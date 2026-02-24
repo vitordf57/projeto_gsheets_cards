@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Painel Estratégico Full</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#f4f6f8;
+    margin:0;
+    padding:20px;
+}
+
+h1{ margin-bottom:15px; }
+
+.menu{
+    background:#1c5ed6;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:20px;
+    color:white;
+}
+
+.menu select,
+.menu input{
+    padding:6px;
+    margin:5px;
+    border-radius:5px;
+    border:none;
+}
+
+.menu button{
+    padding:6px 10px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.top-menu{
+    margin-bottom:20px;
+}
+
+.top-menu button{
+    padding:8px 15px;
+    margin-right:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    background:#333;
+    color:white;
+}
+
+.contador{
+    font-weight:bold;
+    margin:10px 0;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+.linha-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.mlb-area{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+.mlb{
+    font-size:20px;
+    font-weight:bold;
+}
+
+.badges{
+    display:flex;
+    gap:10px;
+}
+
+.badge{
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+}
+
+.badge-green{ background:#d1e7dd; color:#0f5132; }
+.badge-blue{ background:#cfe2ff; color:#084298; }
+.badge-orange{ background:#ffe5d0; color:#7a4100; }
+
+.ia-box{
+    margin-left:40px;
+    font-size:12px;
+    background:#eef2ff;
+    padding:6px 10px;
+    border-radius:10px;
+}
+
+.envio-area{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.envio-area input{
+    padding:6px;
+    width:80px;
+}
+
+.envio-area button{
+    padding:6px 10px;
+    border:none;
+    border-radius:6px;
+    background:#198754;
+    color:white;
+    cursor:pointer;
+}
+
+.duplo-bloco{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:20px;
+    margin-top:15px;
+}
+
+.bloco{
+    background:#f1f3f5;
+    padding:10px;
+    border-radius:px;
+}
+
+.metric{
+    font-size:13px;
+    margin-bottom:6px;
+}
+
+.hidden{
+    display:none;
+}
+
+.linha-quatro{
+    display:flex;
+    gap:20px;
+}
+
+.linha-quatro .duplo-bloco{
+    display:flex;
+    gap:20px;
+    flex:1;
+}
+
+.linha-quatro .bloco{
+    flex:1;
+}
+
+.titulo-duplicado{
+    background:#ffdddd;
+    color:#b30000;
+    padding:4px 8px;
+    border-radius:6px;
+    font-weight:bold;
+    margin-left:10px;
+    font-size:12px;
+    }
+
+.bloco-titulo{
+    margin-top:18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>📦 Painel Estratégico Full</h1>
+
+<div class="top-menu">
+<button onclick="mostrarTela('principal')">📊 Principal</button>
+<button onclick="mostrarTela('enviando')">🚚 Enviando (<span id="contEnv">0</span>)</button>
+<button onclick="mostrarTela('naoEnviar')">❌ Não Enviar (<span id="contNao">0</span>)</button>
+</div>
+
+<div class="menu">
+
+<select id="filtroConta" onchange="renderCards()">
+<option value="">Contas</option>
+<option value="renafcar">RENAFCAR</option>
+<option value="4idistribuidora">4IDISTRIBUIDORA</option>
+</select>
+
+<input type="text" id="filtroBusca" placeholder="SKU ou MLB" oninput="renderCards()">
+
+<select id="filtroSelo" onchange="renderCards()">
+<option value="">Selo</option>
+</select>
+
+<select id="filtroLogica" onchange="renderCards()">
+<option value="">ANALISE</option>
+</select>
+
+<select id="filtroSaude" onchange="renderCards()">
+<option value="">SAUDE DO ESTOQUE 4i</option>
+</select>
+
+<button onclick="setFiltro('valor500')">Valor > 500</button>
+<button onclick="setFiltro('unidades10')">Unid > 10</button>
+<button onclick="setFiltro('critico')">-10 VENDAS + 500 VALOR</button>
+<button onclick="limparFiltros()">Limpar</button>
+
+<div id="contadorPrincipal" class="contador"></div>
+</div>
+
+<div id="principal" class="grid"></div>
+<div id="enviando" class="grid hidden"></div>
+<div id="naoEnviar" class="grid hidden"></div>
+
+<script>
+
+let dadosOriginais=[];
+let filtroEspecial="";
+
+function valorParaNumero(v){
+if(!v) return 0;
+return Number(String(v).replaceAll(".","").replace(",","."));
+}
+
+function sugestaoIA(item){
+let estoque=Number(item["ESTOQUE TOTAL SIGNUS"]||0);
+return {
+s7: Math.min(Number(item["7 DIAS"]||0), estoque),
+s15: Math.min(Number(item["15 DIAS"]||0), estoque),
+s30: Math.min(Number(item["30 DIAS"]||0), estoque),
+s45: Math.min(Number(item["45 DIAS"]||0), estoque)
+};
+}
+
+function analisarSKU(item){
+let mesmoSKU=dadosOriginais.filter(d=>d["SKU"]===item["SKU"] && d["Código do Anúncio"]!==item["Código do Anúncio"]);
+let mesmoTitulo=dadosOriginais.filter(d=>d["Produto"]===item["Produto"] && d["Código do Anúncio"]!==item["Código do Anúncio"]);
+return {qtdSKU:mesmoSKU.length,qtdTitulo:mesmoTitulo.length};
+}
+
+function tituloDuplicado(titulo, codigoAtual){
+    return dadosOriginais.some(item => 
+        item["Título"] === titulo &&
+        item["Código do Anúncio"] !== codigoAtual
+    );
+}
+
+function atualizarContadores(){
+contEnv.innerText=enviando.children.length;
+contNao.innerText=naoEnviar.children.length;
+}
+
+function mostrarTela(tela){
+principal.classList.add("hidden");
+enviando.classList.add("hidden");
+naoEnviar.classList.add("hidden");
+document.getElementById(tela).classList.remove("hidden");
+}
+
+function setFiltro(tipo){
+filtroEspecial=tipo;
+renderCards();
+}
+
+function limparFiltros(){
+document.querySelectorAll(".menu select,.menu input").forEach(e=>e.value="");
+filtroEspecial="";
+renderCards();
+}
+
+fetch("/dados")
+.then(r=>r.json())
+.then(dados=>{
+dadosOriginais=dados;
+popularFiltros();
+renderCards();
+});
+
+function popularFiltros(){
+function unique(col){
+return [...new Set(dadosOriginais.map(d=>d[col]).filter(v=>v))];
+}
+unique("SELO").forEach(v=>filtroSelo.innerHTML+=`<option value="${v}">${v}</option>`);
+unique("ANALISE").forEach(v=>filtroLogica.innerHTML+=`<option value="${v}">${v}</option>`);
+unique("SAUDE DO ESTOQUE 4i").forEach(v=>filtroSaude.innerHTML+=`<option value="${v}">${v}</option>`);
+}
+
+function renderCards(){
+
+const conta=filtroConta.value;
+const busca=filtroBusca.value.toLowerCase();
+const selo=filtroSelo.value;
+const logica=filtroLogica.value;
+const saude=filtroSaude.value;
+
+principal.innerHTML="";
+
+let filtrados=dadosOriginais.filter(item=>{
+
+if(conta && item["Nickname"].toLowerCase()!==conta) return false;
+
+if(busca &&
+!String(item["SKU"]).toLowerCase().includes(busca) &&
+!String(item["Código do Anúncio"]).toLowerCase().includes(busca))
+return false;
+
+if(selo && item["SELO"]!==selo) return false;
+if(logica && item["ANALISE"]!==logica) return false;
+if(saude && item["SAUDE DO ESTOQUE 4i"]!==saude) return false;
+
+let unidades=Number(item["30 DIAS"]||0);
+let valor=valorParaNumero(item["Total de Vendas 30 DIAS"]);
+
+if(filtroEspecial==="valor500" && valor<=500) return false;
+if(filtroEspecial==="unidades10" && unidades<=10) return false;
+if(filtroEspecial==="critico" && !(unidades<10 && valor>500)) return false;
+
+return true;
+});
+
+contadorPrincipal.innerText=filtrados.length+" MLBs";
+
+filtrados.forEach(item=>{
+
+let sugestoes=sugestaoIA(item);
+let analise=analisarSKU(item);
+
+const card=document.createElement("div");
+card.className="card";
+
+card.innerHTML=`
+<div class="linha-topo">
+<div class="mlb-area">
+<div class="mlb">${item["Código do Anúncio"]}</div>
+<div class="badges">
+<span class="badge badge-green">${item["SELO"]}</span>
+<span class="badge badge-blue">${item["ANALISE"]}</span>
+<span class="badge badge-orange">${item["SAUDE DO ESTOQUE 4i"]}</span>
+</div>
+<div class="ia-box">
+IA → 7D:${sugestoes.s7} | 15D:${sugestoes.s15} | 30D:${sugestoes.s30} | 45D:${sugestoes.s45}
+</div>
+</div>
+
+<div class="envio-area">
+<input type="number" id="qtd-${item["Código do Anúncio"]}">
+<button onclick="moverCard('${item["Código do Anúncio"]}', this)">Enviar</button>
+</div>
+</div>
+
+<div>
+<div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+<strong>Título:</strong> 
+<span>${item["Título"]}</span>
+${tituloDuplicado(item["Título"], item["Código do Anúncio"]) 
+    ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>' 
+    : ''}
+</div>
+<div><strong>SKU:</strong> ${item["SKU"]}</div>
+<div><strong>Conta:</strong> ${item["Nickname"]}</div>
+<div><strong>Outros MLBs mesmo SKU:</strong> ${analise.qtdSKU}</div>
+<div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
+
+<hr style="margin:15px 0">
+
+<div class="linha-quatro">
+
+<div class="duplo-bloco">
+<div class="bloco">
+<h3>📈 MELI & PERFORMANCE</h3>
+<div class="metric">Info Meli: ${item["INFO MELI"] || ""}</div>
+<div class="metric">Sugestão Meli: ${item["SUGESTAO MELI"] || ""}</div>
+<div class="metric">Estoque Meli: ${item["ESTOQUE MELI"] || ""}</div>
+<div class="metric">ADS: ${item["ADS"] || ""}</div>
+<div class="metric">Curva 30d: ${item["Curva 30d"] || ""}</div>
+<div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || ""}</div>
+<div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
+<div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
+</div>
+
+<div class="bloco">
+<h3>📅 HISTÓRICO MENSAL</h3>
+<div class="metric">Agosto: ${item["AGOSTO"] || ""}</div>
+<div class="metric">Setembro: ${item["SETEMBRO"] || ""}</div>
+<div class="metric">Outubro: ${item["OUTUBRO"] || ""}</div>
+<div class="metric">Novembro: ${item["NOVEMBRO"] || ""}</div>
+<div class="metric">Dezembro: ${item["DEZEMBRO"] || ""}</div>
+<div class="metric">Janeiro: ${item["JANEIRO"] || ""}</div>
+</div>
+</div>
+
+<div class="duplo-bloco">
+<div class="bloco">
+<h3>📊 VENDAS</h3>
+<div class="metric">7D: ${item["7 DIAS"]} | R$ ${item["Total de Vendas 7 DIAS"]}</div>
+<div class="metric">15D: ${item["15 DIAS"]} | R$ ${item["Total de Vendas 15 DIAS"]}</div>
+<div class="metric">30D: ${item["30 DIAS"]} | R$ ${item["Total de Vendas 30 DIAS"]}</div>
+<div class="metric">45D: ${item["45 DIAS"]} | R$ ${item["Total de Vendas 45 DIAS"]}</div>
+<div class="metric">MÊS: ${item["MES_FECHADO_JANEIRO"]} | 
+R$ ${item["Total de Vendas MES FECHADO ( JANEIRO )"]}</div>
+</div>
+
+<div class="bloco">
+<h3>📦 ESTOQUE</h3>
+<div class="metric">Total Signus: ${item["ESTOQUE TOTAL SIGNUS"]}</div>
+<div class="metric">A Caminho: ${item["A CAMINHO DO FULL"]}</div>
+<div class="metric">Full: ${item["ESTOQUE FULL"]}</div>
+<div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"]}</div>
+</div>
+</div>
+</div>
+`;
+
+principal.appendChild(card);
+});
+}
+
+function moverCard(codigo, botao){
+
+const input=document.getElementById("qtd-"+codigo);
+const quantidade=Number(input.value);
+const card=botao.closest(".card");
+
+card.remove();
+
+if(quantidade>0){
+enviando.appendChild(card);
+}else{
+naoEnviar.appendChild(card);
+}
+
+atualizarContadores();
+}
+
+</script>
+
+</body>
+</html>
