@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f6f9;
+    padding: 20px;
+}
+
+.kpis {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    flex: 1;
+    min-width: 200px;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+th {
+    cursor: pointer;
+}
+
+tr:hover {
+    background: #f3f4f6;
+}
+</style>
+
+<h1>📊 Dashboard Métricas FULL 15 dias</h1>
+
+<div class="kpis">
+    <div class="card">
+        <h3>💰 Vendas Brutas</h3>
+        <h2 id="totalVendas"></h2>
+    </div>
+
+    <div class="card">
+        <h3>🛒 Unidades Vendidas</h3>
+        <h2 id="totalUnidades"></h2>
+    </div>
+
+    <div class="card">
+        <h3>👁 Visitas</h3>
+        <h2 id="totalVisitas"></h2>
+    </div>
+
+    <div class="card">
+        <h3>🎯 Conversão Média</h3>
+        <h2 id="mediaConversao"></h2>
+    </div>
+</div>
+
+<hr style="margin:40px 0;">
+
+<h2>📋 Detalhamento dos Anúncios</h2>
+
+<div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
+    <input type="text" id="filtroBusca" placeholder="Buscar por ID ou SKU..." 
+        style="padding:8px; border-radius:6px; border:1px solid #ccc;">
+
+    <select id="filtroSelo" style="padding:8px; border-radius:6px;">
+        <option value="">Todos os Selos</option>
+    </select>
+</div>
+
+<div style="overflow-x:auto;">
+<table id="tabelaAnuncios" style="width:100%; background:white; border-radius:10px; overflow:hidden;">
+    <thead style="background:#1f2937; color:white;">
+        <tr>
+            <th onclick="ordenar('ID do anúncio')">ID Anúncio</th>
+            <th onclick="ordenar('SKU')">SKU</th>
+            <th onclick="ordenar('Visitas únicas')">Visitas Únicas</th>
+            <th onclick="ordenar('Quantidade de vendas')">Qtd Vendas</th>
+            <th onclick="ordenar('Qualidade do anúncio')">Selo</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+</div>
+
+<script>
+
+fetch("/dados-full")
+.then(res => res.json())
+.then(data => {
+
+    let dadosAtuais = [...data];
+    let ordemAsc = true;
+
+    // ===== KPIs =====
+    let totalVendas = 0;
+    let totalUnidades = 0;
+    let totalVisitas = 0;
+    let totalConversao = 0;
+
+    data.forEach(item => {
+        totalVendas += parseFloat(item["Vendas brutas (BRL)"] || 0);
+        totalUnidades += parseInt(item["Unidades vendidas"] || 0);
+        totalVisitas += parseInt(item["Visitas únicas"] || 0);
+        totalConversao += parseFloat(item["Conversão de visitas em vendas"] || 0);
+    });
+
+    document.getElementById("totalVendas").innerText = 
+        "R$ " + totalVendas.toLocaleString("pt-BR");
+
+    document.getElementById("totalUnidades").innerText = totalUnidades;
+    document.getElementById("totalVisitas").innerText = totalVisitas;
+
+    document.getElementById("mediaConversao").innerText =
+        (totalConversao / data.length).toFixed(2) + "%";
+
+
+    const tabela = document.querySelector("#tabelaAnuncios tbody");
+    const filtroBusca = document.getElementById("filtroBusca");
+    const filtroSelo = document.getElementById("filtroSelo");
+
+    const selosUnicos = [...new Set(data.map(item => item["Qualidade do anúncio"]))];
+
+    selosUnicos.forEach(selo => {
+        const option = document.createElement("option");
+        option.value = selo;
+        option.textContent = selo;
+        filtroSelo.appendChild(option);
+    });
+
+    function renderTabela(lista) {
+        tabela.innerHTML = "";
+
+        let html = "";
+
+        lista.forEach(item => {
+            html += `
+                <tr>
+                    <td>${item["ID do anúncio"] || "-"}</td>
+                    <td>${item["SKU"] || "-"}</td>
+                    <td>${item["Visitas únicas"] || 0}</td>
+                    <td>${item["Quantidade de vendas"] || 0}</td>
+                    <td>${item["selo"] || "-"}</td>
+                </tr>
+            `;
+        });
+
+        tabela.innerHTML = html;
+    }
+
+    renderTabela(dadosAtuais);
+
+    // ===== ORDENAÇÃO =====
+    window.ordenar = function(campo) {
+
+        dadosAtuais.sort((a, b) => {
+
+            let valorA = a[campo] || "";
+            let valorB = b[campo] || "";
+
+            if (!isNaN(valorA) && !isNaN(valorB)) {
+                valorA = Number(valorA);
+                valorB = Number(valorB);
+            }
+
+            if (valorA < valorB) return ordemAsc ? -1 : 1;
+            if (valorA > valorB) return ordemAsc ? 1 : -1;
+            return 0;
+        });
+
+        ordemAsc = !ordemAsc;
+
+        renderTabela(dadosAtuais);
+    };
+
+    // ===== FILTRO =====
+    function aplicarFiltros() {
+        const busca = filtroBusca.value.toLowerCase();
+        const selo = filtroSelo.value;
+
+        dadosAtuais = data.filter(item => {
+            const matchBusca =
+                (item["ID do anúncio"] || "").toLowerCase().includes(busca) ||
+                (item["SKU"] || "").toLowerCase().includes(busca);
+
+            const matchSelo = selo === "" || item["Qualidade do anúncio"] === selo;
+
+            return matchBusca && matchSelo;
+        });
+
+        renderTabela(dadosAtuais);
+    }
+
+    filtroBusca.addEventListener("input", aplicarFiltros);
+    filtroSelo.addEventListener("change", aplicarFiltros);
+
+});
+</script>
+
+{% endblock %}

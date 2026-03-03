@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema Estratégico</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 200px;
+    background: #111827;
+    color: white;
+    height: 100vh;
+    padding: 20px 10px;
+    position: fixed;
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar h2 {
+    font-size: 18px;
+    transition: opacity 0.3s;
+}
+
+.sidebar.collapsed h2 {
+    opacity: 0;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    text-decoration: none;
+    margin: 15px 0;
+    padding: 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.sidebar a:hover {
+    background: #1f2937;
+}
+
+.sidebar.collapsed a span {
+    display: none;
+}
+
+/* BOTÃO */
+.toggle-btn {
+    cursor: pointer;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+/* CONTEÚDO */
+.content {
+    margin-left: 220px;
+    padding: 30px;
+    width: 100%;
+    transition: margin-left 0.3s ease;
+}
+
+.content.expanded {
+    margin-left: 90px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
+
+    <h2>📊 Sistema</h2>
+
+    <a href="/home">
+        🏠 <span>Início</span>
+    </a>
+
+    <a href="/">
+        📦 <span>Painel Estratégico</span>
+    </a>
+
+    <a href="/metricas-full">
+        📈 <span>Métricas FULL 15 dias</span>
+    </a>
+</div>
+
+<div class="content" id="content">
+    {% block content %}{% endblock %}
+</div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+
+    sidebar.classList.toggle("collapsed");
+    content.classList.toggle("expanded");
+}
+</script>
+
+</body>
+</html>

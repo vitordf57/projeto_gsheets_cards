@@ -1,10 +1,6 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Painel Estratégico Full</title>
+{% extends "base.html" %}
 
-
+{% block content %}
 
 <style>
 body{
@@ -115,6 +111,7 @@ h1{ margin-bottom:15px; }
 
 .envio-area{
     display:flex;
+    justify-content: flex-end;
     align-items:center;
     gap:8px;
 }
@@ -135,7 +132,7 @@ h1{ margin-bottom:15px; }
 
 .duplo-bloco{
     display:grid;
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns: 1fr 1fr 1.3fr 1fr;
     gap:20px;
     margin-top:15px;
 }
@@ -163,7 +160,22 @@ h1{ margin-bottom:15px; }
 .linha-quatro .duplo-bloco{
     display:flex;
     gap:20px;
-    flex:1;
+}
+
+.linha-quatro .duplo-bloco:nth-child(1){
+    flex:1.2;   /* MELI + HISTÓRICO ficam um pouco maiores */
+}
+
+.linha-quatro .duplo-bloco:nth-child(2){
+    flex:1.4;   /* VENDAS + ESTOQUE ocupam mais espaço */
+}
+
+.linha-quatro .duplo-bloco:nth-child(2) .bloco:nth-child(1){
+    flex:1.6;   /* VENDAS maior */
+}
+
+.linha-quatro .duplo-bloco:nth-child(2) .bloco:nth-child(2){
+    flex:0.8;   /* ESTOQUE menor */
 }
 
 .linha-quatro .bloco{
@@ -183,10 +195,6 @@ h1{ margin-bottom:15px; }
 .bloco-titulo{
     margin-top:18px;
 }
-
-.badge-orange {
-   ...
-} 
 
 .comentario-topo{
     width:45px;
@@ -479,14 +487,6 @@ IA → 7D:${sugestoes.s7} | 15D:${sugestoes.s15} | 30D:${sugestoes.s30} | 45D:${
 </div>
 </div>
 
-<div class="envio-area">
-<input type="number" id="qtd-${item["Código do Anúncio"]}">
-<button onclick="moverCard('${item["Código do Anúncio"]}', this)">Enviar</button>
-<button onclick="voltarPrincipal('${item["Código do Anúncio"]}', this)" 
-        style="background:#6c757d; color:white;">
-    ↩ Voltar
-</button>
-</div>
 </div>
 
 <div>
@@ -501,6 +501,15 @@ ${tituloDuplicado(item["Título"], item["Código do Anúncio"])
 <div><strong>Conta:</strong> ${item["Nickname"]}</div>
 <div><strong>Outros MLBs mesmo SKU:</strong> ${analise.qtdSKU}</div>
 <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
+
+<div class="envio-area">
+<input type="number" id="qtd-${item["Código do Anúncio"]}">
+<button onclick="moverCard('${item["Código do Anúncio"]}', this)">Enviar</button>
+<button onclick="voltarPrincipal('${item["Código do Anúncio"]}', this)" 
+        style="background:#6c757d; color:white;">
+    ↩ Voltar
+</button>
+</div>
 
 <hr style="margin:15px 0">
 
@@ -566,13 +575,36 @@ ${tituloDuplicado(item["Título"], item["Código do Anúncio"])
   <div class="duplo-bloco">
 
     <div class="bloco">
-      <h3>📊 VENDAS</h3>
-      <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
-      <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
-      <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
-      <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+    
+  <h3>📊 VENDAS</h3>
 
-      </div>
+  <div class="metric">
+    7D: ${item["7 DIAS"] || 0} 
+    | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"} 
+    | Métricas Meli: ${item["METRICAS 07 DIAS DO MELI"] || 0} 
+    | Visitas: ${item["VISITAS 7 DIAS"] || 0}
+  </div>
+
+  <div class="metric">
+    15D: ${item["15 DIAS"] || 0} 
+    | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"} 
+    | Métricas Meli: ${item["METRICAS 15 DIAS DO MELI"] || 0} 
+    | Visitas: ${item["VISITAS 15 DIAS"] || 0}
+  </div>
+
+  <div class="metric">
+    30D: ${item["30 DIAS"] || 0} 
+    | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"} 
+    | Métricas Meli: ${item["METRICAS 30 DIAS DO MELI"] || 0} 
+    | Visitas: ${item["VISITAS 30 DIAS"] || 0}
+  </div>
+
+  <div class="metric">
+    45D: ${item["45 DIAS"] || 0} 
+    | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}
+  </div>
+
+</div>
 
     <div class="bloco">
       <h3>📦 ESTOQUE</h3>
@@ -621,6 +653,7 @@ document.getElementById(destino).appendChild(card);
 
 atualizarContadores();
 }
+
 function voltarPrincipal(codigo, botao){
 
 const card = botao.closest(".card");
@@ -700,5 +733,4 @@ function salvarComentarioModal(){
     </div>
 </div>
 
-</body>
-</html>
+{% endblock %}

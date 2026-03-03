@@ -3,9 +3,28 @@ import pandas as pd
 import sqlite3
 from flask import Flask, render_template, jsonify, request
 
+cache_dados = None
+cache_full = None
+
 app = Flask(__name__)
 
 CSV_URL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=0"
+CSV_URL_FULL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=184771586"
+
+@app.route("/dados-full")
+def dados_full():
+    global cache_full
+    
+    if cache_full is None:
+        df = pd.read_csv(CSV_URL_FULL)
+        df = df.fillna("")
+        cache_full = df.to_dict(orient="records")
+    
+    return jsonify(cache_full)
+
+@app.route("/metricas-full")
+def metricas_full():
+    return render_template("metricas_full.html")
 
 @app.route("/")
 def index():
@@ -13,9 +32,14 @@ def index():
 
 @app.route("/dados")
 def dados():
-    df = pd.read_csv(CSV_URL)
-    df = df.fillna("")
-    return jsonify(df.to_dict(orient="records"))
+    global cache_dados
+    
+    if cache_dados is None:
+        df = pd.read_csv(CSV_URL)
+        df = df.fillna("")
+        cache_dados = df.to_dict(orient="records")
+    
+    return jsonify(cache_dados)
 
 def init_db():
     conn = sqlite3.connect("status.db")
@@ -112,6 +136,24 @@ def debug_comentarios():
     dados = c.fetchall()
     conn.close()
     return {"dados": dados}
+
+@app.route("/home")
+def home():
+    return render_template("home.html")
+
+from collections import Counter
+
+@app.route("/dashboard")
+def dashboard():
+    vendas = carregar_vendas()  # sua função atual
+    contador = Counter([v["produto"] for v in vendas])
+
+    mais_vendidos = contador.most_common(5)
+
+    return render_template(
+        "dashboard.html",
+        mais_vendidos=mais_vendidos
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
