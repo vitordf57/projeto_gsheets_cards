@@ -32,14 +32,40 @@ def index():
 
 @app.route("/dados")
 def dados():
-    global cache_dados
-    
-    if cache_dados is None:
-        df = pd.read_csv(CSV_URL)
-        df = df.fillna("")
-        cache_dados = df.to_dict(orient="records")
-    
-    return jsonify(cache_dados)
+
+    df = pd.read_csv(CSV_URL)
+    df = df.fillna("")
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT codigo, status FROM status_cards")
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    status_dict = {str(codigo): status for codigo, status in rows}
+
+    dados = []
+
+    for _, row in df.iterrows():
+
+        codigo = str(row["Código do Anúncio"]).strip()
+
+        status = status_dict.get(codigo, None)
+
+        # FILTRO APENAS SE EXISTIR STATUS
+        if status is not None:
+
+            if status == "enviando":
+                continue
+
+            if status == "nao_enviar":
+                continue
+
+        dados.append(row.to_dict())
+
+    return jsonify(dados)
 
 def init_db():
     conn = sqlite3.connect("status.db")
@@ -143,6 +169,19 @@ def home():
 
 from collections import Counter
 
+def carregar_vendas():
+    df = pd.read_csv(CSV_URL)
+    df = df.fillna("")
+
+    vendas = []
+
+    for _, row in df.iterrows():
+        vendas.append({
+            "produto": row.get("MLB", "")
+        })
+
+    return vendas
+
 @app.route("/dashboard")
 def dashboard():
     vendas = carregar_vendas()  # sua função atual
@@ -151,9 +190,9 @@ def dashboard():
     mais_vendidos = contador.most_common(5)
 
     return render_template(
-        "dashboard.html",
-        mais_vendidos=mais_vendidos
-    )
+    "metricas_full.html",
+    mais_vendidos=mais_vendidos
+)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

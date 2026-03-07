@@ -5,8 +5,11 @@ fetch("/dados")
     container.innerHTML = "";
 
     dados.forEach((item, index) => {
-      const card = document.createElement("div");
-      card.className = "card";
+
+      if (item.status === "enviando") return;
+      if (item.status === "nao_enviar") return;
+    
+      const codigo = item["Código do Anúncio"];
 
       // Título do card (prioridade para Código do Anúncio)
       const titulo = item["Código do Anúncio"] || item["Código"] || `Item ${index + 1}`;
