@@ -1,6 +1,298 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+h1{
+    margin-bottom: 20px;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.kpi-card{
+    background:white;
+    border-radius:16px;
+    padding:22px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    cursor:pointer;
+    transition:0.2s ease;
+    border-left:6px solid #1c5ed6;
+}
+
+.kpi-card:hover{
+    transform:translateY(-3px);
+}
+
+.kpi-title{
+    font-size:14px;
+    color:#6b7280;
+    margin-bottom:8px;
+    text-transform:uppercase;
+    font-weight:bold;
+}
+
+.kpi-value{
+    font-size:36px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.charts-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px;
+}
+
+.chart-card{
+    background:white;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+}
+
+.chart-card h3{
+    margin-top:0;
+    margin-bottom:15px;
+}
+
+.chart-wrap{
+    position:relative;
+    height:360px;
+}
+
+@media (max-width: 1100px){
+    .dashboard-grid{
+        grid-template-columns:1fr 1fr;
+    }
+
+    .charts-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width: 700px){
+    .dashboard-grid{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
 <h1>🏠 Dashboard Geral</h1>
-<p>Bem-vindo ao sistema estratégico.</p>
+
+<div class="dashboard-grid">
+    <div class="kpi-card" onclick="irParaPainel({saude: 'RUPTURA'})">
+        <div class="kpi-title">Ruptura</div>
+        <div class="kpi-value" id="kpiRuptura">0</div>
+    </div>
+
+    <div class="kpi-card" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC'})">
+        <div class="kpi-title">Sugestão Envio Magic</div>
+        <div class="kpi-value" id="kpiMagic">0</div>
+    </div>
+
+    <div class="kpi-card" onclick="irParaPainel({cobertura: 'baixo30'})">
+        <div class="kpi-title">MLBs com estoque abaixo 30 dias</div>
+        <div class="kpi-value" id="kpiBaixo30">0</div>
+    </div>
+
+    <div class="kpi-card" onclick="irParaPainel({analise: 'ACOMPANHAR'})">
+        <div class="kpi-title">Análise = Acompanhar</div>
+        <div class="kpi-value" id="kpiAcompanhar">0</div>
+    </div>
+
+    <div class="kpi-card" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL'})">
+        <div class="kpi-title">Estoque Saudável</div>
+        <div class="kpi-value" id="kpiSaudavel">0</div>
+    </div>
+
+    <div class="kpi-card" onclick="irParaPainel({full: 'Sim'})">
+        <div class="kpi-title">Itens Full = Sim</div>
+        <div class="kpi-value" id="kpiFull">0</div>
+    </div>
+</div>
+
+<div class="charts-grid">
+    <div class="chart-card">
+        <h3>🏆 Mais vendidos 30 dias (quantidade)</h3>
+        <div class="chart-wrap">
+            <canvas id="chartQtd"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>💰 Mais vendidos 30 dias (valor)</h3>
+        <div class="chart-wrap">
+            <canvas id="chartValor"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>📦 Saúde do estoque</h3>
+        <div class="chart-wrap">
+            <canvas id="chartSaude"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>🧠 Lógica de análise</h3>
+        <div class="chart-wrap">
+            <canvas id="chartAnalise"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+function numero(v){
+    if(v === null || v === undefined || v === "") return 0;
+    return Number(String(v).replaceAll(".","").replace(",","."));
+}
+
+function extrairDiasCobertura(texto){
+    const t = String(texto || "");
+    const match = t.match(/(\d+)\s*dias/i);
+    return match ? Number(match[1]) : null;
+}
+
+function irParaPainel(filtros){
+    const params = new URLSearchParams();
+
+    if (filtros.saude) params.set("saude", filtros.saude);
+    if (filtros.analise) params.set("analise", filtros.analise);
+    if (filtros.magic) params.set("magic", filtros.magic);
+    if (filtros.cobertura) params.set("cobertura", filtros.cobertura);
+    if (filtros.full) params.set("full", filtros.full);
+
+    window.location.href = "/?" + params.toString();
+}
+
+fetch("/dados-dashboard")
+.then(r => r.json())
+.then(dados => {
+
+    const ruptura = dados.filter(item =>
+        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase() === "RUPTURA"
+    ).length;
+
+    const magic = dados.filter(item =>
+        String(item["MAGIC"] || "").toUpperCase() === "SUG DE ENVIO MAGIC"
+    ).length;
+
+    const abaixo30 = dados.filter(item => {
+        const dias = extrairDiasCobertura(item["Cobertura"]);
+        return dias !== null && dias < 30;
+    }).length;
+
+    const acompanhar = dados.filter(item =>
+        String(item["ANALISE"] || "").toUpperCase() === "ACOMPANHAR"
+    ).length;
+
+    const saudavel = dados.filter(item =>
+        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase() === "ESTOQUE SAUDÁVEL"
+    ).length;
+
+    const fullSim = dados.filter(item =>
+        String(item["Full"] || "").toUpperCase() === "SIM"
+    ).length;
+
+    document.getElementById("kpiRuptura").innerText = ruptura;
+    document.getElementById("kpiMagic").innerText = magic;
+    document.getElementById("kpiBaixo30").innerText = abaixo30;
+    document.getElementById("kpiAcompanhar").innerText = acompanhar;
+    document.getElementById("kpiSaudavel").innerText = saudavel;
+    document.getElementById("kpiFull").innerText = fullSim;
+
+    const topQtd = [...dados]
+        .sort((a,b) => numero(b["30 DIAS"]) - numero(a["30 DIAS"]))
+        .slice(0, 10);
+
+    const topValor = [...dados]
+        .sort((a,b) => numero(b["Total de Vendas 30 DIAS"]) - numero(a["Total de Vendas 30 DIAS"]))
+        .slice(0, 10);
+
+    const saudeMap = {};
+    dados.forEach(item => {
+        const chave = String(item["SAUDE DO ESTOQUE 4i"] || "SEM DADO");
+        saudeMap[chave] = (saudeMap[chave] || 0) + 1;
+    });
+
+    const analiseMap = {};
+    dados.forEach(item => {
+        const chave = String(item["ANALISE"] || "SEM DADO");
+        analiseMap[chave] = (analiseMap[chave] || 0) + 1;
+    });
+
+    new Chart(document.getElementById("chartQtd"), {
+        type: "bar",
+        data: {
+            labels: topQtd.map(item => item["Código do Anúncio"]),
+            datasets: [{
+                label: "30 DIAS",
+                data: topQtd.map(item => numero(item["30 DIAS"]))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    new Chart(document.getElementById("chartValor"), {
+        type: "bar",
+        data: {
+            labels: topValor.map(item => item["Código do Anúncio"]),
+            datasets: [{
+                label: "Total de Vendas 30 DIAS",
+                data: topValor.map(item => numero(item["Total de Vendas 30 DIAS"]))
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    new Chart(document.getElementById("chartSaude"), {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(saudeMap),
+            datasets: [{
+                data: Object.values(saudeMap)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    new Chart(document.getElementById("chartAnalise"), {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(analiseMap),
+            datasets: [{
+                data: Object.values(analiseMap)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+});
+</script>
+
 {% endblock %}
