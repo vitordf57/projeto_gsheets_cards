@@ -163,19 +163,19 @@ h1{ margin-bottom:15px; }
 }
 
 .linha-quatro .duplo-bloco:nth-child(1){
-    flex:1.2;   /* MELI + HISTÓRICO ficam um pouco maiores */
+    flex:1.2;
 }
 
 .linha-quatro .duplo-bloco:nth-child(2){
-    flex:1.4;   /* VENDAS + ESTOQUE ocupam mais espaço */
+    flex:1.4;
 }
 
 .linha-quatro .duplo-bloco:nth-child(2) .bloco:nth-child(1){
-    flex:1.6;   /* VENDAS maior */
+    flex:1.6;
 }
 
 .linha-quatro .duplo-bloco:nth-child(2) .bloco:nth-child(2){
-    flex:0.8;   /* ESTOQUE menor */
+    flex:0.8;
 }
 
 .linha-quatro .bloco{
@@ -190,7 +190,7 @@ h1{ margin-bottom:15px; }
     font-weight:bold;
     margin-left:10px;
     font-size:12px;
-    }
+}
 
 .bloco-titulo{
     margin-top:18px;
@@ -273,7 +273,6 @@ h1{ margin-bottom:15px; }
     from{ transform:scale(0.95); opacity:0; }
     to{ transform:scale(1); opacity:1; }
 }
-
 </style>
 
 </head>
@@ -323,427 +322,460 @@ h1{ margin-bottom:15px; }
 <div id="naoEnviar" class="grid hidden"></div>
 
 <script>
-    const principal = document.getElementById("principal");
-    const enviando = document.getElementById("enviando");
-    const naoEnviar = document.getElementById("naoEnviar");
-    const contEnv = document.getElementById("contEnv");
-    const contNao = document.getElementById("contNao");
-    const contadorPrincipal = document.getElementById("contadorPrincipal");
-    
-    const filtroConta = document.getElementById("filtroConta");
-    const filtroBusca = document.getElementById("filtroBusca");
-    const filtroSelo = document.getElementById("filtroSelo");
-    const filtroLogica = document.getElementById("filtroLogica");
-    const filtroSaude = document.getElementById("filtroSaude");
-    
-    let dadosOriginais=[];
+const principal = document.getElementById("principal");
+const enviando = document.getElementById("enviando");
+const naoEnviar = document.getElementById("naoEnviar");
+const contEnv = document.getElementById("contEnv");
+const contNao = document.getElementById("contNao");
+const contadorPrincipal = document.getElementById("contadorPrincipal");
+
+const filtroConta = document.getElementById("filtroConta");
+const filtroBusca = document.getElementById("filtroBusca");
+const filtroSelo = document.getElementById("filtroSelo");
+const filtroLogica = document.getElementById("filtroLogica");
+const filtroSaude = document.getElementById("filtroSaude");
+
+let dadosOriginais = [];
 let comentariosSalvos = {};
-let filtroEspecial="";
-let statusSalvos={};
+let filtroEspecial = "";
+let statusSalvos = {};
 let telaAtual = "principal";
 
 const urlParams = new URLSearchParams(window.location.search);
 let filtroUrlMagic = urlParams.get("magic") || "";
 let filtroUrlCobertura = urlParams.get("cobertura") || "";
 let filtroUrlFull = urlParams.get("full") || "";
-    
-    let skuCounts = {};
-    let tituloCounts = {};
-    
-    let dadosFiltradosBase = [];
-    let dadosTelaAtual = [];
-    
-    let indiceRender = 0;
-    const LOTE_RENDER = 80;
-    let renderizando = false;
-    let debounceTimer = null;
-    
-    function valorParaNumero(v){
-        if(!v) return 0;
-        return Number(String(v).replaceAll(".","").replace(",","."));
-    }
-    
-    function sugestaoIA(item){
-        let estoque = Number(item["ESTOQUE TOTAL SIGNUS"] || 0);
-        return {
-            s7: Math.min(Number(item["7 DIAS"] || 0), estoque),
-            s15: Math.min(Number(item["15 DIAS"] || 0), estoque),
-            s30: Math.min(Number(item["30 DIAS"] || 0), estoque),
-            s45: Math.min(Number(item["45 DIAS"] || 0), estoque)
-        };
-    }
-    
-    function montarIndices(){
-        skuCounts = {};
-        tituloCounts = {};
-    
-        for (const item of dadosOriginais){
-            const sku = String(item["SKU"] || "").trim();
-            const titulo = String(item["Título"] || "").trim();
-    
-            if (sku){
-                skuCounts[sku] = (skuCounts[sku] || 0) + 1;
-            }
-    
-            if (titulo){
-                tituloCounts[titulo] = (tituloCounts[titulo] || 0) + 1;
-            }
-        }
-    }
-    
-    function analisarSKU(item){
+let filtroUrlSaudeFull = urlParams.get("saudeFull") || "";
+let filtroUrlConta = urlParams.get("conta") || "";
+
+let skuCounts = {};
+let tituloCounts = {};
+
+let dadosFiltradosBase = [];
+let dadosTelaAtual = [];
+
+let indiceRender = 0;
+const LOTE_RENDER = 80;
+let renderizando = false;
+let debounceTimer = null;
+
+function valorParaNumero(v){
+    if(!v) return 0;
+    return Number(String(v).replaceAll(".","").replace(",","."));
+}
+
+function sugestaoIA(item){
+    let estoque = Number(item["ESTOQUE TOTAL SIGNUS"] || 0);
+    return {
+        s7: Math.min(Number(item["7 DIAS"] || 0), estoque),
+        s15: Math.min(Number(item["15 DIAS"] || 0), estoque),
+        s30: Math.min(Number(item["30 DIAS"] || 0), estoque),
+        s45: Math.min(Number(item["45 DIAS"] || 0), estoque)
+    };
+}
+
+function montarIndices(){
+    skuCounts = {};
+    tituloCounts = {};
+
+    for (const item of dadosOriginais){
         const sku = String(item["SKU"] || "").trim();
         const titulo = String(item["Título"] || "").trim();
-    
-        return {
-            qtdSKU: Math.max((skuCounts[sku] || 1) - 1, 0),
-            qtdTitulo: Math.max((tituloCounts[titulo] || 1) - 1, 0)
-        };
-    }
-    
-    function tituloDuplicado(titulo){
-        const t = String(titulo || "").trim();
-        return (tituloCounts[t] || 0) > 1;
-    }
-    
-    function obterDestino(item){
-        const codigo = item["Código do Anúncio"];
-        const status = statusSalvos[codigo];
-    
-        if (status === "enviando") return "enviando";
-        if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
-        return "principal";
-    }
-    
-    function atualizarContadores(){
-        const totalPrincipal = dadosFiltradosBase.filter(item => obterDestino(item) === "principal").length;
-        const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
-        const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
-    
-        contEnv.innerText = totalEnviando;
-        contNao.innerText = totalNao;
-    
-        if (telaAtual === "principal"){
-            contadorPrincipal.innerText = `${totalPrincipal} MLBs`;
-        } else if (telaAtual === "enviando"){
-            contadorPrincipal.innerText = `${totalEnviando} MLBs`;
-        } else {
-            contadorPrincipal.innerText = `${totalNao} MLBs`;
-        }
-    }
-    
-    function mostrarTela(tela){
-        telaAtual = tela;
-    
-        principal.classList.add("hidden");
-        enviando.classList.add("hidden");
-        naoEnviar.classList.add("hidden");
-    
-        document.getElementById(tela).classList.remove("hidden");
-    
-        renderCards();
-        window.scrollTo({ top: 0, behavior: "instant" });
-    }
-    
-    function setFiltro(tipo){
-        filtroEspecial = tipo;
-        renderCards();
-    }
-    
-    function limparFiltros(){
-document.querySelectorAll(".menu select,.menu input").forEach(e=>e.value="");
-filtroEspecial="";
-filtroUrlMagic="";
-filtroUrlCobertura="";
-filtroUrlFull="";
-history.replaceState({}, "", "/");
-renderCards();
-}
-    
-    function popularFiltros(){
-        function unique(col){
-            return [...new Set(dadosOriginais.map(d => d[col]).filter(v => v))];
-        }
-    
-        filtroSelo.innerHTML = '<option value="">Todos os selos</option>';
-        filtroLogica.innerHTML = '<option value="">Toda lógica</option>';
-        filtroSaude.innerHTML = '<option value="">Toda saúde</option>';
-    
-        unique("SELO").forEach(v => filtroSelo.innerHTML += `<option value="${v}">${v}</option>`);
-        unique("ANALISE").forEach(v => filtroLogica.innerHTML += `<option value="${v}">${v}</option>`);
-        unique("SAUDE DO ESTOQUE 4i").forEach(v => filtroSaude.innerHTML += `<option value="${v}">${v}</option>`);
-    }
-    
-    function aplicarFiltrosBase(){
-        const conta = filtroConta.value;
-        const busca = filtroBusca.value.toLowerCase().trim();
-        const selo = filtroSelo.value;
-        const logica = filtroLogica.value;
-        const saude = filtroSaude.value;
-    
-        return dadosOriginais.filter(item => {
-            if (conta && String(item["Nickname"] || "").toLowerCase() !== conta.toLowerCase()) return false;
-    
-            if (
-                busca &&
-                !String(item["SKU"] || "").toLowerCase().includes(busca) &&
-                !String(item["Código do Anúncio"] || "").toLowerCase().includes(busca)
-            ) return false;
-    
-            if (selo && item["SELO"] !== selo) return false;
-            if (logica && item["ANALISE"] !== logica) return false;
-            if (saude && item["SAUDE DO ESTOQUE 4i"] !== saude) return false;
-    
-            let unidades = Number(item["30 DIAS"] || 0);
-            let valor = valorParaNumero(item["Total de Vendas 30 DIAS"]);
-    
-            if (filtroEspecial === "valor500" && valor <= 500) return false;
-            if (filtroEspecial === "unidades10" && unidades <= 10) return false;
-            if (filtroEspecial === "critico" && !(unidades < 10 && valor > 500)) return false;
-    
-            return true;
-        });
-    }
-    
-    function montarHTMLCard(item){
-        const sugestoes = sugestaoIA(item);
-        const analise = analisarSKU(item);
-    
-        return `
-        <div class="linha-topo">
-            <div class="mlb-area">
-                <div class="mlb">${item["Código do Anúncio"]}</div>
-                <div class="badges">
-                    <span class="badge badge-green">${item["SELO"] || ""}</span>
-                    <span class="badge badge-blue">${item["ANALISE"] || ""}</span>
-                    <span class="badge badge-orange">${item["SAUDE DO ESTOQUE 4i"] || ""}</span>
-                </div>
-                <div class="ia-box">
-                    IA → 7D:${sugestoes.s7} | 15D:${sugestoes.s15} | 30D:${sugestoes.s30} | 45D:${sugestoes.s45}
-                </div>
-    
-                <div class="comentario-topo"
-                    onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
-                    💬
-                </div>
-            </div>
-        </div>
-    
-        <div>
-            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                <strong>Título:</strong>
-                <span>${item["Título"] || ""}</span>
-                ${tituloDuplicado(item["Título"])
-                    ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>'
-                    : ''}
-            </div>
-    
-            <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
-            <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
-            <div><strong>Outros MLBs mesmo SKU:</strong> ${analise.qtdSKU}</div>
-            <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
-    
-            <div class="envio-area">
-                <input type="number" id="qtd-${item["Código do Anúncio"]}">
-                <button onclick="moverCard('${item["Código do Anúncio"]}', this)">Enviar</button>
-                <button onclick="voltarPrincipal('${item["Código do Anúncio"]}', this)"
-                        style="background:#6c757d; color:white;">
-                    ↩ Voltar
-                </button>
-            </div>
-    
-            <hr style="margin:15px 0">
-    
-            <div class="linha-quatro">
-                <div class="duplo-bloco">
-                    <div class="bloco">
-                        <h3>📈 MELI & PERFORMANCE</h3>
-                        <div class="metric">Info Meli: ${item["INFO MELI"] || ""}</div>
-                        <div class="metric">Sugestão Meli: ${item["SUGESTAO MELI"] || ""}</div>
-                        <div class="metric">Estoque Meli: ${item["ESTOQUE MELI"] || ""}</div>
-                        <div class="metric">ADS: ${item["ADS"] || ""}</div>
-                        <div class="metric">Curva 30d: ${item["Curva 30d"] || item["Curva 30D"] || ""}</div>
-                        <div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || item["Tendência 30"] || ""}</div>
-                        <div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
-                        <div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
-                    </div>
-    
-                    <div class="bloco">
-                        <h3>📅 HISTÓRICO MENSAL</h3>
-    
-                        <div class="metric">AGOSTO: ${item["AGOSTO"] || 0} | Seconds: ${item["AGOSTO SECONDS"] || 0} | Balcão/site: ${item["AGOSTO BALCAO/SITE"] || 0}</div>
-                        <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0} | Seconds: ${item["SETEMBRO SECONDS"] || 0} | Balcão/site: ${item["SETEMBRO BALCAO/SITE"] || 0}</div>
-                        <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0} | Seconds: ${item["OUTUBRO SECONDS"] || 0} | Balcão/site: ${item["OUTUBRO BALCAO/SITE"] || 0}</div>
-                        <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0} | Seconds: ${item["NOVEMBRO SECONDS"] || 0} | Balcão/site: ${item["NOVEMBRO BALCAO/SITE"] || 0}</div>
-                        <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0} | Seconds: ${item["DEZEMBRO SECONDS"] || 0} | Balcão/site: ${item["DEZEMBRO BALCAO/SITE"] || 0}</div>
-                        <div class="metric">JANEIRO: ${item["JANEIRO"] || 0} | Seconds: ${item["JANEIRO SECONDS"] || 0} | Balcão/site: ${item["JANEIRO BALCAO/SITE"] || 0}</div>
-                    </div>
-                </div>
-    
-                <div class="duplo-bloco">
-                    <div class="bloco">
-                        <h3>📊 VENDAS</h3>
-    
-                        <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 07 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 7 DIAS"] || 0}</div>
-                        <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 15 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 15 DIAS"] || 0}</div>
-                        <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 30 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 30 DIAS"] || 0}</div>
-                        <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
-                    </div>
-    
-                    <div class="bloco">
-                        <h3>📦 ESTOQUE</h3>
-                        <div class="metric">Total Signus: ${item["ESTOQUE TOTAL SIGNUS"] || 0}</div>
-                        <div class="metric">A Caminho: ${item["A CAMINHO DO FULL"] || 0}</div>
-                        <div class="metric">Full: ${item["ESTOQUE FULL"] || 0}</div>
-                        <div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-    
-    function renderProximoLote(){
-        if (renderizando) return;
-        if (indiceRender >= dadosTelaAtual.length) return;
-    
-        renderizando = true;
-    
-        const container = document.getElementById(telaAtual);
-        const fragment = document.createDocumentFragment();
-    
-        const fim = Math.min(indiceRender + LOTE_RENDER, dadosTelaAtual.length);
-    
-        for (let i = indiceRender; i < fim; i++){
-            const item = dadosTelaAtual[i];
-            const card = document.createElement("div");
-            card.className = "card";
-            card.innerHTML = montarHTMLCard(item);
-            fragment.appendChild(card);
-        }
-    
-        container.appendChild(fragment);
-        indiceRender = fim;
-        renderizando = false;
-    }
-    
-    function renderCards(){
-        dadosFiltradosBase = aplicarFiltrosBase();
-        dadosTelaAtual = dadosFiltradosBase.filter(item => obterDestino(item) === telaAtual);
-    
-        principal.innerHTML = "";
-        enviando.innerHTML = "";
-        naoEnviar.innerHTML = "";
-    
-        indiceRender = 0;
-        renderProximoLote();
-        atualizarContadores();
-    }
-    
-    function moverCard(codigo){
-        const input = document.getElementById("qtd-" + codigo);
-        const quantidade = Number(input ? input.value : 0);
-    
-        let status = "nao_enviar";
-        if (quantidade > 0){
-            status = "enviando";
-        }
-    
-        fetch("/salvar-status", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({codigo: codigo, status: status})
-        }).then(() => {
-            statusSalvos[codigo] = status;
-            renderCards();
-        });
-    }
-    
-    function voltarPrincipal(codigo){
-        fetch("/salvar-status", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({codigo: codigo, status: "principal"})
-        }).then(() => {
-            statusSalvos[codigo] = "principal";
-            renderCards();
-        });
-    }
-    
-    function toggleComentario(codigo, sku){
-        const box = document.getElementById("comentario-box-" + codigo);
-        box.style.display = box.style.display === "none" ? "block" : "none";
-    
-        if(comentariosSalvos[sku]){
-            document.getElementById("comentario-" + codigo).value = comentariosSalvos[sku];
-        }
-    }
-    
-    function salvarComentario(codigo, sku){
-        const texto = document.getElementById("comentario-" + codigo).value;
-    
-        fetch("/salvar-comentario",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-                sku: sku,
-                comentario: texto
-            })
-        }).then(()=>{
-            comentariosSalvos[sku] = texto;
-            alert("Comentário salvo!");
-        });
-    }
-    
-    let skuAtualComentario = null;
-    
-    function abrirComentario(codigo, sku){
-        skuAtualComentario = sku;
-    
-        document.getElementById("textoComentario").value =
-            localStorage.getItem("comentario_" + sku) || "";
-    
-        document.getElementById("modalComentario").style.display = "flex";
-    }
-    
-    function fecharComentario(){
-        document.getElementById("modalComentario").style.display = "none";
-    }
-    
-    function salvarComentarioModal(){
-        const texto = document.getElementById("textoComentario").value;
-        localStorage.setItem("comentario_" + skuAtualComentario, texto);
-        fecharComentario();
-    }
-    
-    function aplicarRenderComDebounce(){
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            renderCards();
-        }, 250);
-    }
-    
-    filtroConta.addEventListener("change", renderCards);
-    filtroSelo.addEventListener("change", renderCards);
-    filtroLogica.addEventListener("change", renderCards);
-    filtroSaude.addEventListener("change", renderCards);
-    filtroBusca.addEventListener("input", aplicarRenderComDebounce);
-    
-    window.addEventListener("scroll", () => {
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 500)){
-            renderProximoLote();
-        }
-    });
-    
-    Promise.all([
-        fetch("/dados").then(r => r.json()),
-        fetch("/status").then(r => r.json()),
-        fetch("/comentarios").then(r => r.json())
-    ]).then(([dados,status,comentarios])=>{
-    dadosOriginais=dados;
-    statusSalvos=status;
-    comentariosSalvos=comentarios;
 
+        if (sku){
+            skuCounts[sku] = (skuCounts[sku] || 0) + 1;
+        }
+
+        if (titulo){
+            tituloCounts[titulo] = (tituloCounts[titulo] || 0) + 1;
+        }
+    }
+}
+
+function analisarSKU(item){
+    const sku = String(item["SKU"] || "").trim();
+    const titulo = String(item["Título"] || "").trim();
+
+    return {
+        qtdSKU: Math.max((skuCounts[sku] || 1) - 1, 0),
+        qtdTitulo: Math.max((tituloCounts[titulo] || 1) - 1, 0)
+    };
+}
+
+function tituloDuplicado(titulo){
+    const t = String(titulo || "").trim();
+    return (tituloCounts[t] || 0) > 1;
+}
+
+function obterDestino(item){
+    const codigo = item["Código do Anúncio"];
+    const status = statusSalvos[codigo];
+
+    if (status === "enviando") return "enviando";
+    if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
+    return "principal";
+}
+
+function atualizarContadores(){
+    const totalPrincipal = dadosFiltradosBase.filter(item => obterDestino(item) === "principal").length;
+    const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
+
+    contEnv.innerText = totalEnviando;
+    contNao.innerText = totalNao;
+
+    if (telaAtual === "principal"){
+        contadorPrincipal.innerText = `${totalPrincipal} MLBs`;
+    } else if (telaAtual === "enviando"){
+        contadorPrincipal.innerText = `${totalEnviando} MLBs`;
+    } else {
+        contadorPrincipal.innerText = `${totalNao} MLBs`;
+    }
+}
+
+function mostrarTela(tela){
+    telaAtual = tela;
+
+    principal.classList.add("hidden");
+    enviando.classList.add("hidden");
+    naoEnviar.classList.add("hidden");
+
+    document.getElementById(tela).classList.remove("hidden");
+
+    renderCards();
+    window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function setFiltro(tipo){
+    filtroEspecial = tipo;
+    renderCards();
+}
+
+function limparFiltros(){
+    document.querySelectorAll(".menu select,.menu input").forEach(e => e.value = "");
+    filtroEspecial = "";
+    filtroUrlMagic = "";
+    filtroUrlCobertura = "";
+    filtroUrlFull = "";
+    filtroUrlSaudeFull = "";
+    filtroUrlConta = "";
+    history.replaceState({}, "", "/");
+    renderCards();
+}
+
+function popularFiltros(){
+    function unique(col){
+        return [...new Set(dadosOriginais.map(d => d[col]).filter(v => v))];
+    }
+
+    filtroSelo.innerHTML = '<option value="">Todos os selos</option>';
+    filtroLogica.innerHTML = '<option value="">Toda lógica</option>';
+    filtroSaude.innerHTML = '<option value="">Toda saúde</option>';
+
+    unique("SELO").forEach(v => filtroSelo.innerHTML += `<option value="${v}">${v}</option>`);
+    unique("ANALISE").forEach(v => filtroLogica.innerHTML += `<option value="${v}">${v}</option>`);
+    unique("SAUDE DO ESTOQUE 4i").forEach(v => filtroSaude.innerHTML += `<option value="${v}">${v}</option>`);
+}
+
+function aplicarFiltrosBase(){
+    const conta = filtroConta.value;
+    const busca = filtroBusca.value.toLowerCase().trim();
+    const selo = filtroSelo.value;
+    const logica = filtroLogica.value;
+    const saude = filtroSaude.value;
+
+    return dadosOriginais.filter(item => {
+        if (conta && String(item["Nickname"] || "").toLowerCase() !== conta.toLowerCase()) return false;
+
+        if (
+    filtroUrlConta &&
+    String(item["Nickname"] || "").toUpperCase().trim() !== filtroUrlConta.toUpperCase().trim()
+) return false;
+
+        if (
+            busca &&
+            !String(item["SKU"] || "").toLowerCase().includes(busca) &&
+            !String(item["Código do Anúncio"] || "").toLowerCase().includes(busca)
+        ) return false;
+
+        if (selo && String(item["SELO"] || "").trim() !== String(selo).trim()) return false;
+        if (logica && String(item["ANALISE"] || "").trim() !== String(logica).trim()) return false;
+        if (saude && String(item["SAUDE DO ESTOQUE 4i"] || "").trim() !== String(saude).trim()) return false;
+
+        if (
+            filtroUrlMagic &&
+            String(item["MAGIC"] || "").toUpperCase().trim() !== filtroUrlMagic.toUpperCase().trim()
+        ) return false;
+
+        if (
+            filtroUrlFull &&
+            String(item["Full"] || "").toUpperCase().trim() !== filtroUrlFull.toUpperCase().trim()
+        ) return false;
+
+        if (
+            filtroUrlSaudeFull &&
+            String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() !== filtroUrlSaudeFull.toUpperCase().trim()
+        ) return false;
+
+        if (filtroUrlCobertura === "baixo30"){
+            const textoCobertura = String(item["Cobertura"] || "");
+            const matchDias = textoCobertura.match(/(\d+)\s*dias/i);
+            const dias = matchDias ? Number(matchDias[1]) : null;
+
+            if (dias === null || dias >= 30) return false;
+        }
+
+        let unidades = Number(item["30 DIAS"] || 0);
+        let valor = valorParaNumero(item["Total de Vendas 30 DIAS"]);
+
+        if (filtroEspecial === "valor500" && valor <= 500) return false;
+        if (filtroEspecial === "unidades10" && unidades <= 10) return false;
+        if (filtroEspecial === "critico" && !(unidades < 10 && valor > 500)) return false;
+
+        return true;
+    });
+}
+
+function montarHTMLCard(item){
+    const sugestoes = sugestaoIA(item);
+    const analise = analisarSKU(item);
+
+    return `
+    <div class="linha-topo">
+        <div class="mlb-area">
+            <div class="mlb">${item["Código do Anúncio"]}</div>
+            <div class="badges">
+                <span class="badge badge-green">${item["SELO"] || ""}</span>
+                <span class="badge badge-blue">${item["ANALISE"] || ""}</span>
+                <span class="badge badge-orange">${item["SAUDE DO ESTOQUE 4i"] || ""}</span>
+            </div>
+            <div class="ia-box">
+                IA → 7D:${sugestoes.s7} | 15D:${sugestoes.s15} | 30D:${sugestoes.s30} | 45D:${sugestoes.s45}
+            </div>
+
+            <div class="comentario-topo"
+                onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
+                💬
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+            <strong>Título:</strong>
+            <span>${item["Título"] || ""}</span>
+            ${tituloDuplicado(item["Título"])
+                ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>'
+                : ''}
+        </div>
+
+        <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
+        <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
+        <div><strong>Outros MLBs mesmo SKU:</strong> ${analise.qtdSKU}</div>
+        <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
+
+        <div class="envio-area">
+            <input type="number" id="qtd-${item["Código do Anúncio"]}">
+            <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
+            <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')"
+                    style="background:#6c757d; color:white;">
+                ↩ Voltar
+            </button>
+        </div>
+
+        <hr style="margin:15px 0">
+
+        <div class="linha-quatro">
+            <div class="duplo-bloco">
+                <div class="bloco">
+                    <h3>📈 MELI & PERFORMANCE</h3>
+                    <div class="metric">Info Meli: ${item["INFO MELI"] || ""}</div>
+                    <div class="metric">Sugestão Meli: ${item["SUGESTAO MELI"] || ""}</div>
+                    <div class="metric">Estoque Meli: ${item["ESTOQUE MELI"] || ""}</div>
+                    <div class="metric">ADS: ${item["ADS"] || ""}</div>
+                    <div class="metric">Curva 30d: ${item["Curva 30d"] || item["Curva 30D"] || ""}</div>
+                    <div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || item["Tendência 30"] || ""}</div>
+                    <div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
+                    <div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
+                </div>
+
+                <div class="bloco">
+                    <h3>📅 HISTÓRICO MENSAL</h3>
+
+                    <div class="metric">AGOSTO: ${item["AGOSTO"] || 0} | Seconds: ${item["AGOSTO SECONDS"] || 0} | Balcão/site: ${item["AGOSTO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0} | Seconds: ${item["SETEMBRO SECONDS"] || 0} | Balcão/site: ${item["SETEMBRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0} | Seconds: ${item["OUTUBRO SECONDS"] || 0} | Balcão/site: ${item["OUTUBRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0} | Seconds: ${item["NOVEMBRO SECONDS"] || 0} | Balcão/site: ${item["NOVEMBRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0} | Seconds: ${item["DEZEMBRO SECONDS"] || 0} | Balcão/site: ${item["DEZEMBRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">JANEIRO: ${item["JANEIRO"] || 0} | Seconds: ${item["JANEIRO SECONDS"] || 0} | Balcão/site: ${item["JANEIRO BALCAO/SITE"] || 0}</div>
+                </div>
+            </div>
+
+            <div class="duplo-bloco">
+                <div class="bloco">
+                    <h3>📊 VENDAS</h3>
+
+                    <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 07 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 7 DIAS"] || 0}</div>
+                    <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 15 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 15 DIAS"] || 0}</div>
+                    <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 30 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 30 DIAS"] || 0}</div>
+                    <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+                </div>
+
+                <div class="bloco">
+                    <h3>📦 ESTOQUE</h3>
+                    <div class="metric">Total Signus: ${item["ESTOQUE TOTAL SIGNUS"] || 0}</div>
+                    <div class="metric">A Caminho: ${item["A CAMINHO DO FULL"] || 0}</div>
+                    <div class="metric">Full: ${item["ESTOQUE FULL"] || 0}</div>
+                    <div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function renderProximoLote(){
+    if (renderizando) return;
+    if (indiceRender >= dadosTelaAtual.length) return;
+
+    renderizando = true;
+
+    const container = document.getElementById(telaAtual);
+    const fragment = document.createDocumentFragment();
+
+    const fim = Math.min(indiceRender + LOTE_RENDER, dadosTelaAtual.length);
+
+    for (let i = indiceRender; i < fim; i++){
+        const item = dadosTelaAtual[i];
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = montarHTMLCard(item);
+        fragment.appendChild(card);
+    }
+
+    container.appendChild(fragment);
+    indiceRender = fim;
+    renderizando = false;
+}
+
+function renderCards(){
+    dadosFiltradosBase = aplicarFiltrosBase();
+    dadosTelaAtual = dadosFiltradosBase.filter(item => obterDestino(item) === telaAtual);
+
+    principal.innerHTML = "";
+    enviando.innerHTML = "";
+    naoEnviar.innerHTML = "";
+
+    indiceRender = 0;
+    renderProximoLote();
+    atualizarContadores();
+}
+
+function moverCard(codigo){
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidade = Number(input ? input.value : 0);
+
+    let status = "nao_enviar";
+    if (quantidade > 0){
+        status = "enviando";
+    }
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({codigo: codigo, status: status})
+    }).then(() => {
+        statusSalvos[codigo] = status;
+        renderCards();
+    });
+}
+
+function voltarPrincipal(codigo){
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({codigo: codigo, status: "principal"})
+    }).then(() => {
+        statusSalvos[codigo] = "principal";
+        renderCards();
+    });
+}
+
+function toggleComentario(codigo, sku){
+    const box = document.getElementById("comentario-box-" + codigo);
+    box.style.display = box.style.display === "none" ? "block" : "none";
+
+    if(comentariosSalvos[sku]){
+        document.getElementById("comentario-" + codigo).value = comentariosSalvos[sku];
+    }
+}
+
+function salvarComentario(codigo, sku){
+    const texto = document.getElementById("comentario-" + codigo).value;
+
+    fetch("/salvar-comentario",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            sku: sku,
+            comentario: texto
+        })
+    }).then(()=>{
+        comentariosSalvos[sku] = texto;
+        alert("Comentário salvo!");
+    });
+}
+
+let skuAtualComentario = null;
+
+function abrirComentario(codigo, sku){
+    skuAtualComentario = sku;
+
+    document.getElementById("textoComentario").value =
+        localStorage.getItem("comentario_" + sku) || "";
+
+    document.getElementById("modalComentario").style.display = "flex";
+}
+
+function fecharComentario(){
+    document.getElementById("modalComentario").style.display = "none";
+}
+
+function salvarComentarioModal(){
+    const texto = document.getElementById("textoComentario").value;
+    localStorage.setItem("comentario_" + skuAtualComentario, texto);
+    fecharComentario();
+}
+
+function aplicarRenderComDebounce(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        renderCards();
+    }, 250);
+}
+
+filtroConta.addEventListener("change", renderCards);
+filtroSelo.addEventListener("change", renderCards);
+filtroLogica.addEventListener("change", renderCards);
+filtroSaude.addEventListener("change", renderCards);
+filtroBusca.addEventListener("input", aplicarRenderComDebounce);
+
+window.addEventListener("scroll", () => {
+    if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 500)){
+        renderProximoLote();
+    }
+});
+
+Promise.all([
+    fetch("/dados").then(r => r.json()),
+    fetch("/status").then(r => r.json()),
+    fetch("/comentarios").then(r => r.json())
+]).then(([dados,status,comentarios])=>{
+    dadosOriginais = dados;
+    statusSalvos = status;
+    comentariosSalvos = comentarios;
+
+    montarIndices();
     popularFiltros();
 
     if(urlParams.get("saude")){
@@ -756,7 +788,7 @@ renderCards();
 
     renderCards();
 });
-    </script>
+</script>
 
 <div id="modalComentario" class="modal-comentario">
     <div class="modal-conteudo">

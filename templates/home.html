@@ -3,117 +3,218 @@
 {% block content %}
 
 <style>
-h1{
-    margin-bottom: 20px;
-}
-
-.dashboard-grid{
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap:20px;
-    margin-bottom:25px;
-}
-
-.kpi-card{
-    background:white;
-    border-radius:16px;
-    padding:22px;
-    box-shadow:0 4px 14px rgba(0,0,0,0.08);
-    cursor:pointer;
-    transition:0.2s ease;
-    border-left:6px solid #1c5ed6;
-}
-
-.kpi-card:hover{
-    transform:translateY(-3px);
-}
-
-.kpi-title{
-    font-size:14px;
-    color:#6b7280;
-    margin-bottom:8px;
-    text-transform:uppercase;
-    font-weight:bold;
-}
-
-.kpi-value{
-    font-size:36px;
-    font-weight:bold;
-    color:#111827;
-}
-
-.charts-grid{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:20px;
-}
-
-.chart-card{
-    background:white;
-    border-radius:16px;
-    padding:20px;
-    box-shadow:0 4px 14px rgba(0,0,0,0.08);
-}
-
-.chart-card h3{
-    margin-top:0;
-    margin-bottom:15px;
-}
-
-.chart-wrap{
-    position:relative;
-    height:360px;
-}
-
-@media (max-width: 1100px){
-    .dashboard-grid{
-        grid-template-columns:1fr 1fr;
+    h1{
+        margin-bottom: 20px;
     }
-
+    
+    .dashboard-grid{
+        display:grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap:20px;
+        margin-bottom:25px;
+    }
+    
+    .kpi-card{
+        background:white;
+        border-radius:16px;
+        padding:22px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.08);
+        transition:0.2s ease;
+        border-left:6px solid #e5e7eb;
+    }
+    
+    .kpi-card:hover{
+        transform:translateY(-3px);
+    }
+    
+    .kpi-title{
+        font-size:14px;
+        color:#6b7280;
+        margin-bottom:12px;
+        text-transform:uppercase;
+        font-weight:bold;
+    }
+    
+    .kpi-split{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:12px;
+    }
+    
+    .kpi-side{
+        border-radius:12px;
+        padding:14px;
+        cursor:pointer;
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        transition:0.2s ease;
+    }
+    
+    .kpi-side:hover{
+        transform:translateY(-2px);
+    }
+    
+    .kpi-side-blue{
+        border-left:6px solid #1c5ed6;
+    }
+    
+    .kpi-side-orange{
+        border-left:6px solid #f28c28;
+    }
+    
+    .kpi-side-label{
+        font-size:12px;
+        font-weight:bold;
+        margin-bottom:8px;
+        text-transform:uppercase;
+    }
+    
+    .kpi-side-blue .kpi-side-label{
+        color:#1c5ed6;
+    }
+    
+    .kpi-side-orange .kpi-side-label{
+        color:#f28c28;
+    }
+    
+    .kpi-side-value{
+        font-size:30px;
+        font-weight:bold;
+        color:#111827;
+    }
+    
     .charts-grid{
-        grid-template-columns:1fr;
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:20px;
     }
-}
-
-@media (max-width: 700px){
-    .dashboard-grid{
-        grid-template-columns:1fr;
+    
+    .chart-card{
+        background:white;
+        border-radius:16px;
+        padding:20px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.08);
     }
-}
-</style>
+    
+    .chart-card h3{
+        margin-top:0;
+        margin-bottom:15px;
+    }
+    
+    .chart-wrap{
+        position:relative;
+        height:360px;
+    }
+    
+    @media (max-width: 1100px){
+        .dashboard-grid{
+            grid-template-columns:1fr 1fr;
+        }
+    
+        .charts-grid{
+            grid-template-columns:1fr;
+        }
+    }
+    
+    @media (max-width: 700px){
+        .dashboard-grid{
+            grid-template-columns:1fr;
+        }
+    
+        .kpi-split{
+            grid-template-columns:1fr;
+        }
+    }
+    </style>
 
 <h1>🏠 Dashboard Geral</h1>
 
 <div class="dashboard-grid">
-    <div class="kpi-card" onclick="irParaPainel({saude: 'RUPTURA'})">
+
+    <div class="kpi-card">
         <div class="kpi-title">Ruptura</div>
-        <div class="kpi-value" id="kpiRuptura">0</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({saudeFull: 'RUPTURA', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiRupturaRenaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({saudeFull: 'RUPTURA', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiRuptura4i">0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="kpi-card" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC'})">
+    <div class="kpi-card">
         <div class="kpi-title">Sugestão Envio Magic</div>
-        <div class="kpi-value" id="kpiMagic">0</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiMagicRenaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiMagic4i">0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="kpi-card" onclick="irParaPainel({cobertura: 'baixo30'})">
+    <div class="kpi-card">
         <div class="kpi-title">MLBs com estoque abaixo 30 dias</div>
-        <div class="kpi-value" id="kpiBaixo30">0</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({analise: 'ANALISE DE ENVIO', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiBaixo30Renaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({analise: 'ANALISE DE ENVIO', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiBaixo304i">0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="kpi-card" onclick="irParaPainel({analise: 'ACOMPANHAR'})">
-        <div class="kpi-title">Análise = Acompanhar</div>
-        <div class="kpi-value" id="kpiAcompanhar">0</div>
+    <div class="kpi-card">
+        <div class="kpi-title">Acompanhar</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({analise: 'ACOMPANHAR', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiAcompanharRenaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({analise: 'ACOMPANHAR', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiAcompanhar4i">0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="kpi-card" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL'})">
+    <div class="kpi-card">
         <div class="kpi-title">Estoque Saudável</div>
-        <div class="kpi-value" id="kpiSaudavel">0</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiSaudavelRenaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiSaudavel4i">0</div>
+            </div>
+        </div>
     </div>
 
-    <div class="kpi-card" onclick="irParaPainel({full: 'Sim'})">
+    <div class="kpi-card">
         <div class="kpi-title">Itens Full = Sim</div>
-        <div class="kpi-value" id="kpiFull">0</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({full: 'Sim', conta: 'RENAFCAR'})">
+                <div class="kpi-side-label">RENAFCAR</div>
+                <div class="kpi-side-value" id="kpiFullRenaf">0</div>
+            </div>
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({full: 'Sim', conta: '4IDISTRIBUIDORA'})">
+                <div class="kpi-side-label">4I</div>
+                <div class="kpi-side-value" id="kpiFull4i">0</div>
+            </div>
+        </div>
     </div>
+
 </div>
 
 <div class="charts-grid">
@@ -162,49 +263,89 @@ function irParaPainel(filtros){
     const params = new URLSearchParams();
 
     if (filtros.saude) params.set("saude", filtros.saude);
+    if (filtros.saudeFull) params.set("saudeFull", filtros.saudeFull);
     if (filtros.analise) params.set("analise", filtros.analise);
     if (filtros.magic) params.set("magic", filtros.magic);
     if (filtros.cobertura) params.set("cobertura", filtros.cobertura);
     if (filtros.full) params.set("full", filtros.full);
+    if (filtros.conta) params.set("conta", filtros.conta);
 
     window.location.href = "/?" + params.toString();
+}
+
+function porConta(dados, nickname){
+    return dados.filter(item =>
+        String(item["Nickname"] || "").toUpperCase().trim() === nickname.toUpperCase().trim()
+    );
 }
 
 fetch("/dados-dashboard")
 .then(r => r.json())
 .then(dados => {
 
-    const ruptura = dados.filter(item =>
-        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase() === "RUPTURA"
+    const renaf = porConta(dados, "RENAFCAR");
+    const conta4i = porConta(dados, "4IDISTRIBUIDORA");
+
+    const rupturaRenaf = renaf.filter(item =>
+        String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() === "RUPTURA"
     ).length;
 
-    const magic = dados.filter(item =>
-        String(item["MAGIC"] || "").toUpperCase() === "SUG DE ENVIO MAGIC"
+    const ruptura4i = conta4i.filter(item =>
+        String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() === "RUPTURA"
     ).length;
 
-    const abaixo30 = dados.filter(item => {
-        const dias = extrairDiasCobertura(item["Cobertura"]);
-        return dias !== null && dias < 30;
-    }).length;
-
-    const acompanhar = dados.filter(item =>
-        String(item["ANALISE"] || "").toUpperCase() === "ACOMPANHAR"
+    const magicRenaf = renaf.filter(item =>
+        String(item["MAGIC"] || "").toUpperCase().trim() === "SUG DE ENVIO MAGIC"
     ).length;
 
-    const saudavel = dados.filter(item =>
-        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase() === "ESTOQUE SAUDÁVEL"
+    const magic4i = conta4i.filter(item =>
+        String(item["MAGIC"] || "").toUpperCase().trim() === "SUG DE ENVIO MAGIC"
     ).length;
 
-    const fullSim = dados.filter(item =>
-        String(item["Full"] || "").toUpperCase() === "SIM"
+    const baixo30Renaf = renaf.filter(item =>
+    String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
+).length;
+
+const baixo304i = conta4i.filter(item =>
+    String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
+).length;
+
+const acompanharRenaf = renaf.filter(item =>
+    String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
+).length;
+
+const acompanhar4i = conta4i.filter(item =>
+    String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
+).length;
+
+    const saudavelRenaf = renaf.filter(item =>
+        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase().trim() === "ESTOQUE SAUDÁVEL"
     ).length;
 
-    document.getElementById("kpiRuptura").innerText = ruptura;
-    document.getElementById("kpiMagic").innerText = magic;
-    document.getElementById("kpiBaixo30").innerText = abaixo30;
-    document.getElementById("kpiAcompanhar").innerText = acompanhar;
-    document.getElementById("kpiSaudavel").innerText = saudavel;
-    document.getElementById("kpiFull").innerText = fullSim;
+    const saudavel4i = conta4i.filter(item =>
+        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase().trim() === "ESTOQUE SAUDÁVEL"
+    ).length;
+
+    const fullRenaf = renaf.filter(item =>
+        String(item["Full"] || "").toUpperCase().trim() === "SIM"
+    ).length;
+
+    const full4i = conta4i.filter(item =>
+        String(item["Full"] || "").toUpperCase().trim() === "SIM"
+    ).length;
+
+    document.getElementById("kpiRupturaRenaf").innerText = rupturaRenaf;
+    document.getElementById("kpiRuptura4i").innerText = ruptura4i;
+    document.getElementById("kpiMagicRenaf").innerText = magicRenaf;
+    document.getElementById("kpiMagic4i").innerText = magic4i;
+    document.getElementById("kpiBaixo30Renaf").innerText = baixo30Renaf;
+    document.getElementById("kpiBaixo304i").innerText = baixo304i;
+    document.getElementById("kpiAcompanharRenaf").innerText = acompanharRenaf;
+    document.getElementById("kpiAcompanhar4i").innerText = acompanhar4i;
+    document.getElementById("kpiSaudavelRenaf").innerText = saudavelRenaf;
+    document.getElementById("kpiSaudavel4i").innerText = saudavel4i;
+    document.getElementById("kpiFullRenaf").innerText = fullRenaf;
+    document.getElementById("kpiFull4i").innerText = full4i;
 
     const topQtd = [...dados]
         .sort((a,b) => numero(b["30 DIAS"]) - numero(a["30 DIAS"]))
@@ -216,13 +357,13 @@ fetch("/dados-dashboard")
 
     const saudeMap = {};
     dados.forEach(item => {
-        const chave = String(item["SAUDE DO ESTOQUE 4i"] || "SEM DADO");
+        const chave = String(item["SAUDE DO ESTOQUE 4i"] || "SEM DADO").trim();
         saudeMap[chave] = (saudeMap[chave] || 0) + 1;
     });
 
     const analiseMap = {};
     dados.forEach(item => {
-        const chave = String(item["ANALISE"] || "SEM DADO");
+        const chave = String(item["ANALISE"] || "SEM DADO").trim();
         analiseMap[chave] = (analiseMap[chave] || 0) + 1;
     });
 
