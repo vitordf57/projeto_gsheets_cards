@@ -82,6 +82,44 @@
         font-weight:bold;
         color:#111827;
     }
+
+    .kpi-card-wide{
+        grid-column: span 2;
+    }
+
+    .kpi-lista{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap:12px;
+    }
+
+    .kpi-item{
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        border-left:6px solid #1c5ed6;
+        border-radius:12px;
+        padding:14px;
+        cursor:pointer;
+        transition:0.2s ease;
+    }
+
+    .kpi-item:hover{
+        transform:translateY(-2px);
+    }
+
+    .kpi-item-label{
+        font-size:12px;
+        font-weight:bold;
+        color:#1c5ed6;
+        margin-bottom:8px;
+        text-transform:uppercase;
+    }
+
+    .kpi-item-value{
+        font-size:30px;
+        font-weight:bold;
+        color:#111827;
+    }
     
     .charts-grid{
         display:grid;
@@ -114,6 +152,10 @@
         .charts-grid{
             grid-template-columns:1fr;
         }
+
+        .kpi-card-wide{
+            grid-column: span 2;
+        }
     }
     
     @media (max-width: 700px){
@@ -124,8 +166,16 @@
         .kpi-split{
             grid-template-columns:1fr;
         }
+
+        .kpi-card-wide{
+            grid-column: span 1;
+        }
+
+        .kpi-lista{
+            grid-template-columns:1fr;
+        }
     }
-    </style>
+</style>
 
 <h1>🏠 Dashboard Geral</h1>
 
@@ -187,32 +237,9 @@
         </div>
     </div>
 
-    <div class="kpi-card">
-        <div class="kpi-title">Estoque Saudável</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiSaudavelRenaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({saude: 'ESTOQUE SAUDÁVEL', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiSaudavel4i">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-title">Itens Full = Sim</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({full: 'Sim', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiFullRenaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({full: 'Sim', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiFull4i">0</div>
-            </div>
-        </div>
+    <div class="kpi-card kpi-card-wide">
+        <div class="kpi-title">Informação do Estoque</div>
+        <div class="kpi-lista" id="kpiInfoEstoque"></div>
     </div>
 
 </div>
@@ -303,35 +330,19 @@ fetch("/dados-dashboard")
     ).length;
 
     const baixo30Renaf = renaf.filter(item =>
-    String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
-).length;
-
-const baixo304i = conta4i.filter(item =>
-    String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
-).length;
-
-const acompanharRenaf = renaf.filter(item =>
-    String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
-).length;
-
-const acompanhar4i = conta4i.filter(item =>
-    String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
-).length;
-
-    const saudavelRenaf = renaf.filter(item =>
-        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase().trim() === "ESTOQUE SAUDÁVEL"
+        String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
     ).length;
 
-    const saudavel4i = conta4i.filter(item =>
-        String(item["SAUDE DO ESTOQUE 4i"] || "").toUpperCase().trim() === "ESTOQUE SAUDÁVEL"
+    const baixo304i = conta4i.filter(item =>
+        String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
     ).length;
 
-    const fullRenaf = renaf.filter(item =>
-        String(item["Full"] || "").toUpperCase().trim() === "SIM"
+    const acompanharRenaf = renaf.filter(item =>
+        String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
     ).length;
 
-    const full4i = conta4i.filter(item =>
-        String(item["Full"] || "").toUpperCase().trim() === "SIM"
+    const acompanhar4i = conta4i.filter(item =>
+        String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
     ).length;
 
     document.getElementById("kpiRupturaRenaf").innerText = rupturaRenaf;
@@ -342,10 +353,34 @@ const acompanhar4i = conta4i.filter(item =>
     document.getElementById("kpiBaixo304i").innerText = baixo304i;
     document.getElementById("kpiAcompanharRenaf").innerText = acompanharRenaf;
     document.getElementById("kpiAcompanhar4i").innerText = acompanhar4i;
-    document.getElementById("kpiSaudavelRenaf").innerText = saudavelRenaf;
-    document.getElementById("kpiSaudavel4i").innerText = saudavel4i;
-    document.getElementById("kpiFullRenaf").innerText = fullRenaf;
-    document.getElementById("kpiFull4i").innerText = full4i;
+
+    // CARD DINÂMICO DE INFORMAÇÃO DE ESTOQUE
+    const infoEstoqueMap = {};
+
+    dados.forEach(item => {
+        const valorOriginal = String(item["SAUDE DO ESTOQUE 4i"] || "").trim();
+        const chave = valorOriginal !== "" ? valorOriginal : "SEM DADO";
+        infoEstoqueMap[chave] = (infoEstoqueMap[chave] || 0) + 1;
+    });
+
+    const infoOrdenada = Object.entries(infoEstoqueMap)
+        .sort((a, b) => b[1] - a[1]);
+
+    const containerInfoEstoque = document.getElementById("kpiInfoEstoque");
+    containerInfoEstoque.innerHTML = "";
+
+    infoOrdenada.forEach(([status, quantidade]) => {
+        const item = document.createElement("div");
+        item.className = "kpi-item";
+        item.onclick = () => irParaPainel({ saude: status });
+
+        item.innerHTML = `
+            <div class="kpi-item-label">${status}</div>
+            <div class="kpi-item-value">${quantidade}</div>
+        `;
+
+        containerInfoEstoque.appendChild(item);
+    });
 
     const topQtd = [...dados]
         .sort((a,b) => numero(b["30 DIAS"]) - numero(a["30 DIAS"]))

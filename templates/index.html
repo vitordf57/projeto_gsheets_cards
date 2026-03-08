@@ -105,8 +105,65 @@ h1{ margin-bottom:15px; }
     margin-left:40px;
     font-size:12px;
     background:#eef2ff;
-    padding:6px 10px;
+    padding:8px 12px;
     border-radius:10px;
+    position:relative;
+    cursor:help;
+    min-width:190px;
+    border:1px solid #dbe4ff;
+}
+
+.ia-box.ia-enviar{
+    background:#e8f7ee;
+    border:1px solid #b7e4c7;
+    color:#146c43;
+}
+
+.ia-box.ia-repor{
+    background:#fff4db;
+    border:1px solid #f7d58b;
+    color:#8a5a00;
+}
+
+.ia-box.ia-nao-enviar{
+    background:#fdeaea;
+    border:1px solid #f2b8b5;
+    color:#a61b1b;
+}
+
+.ia-titulo{
+    font-weight:bold;
+}
+
+.ia-tooltip{
+    display:none;
+    position:absolute;
+    top:110%;
+    left:0;
+    width:320px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.ia-box:hover .ia-tooltip{
+    display:block;
+}
+
+.ia-tooltip strong{
+    color:#93c5fd;
+}
+
+.ia-score{
+    margin-top:6px;
+    font-weight:bold;
 }
 
 .envio-area{
@@ -364,13 +421,193 @@ function valorParaNumero(v){
     return Number(String(v).replaceAll(".","").replace(",","."));
 }
 
+function textoNormalizado(v){
+    return String(v || "").toUpperCase().trim();
+}
+
+function numeroInteiro(v){
+    if (v === null || v === undefined || v === "") return 0;
+    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+}
+
+function textoNormalizado(v){
+    return String(v || "").toUpperCase().trim();
+}
+
+function numeroInteiro(v){
+    if (v === null || v === undefined || v === "") return 0;
+    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+}
+
+function textoNormalizado(v){
+    return String(v || "").toUpperCase().trim();
+}
+
+function numeroInteiro(v){
+    if (v === null || v === undefined || v === "") return 0;
+    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+}
+
+function textoNormalizado(v){
+    return String(v || "").toUpperCase().trim();
+}
+
+function numeroInteiro(v){
+    if (v === null || v === undefined || v === "") return 0;
+    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+}
+
+function textoNormalizado(v){
+    return String(v || "").toUpperCase().trim();
+}
+
+function numeroInteiro(v){
+    if (v === null || v === undefined || v === "") return 0;
+    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+}
+
 function sugestaoIA(item){
-    let estoque = Number(item["ESTOQUE TOTAL SIGNUS"] || 0);
+    const estoqueEmpresa = numeroInteiro(item["ESTOQUE TOTAL SIGNUS"]);
+    const estoqueFull = numeroInteiro(item["ESTOQUE FULL"]);
+    const vendas30 = numeroInteiro(item["30 DIAS"]);
+    const valor30 = valorParaNumero(item["Total de Vendas 30 DIAS"]);
+    const metrica30 = numeroInteiro(item["METRICAS 30 DIAS DO MELI"]);
+    const visitas30 = numeroInteiro(item["VISITAS 30 DIAS"]);
+
+    const saude = textoNormalizado(item["SAUDE DO ESTOQUE 4i"]);
+    const analise = textoNormalizado(item["ANALISE"]);
+    const selo = textoNormalizado(item["SELO"]);
+    const tendencia = textoNormalizado(item["Tendência 30-0"] || item["Tendência 30"]);
+    const acao = textoNormalizado(item["Ação Recomendada"]);
+    const sugestaoMeli = textoNormalizado(item["SUGESTAO MELI"]);
+
+    let score = 0;
+    const motivosPositivos = [];
+    const motivosNegativos = [];
+
+    if (vendas30 >= 4){
+        score += 1;
+        motivosPositivos.push("Venda de 30 dias é relevante");
+    } else {
+        motivosNegativos.push("Venda de 30 dias está baixa");
+    }
+
+    if (valor30 >= 500){
+        score += 1;
+        motivosPositivos.push("Faturamento dos últimos 30 dias é bom");
+    } else {
+        motivosNegativos.push("Faturamento dos últimos 30 dias está fraco");
+    }
+
+    if (metrica30 >= 60){
+        score += 1;
+        motivosPositivos.push("Métrica MELI está boa");
+    } else {
+        motivosNegativos.push("Métrica MELI está abaixo do ideal");
+    }
+
+    if (visitas30 >= 80){
+        score += 1;
+        motivosPositivos.push("Volume de visitas está bom");
+    } else {
+        motivosNegativos.push("Volume de visitas está baixo");
+    }
+
+    if (
+        tendencia.includes("ALTA") ||
+        tendencia.includes("SUBINDO") ||
+        tendencia.includes("CRESCIMENTO") ||
+        tendencia.includes("POSITIVA")
+    ){
+        score += 1;
+        motivosPositivos.push("Tendência está positiva");
+    }
+
+    if (
+        saude.includes("REPOSIÇÃO URGENTE") ||
+        saude.includes("RUPTURA") ||
+        saude.includes("ESTOQUE BAIXO")
+    ){
+        score += 1;
+        motivosPositivos.push("Saúde do estoque pede reposição");
+    }
+
+    if (
+        analise.includes("ANALISE DE ENVIO") ||
+        sugestaoMeli.includes("ENVIAR") ||
+        acao.includes("ENVIAR") ||
+        acao.includes("REPOR")
+    ){
+        score += 1;
+        motivosPositivos.push("Lógica operacional indica envio");
+    }
+
+    if (
+        selo.includes("FULL") ||
+        selo.includes("PREMIUM")
+    ){
+        score += 1;
+        motivosPositivos.push("Anúncio tem selo relevante");
+    }
+
+    const metricasBoas = score >= 4 && vendas30 > 0;
+    const necessidade30Dias = Math.max(vendas30 - estoqueFull, 0);
+
+    let sugestao = 0;
+    let statusIA = "NÃO ENVIAR";
+    let detalhe = "";
+    let classe = "ia-nao-enviar";
+    let explicacao = "";
+
+    if (!metricasBoas){
+        sugestao = 0;
+        statusIA = "NÃO ENVIAR";
+        detalhe = "Métricas insuficientes";
+        classe = "ia-nao-enviar";
+        explicacao = "O MLB não está performando bem o suficiente para justificar reposição agora.";
+    }
+    else if (necessidade30Dias <= 0){
+        sugestao = 0;
+        statusIA = "NÃO ENVIAR";
+        detalhe = "Full já cobre 30 dias";
+        classe = "ia-nao-enviar";
+        explicacao = "O estoque que já está no Full é suficiente para cobrir pelo menos 30 dias de venda.";
+    }
+    else if (estoqueEmpresa < necessidade30Dias){
+        sugestao = 0;
+        statusIA = "REPOR ESTOQUE EMPRESA";
+        detalhe = `Precisa ${necessidade30Dias} e empresa tem ${estoqueEmpresa}`;
+        classe = "ia-repor";
+        explicacao = "Mesmo com bom potencial de venda, a empresa não tem estoque suficiente para repor 30 dias completos. O ideal é repor o estoque interno antes de enviar.";
+    }
+    else{
+        sugestao = necessidade30Dias;
+        statusIA = `ENVIAR ${sugestao} UN.`;
+        detalhe = "Reposição completa de 30 dias";
+        classe = "ia-enviar";
+        explicacao = "O MLB tem bom potencial, o Full não cobre 30 dias e a empresa tem estoque suficiente para fazer a reposição completa.";
+    }
+
+    const motivosHtml = `
+        <div><strong>Motivo principal:</strong> ${explicacao}</div>
+        <div class="ia-score"><strong>Score:</strong> ${score}</div>
+        <div><strong>Venda 30 dias:</strong> ${vendas30}</div>
+        <div><strong>Estoque Full:</strong> ${estoqueFull}</div>
+        <div><strong>Estoque empresa:</strong> ${estoqueEmpresa}</div>
+        <div><strong>Necessidade p/ 30 dias:</strong> ${necessidade30Dias}</div>
+        <div><strong>Saúde:</strong> ${saude || "SEM DADO"}</div>
+        <div><strong>Análise:</strong> ${analise || "SEM DADO"}</div>
+        <div style="margin-top:8px;"><strong>Pontos positivos:</strong> ${motivosPositivos.length ? motivosPositivos.join(" | ") : "Nenhum"}</div>
+        <div style="margin-top:6px;"><strong>Pontos de atenção:</strong> ${motivosNegativos.length ? motivosNegativos.join(" | ") : "Nenhum"}</div>
+    `;
+
     return {
-        s7: Math.min(Number(item["7 DIAS"] || 0), estoque),
-        s15: Math.min(Number(item["15 DIAS"] || 0), estoque),
-        s30: Math.min(Number(item["30 DIAS"] || 0), estoque),
-        s45: Math.min(Number(item["45 DIAS"] || 0), estoque)
+        sugestao,
+        statusIA,
+        detalhe,
+        score,
+        classe,
+        tooltip: motivosHtml
     };
 }
 
@@ -549,9 +786,14 @@ function montarHTMLCard(item){
                 <span class="badge badge-blue">${item["ANALISE"] || ""}</span>
                 <span class="badge badge-orange">${item["SAUDE DO ESTOQUE 4i"] || ""}</span>
             </div>
-            <div class="ia-box">
-                IA → 7D:${sugestoes.s7} | 15D:${sugestoes.s15} | 30D:${sugestoes.s30} | 45D:${sugestoes.s45}
-            </div>
+
+            <div class="ia-box ${sugestoes.classe}">
+    <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
+    <div>${sugestoes.detalhe}</div>
+    <div class="ia-tooltip">
+        ${sugestoes.tooltip}
+    </div>
+</div>
 
             <div class="comentario-topo"
                 onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
