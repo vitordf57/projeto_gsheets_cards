@@ -3,12 +3,21 @@ import pandas as pd
 import sqlite3
 import time
 from io import BytesIO
-from collections import Counter 
+from collections import Counter
 
 app = Flask(__name__)
 
 CSV_URL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=0"
 CSV_URL_FULL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=184771586"
+
+CACHE_TTL = 300  # 5 minutos
+
+cache_dados = None
+cache_dados_ts = 0
+
+cache_full = None
+cache_full_ts = 0
+
 
 def carregar_dados_base():
     global cache_dados, cache_dados_ts
@@ -22,17 +31,6 @@ def carregar_dados_base():
         cache_dados_ts = agora
 
     return cache_dados
-
-CACHE_TTL = 300  # 5 minutos
-
-cache_dados = None
-cache_dados_ts = 0
-
-cache_full = None
-cache_full_ts = 0
-
-cache_dados_ts = 0
-CACHE_TTL = 300
 
 
 def carregar_csv_com_cache(url, tipo="dados"):
@@ -58,8 +56,10 @@ def carregar_csv_com_cache(url, tipo="dados"):
 
     return []
 
+
 def normalizar_texto(valor):
     return str(valor or "").strip().upper()
+
 
 def numero_float(valor):
     if valor is None or valor == "":
@@ -69,17 +69,25 @@ def numero_float(valor):
     except:
         return 0
 
+
 def init_db():
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS status_cards (
-        codigo TEXT PRIMARY KEY,
-        status TEXT,
-        quantidade INTEGER DEFAULT 0
-    )
-""")
+        CREATE TABLE IF NOT EXISTS status_cards (
+            codigo TEXT PRIMARY KEY,
+            status TEXT,
+            quantidade INTEGER DEFAULT 0
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comentarios (
+            sku TEXT PRIMARY KEY,
+            comentario TEXT
+        )
+    """)
 
     cursor.execute("PRAGMA table_info(status_cards)")
     colunas_status = [col[1] for col in cursor.fetchall()]
@@ -89,9 +97,6 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-
-init_db()
 
 
 @app.route("/")
@@ -125,18 +130,20 @@ def dados():
 
     for row in base:
         codigo = str(row.get("Código do Anúncio", "")).strip()
-        status = status_dict.get(codigo)
+        status = status_dict.get(codigo, "")
 
-        if status == "enviando" or status == "nao_enviar":
+        if status in ["enviando", "nao_enviar", "naoEnviar"]:
             continue
 
         dados_filtrados.append(row)
 
     return jsonify(dados_filtrados)
 
+
 @app.route("/dados-dashboard")
 def dados_dashboard():
     return jsonify(carregar_dados_base())
+
 
 @app.route("/exportar-excel")
 def exportar_excel():
@@ -207,6 +214,7 @@ def exportar_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
 @app.route("/dados-full")
 def dados_full():
     return jsonify(carregar_csv_com_cache(CSV_URL_FULL, "full"))
@@ -240,6 +248,7 @@ def salvar_status():
 
     return jsonify({"success": True})
 
+
 @app.route("/status")
 def get_status():
     conn = sqlite3.connect("status.db")
@@ -260,11 +269,25 @@ def get_status():
     return jsonify(status_dict)
 
 
+@app.route("/comentarios")
+def get_comentarios():
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT sku, comentario FROM comentarios")
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    comentarios_dict = {str(sku): comentario for sku, comentario in rows}
+    return jsonify(comentarios_dict)
+
+
 @app.route("/salvar-comentario", methods=["POST"])
 def salvar_comentario():
     data = request.json
     sku = data.get("sku")
-    comentario = data.get("comentario")
+    comentario = data.get("comentario", "")
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
@@ -272,29 +295,13 @@ def salvar_comentario():
     cursor.execute("""
         INSERT INTO comentarios (sku, comentario)
         VALUES (?, ?)
-        ON CONFLICT(sku)
-        DO UPDATE SET comentario=excluded.comentario
+        ON CONFLICT(sku) DO UPDATE SET comentario=excluded.comentario
     """, (sku, comentario))
 
     conn.commit()
     conn.close()
 
     return jsonify({"success": True})
-
-
-@app.route("/comentarios")
-def listar_comentarios():
-    conn = sqlite3.connect("status.db")
-    c = conn.cursor()
-    c.execute("SELECT sku, comentario FROM comentarios")
-    rows = c.fetchall()
-    conn.close()
-
-    comentarios = {}
-    for sku, comentario in rows:
-        comentarios[sku] = comentario
-
-    return jsonify(comentarios)
 
 
 @app.route("/debug-comentarios")
@@ -330,6 +337,9 @@ def dashboard():
         "metricas_full.html",
         mais_vendidos=mais_vendidos
     )
+
+
+init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

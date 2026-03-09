@@ -663,8 +663,9 @@ function tituloDuplicado(titulo){
 }
 
 function obterDestino(item){
-    const codigo = item["Código do Anúncio"];
-    const status = statusSalvos[codigo];
+    const codigo = String(item["Código do Anúncio"]);
+    const registro = statusSalvos[codigo] || {};
+    const status = registro.status || "principal";
 
     if (status === "enviando") return "enviando";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
@@ -791,6 +792,16 @@ function aplicarFiltrosBase(){
     });
 }
 
+function obterDestino(item){
+    const codigo = String(item["Código do Anúncio"]);
+    const registro = statusSalvos[codigo] || {};
+    const status = registro.status || "principal";
+
+    if (status === "enviando") return "enviando";
+    if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
+    return "principal";
+}
+
 function montarHTMLCard(item){
     const sugestoes = sugestaoIA(item);
     const analise = analisarSKU(item);
@@ -835,7 +846,7 @@ function montarHTMLCard(item){
         <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
 
         <div class="envio-area">
-            <input type="number" id="qtd-${item["Código do Anúncio"]}">
+            <input type="number" id="qtd-${item["Código do Anúncio"]}" value="${obterQuantidadeSalva(item["Código do Anúncio"])}">
             <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
             <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')"
                     style="background:#6c757d; color:white;">
@@ -965,20 +976,36 @@ function moverCard(codigo){
     fetch("/salvar-status", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({codigo: codigo, status: status})
+        body: JSON.stringify({
+            codigo: codigo,
+            status: status,
+            quantidade: quantidade
+        })
     }).then(() => {
-        statusSalvos[codigo] = status;
+        statusSalvos[String(codigo)] = {
+            status: status,
+            quantidade: quantidade
+        };
         renderCards();
     });
 }
 
 function voltarPrincipal(codigo){
+    const quantidadeAtual = obterQuantidadeSalva(codigo);
+
     fetch("/salvar-status", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({codigo: codigo, status: "principal"})
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "principal",
+            quantidade: quantidadeAtual
+        })
     }).then(() => {
-        statusSalvos[codigo] = "principal";
+        statusSalvos[String(codigo)] = {
+            status: "principal",
+            quantidade: quantidadeAtual
+        };
         renderCards();
     });
 }
