@@ -4,8 +4,18 @@ import sqlite3
 import time
 from io import BytesIO
 from collections import Counter
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+UPLOAD_FOLDER_CONFERENCIA = os.path.join("static", "uploads", "conferencia")
+os.makedirs(UPLOAD_FOLDER_CONFERENCIA, exist_ok=True)
+
+app.config["UPLOAD_FOLDER_CONFERENCIA"] = UPLOAD_FOLDER_CONFERENCIA
 
 CSV_URL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=0"
 CSV_URL_FULL = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=184771586"
@@ -69,6 +79,172 @@ def numero_float(valor):
     except:
         return 0
 
+@app.route("/conferencia")
+def conferencia():
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            lc.numero_lote,
+            lc.tipo_lote,
+            lc.status,
+            lc.data_criacao,
+            COUNT(li.id) AS total_itens,
+            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
+            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
+            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
+        FROM lotes_conferencia lc
+        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
+        LEFT JOIN conferencia_itens ci
+            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
+        ORDER BY lc.data_criacao DESC
+    """)
+
+    lotes = cursor.fetchall()
+    conn.close()
+
+    return render_template("conferencia.html", lotes=lotes, lote=None, itens=[])
+
+@app.route("/conferencia/<numero_lote>")
+def conferencia_lote(numero_lote):
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            lc.numero_lote,
+            lc.tipo_lote,
+            lc.status,
+            lc.data_criacao,
+            COUNT(li.id) AS total_itens,
+            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
+            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
+            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
+        FROM lotes_conferencia lc
+        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
+        LEFT JOIN conferencia_itens ci
+            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE lc.numero_lote = ?
+        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
+    """, (numero_lote,))
+    lote = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT
+            li.numero_lote,
+            li.codigo,
+            li.sku,
+            li.titulo,
+            li.quantidade_esperada,
+            li.endereco,
+            li.lote_filete,
+            ci.quantidade_conferida,
+            ci.foto_path,
+            ci.status_item,
+            ci.observacao,
+            ci.conferido_em
+        FROM lotes_itens li
+        LEFT JOIN conferencia_itens ci
+            ON li.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE li.numero_lote = ?
+        ORDER BY li.endereco, li.sku
+    """, (numero_lote,))
+    itens = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT
+            lc.numero_lote,
+            lc.tipo_lote,
+            lc.status,
+            lc.data_criacao,
+            COUNT(li.id) AS total_itens,
+            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
+            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
+            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
+        FROM lotes_conferencia lc
+        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
+        LEFT JOIN conferencia_itens ci
+            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
+        ORDER BY lc.data_criacao DESC
+    """)
+    lotes = cursor.fetchall()
+
+    conn.close()
+
+    return render_template("conferencia.html", lotes=lotes, lote=lote, itens=itens)@app.route("/conferencia/<numero_lote>")
+def conferencia_lote(numero_lote):
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            lc.numero_lote,
+            lc.tipo_lote,
+            lc.status,
+            lc.data_criacao,
+            COUNT(li.id) AS total_itens,
+            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
+            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
+            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
+        FROM lotes_conferencia lc
+        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
+        LEFT JOIN conferencia_itens ci
+            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE lc.numero_lote = ?
+        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
+    """, (numero_lote,))
+    lote = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT
+            li.numero_lote,
+            li.codigo,
+            li.sku,
+            li.titulo,
+            li.quantidade_esperada,
+            li.endereco,
+            li.lote_filete,
+            ci.quantidade_conferida,
+            ci.foto_path,
+            ci.status_item,
+            ci.observacao,
+            ci.conferido_em
+        FROM lotes_itens li
+        LEFT JOIN conferencia_itens ci
+            ON li.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE li.numero_lote = ?
+        ORDER BY li.endereco, li.sku
+    """, (numero_lote,))
+    itens = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT
+            lc.numero_lote,
+            lc.tipo_lote,
+            lc.status,
+            lc.data_criacao,
+            COUNT(li.id) AS total_itens,
+            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
+            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
+            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
+        FROM lotes_conferencia lc
+        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
+        LEFT JOIN conferencia_itens ci
+            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
+        ORDER BY lc.data_criacao DESC
+    """)
+    lotes = cursor.fetchall()
+
+    conn.close()
+
+    return render_template("conferencia.html", lotes=lotes, lote=lote, itens=itens)
 
 def init_db():
     conn = sqlite3.connect("status.db")
@@ -86,6 +262,45 @@ def init_db():
         CREATE TABLE IF NOT EXISTS comentarios (
             sku TEXT PRIMARY KEY,
             comentario TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_conferencia (
+            numero_lote TEXT PRIMARY KEY,
+            tipo_lote TEXT,
+            status TEXT DEFAULT 'PENDENTE',
+            data_criacao TEXT,
+            data_fechamento TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT,
+            quantidade_esperada INTEGER DEFAULT 0,
+            endereco TEXT,
+            lote_filete TEXT,
+            UNIQUE(numero_lote, codigo)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conferencia_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            quantidade_conferida INTEGER DEFAULT 0,
+            foto_path TEXT,
+            status_item TEXT DEFAULT 'PENDENTE',
+            observacao TEXT,
+            conferido_em TEXT,
+            UNIQUE(numero_lote, codigo)
         )
     """)
 
@@ -116,28 +331,9 @@ def metricas_full():
 
 @app.route("/dados")
 def dados():
-    base = carregar_dados_base()
-
-    conn = sqlite3.connect("status.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT codigo, status FROM status_cards")
-    rows = cursor.fetchall()
-    conn.close()
-
-    status_dict = {str(codigo): status for codigo, status in rows}
-
-    dados_filtrados = []
-
-    for row in base:
-        codigo = str(row.get("Código do Anúncio", "")).strip()
-        status = status_dict.get(codigo, "")
-
-        if status in ["enviando", "nao_enviar", "naoEnviar"]:
-            continue
-
-        dados_filtrados.append(row)
-
-    return jsonify(dados_filtrados)
+    # Retorna toda a base.
+    # A separação entre principal / enviando / naoEnviar já é feita no front.
+    return jsonify(carregar_dados_base())
 
 
 @app.route("/dados-dashboard")
@@ -157,8 +353,10 @@ def exportar_excel():
         cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
         rows = cursor.fetchall()
         mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade in rows}
+        mapa_status = {str(codigo): status or "" for codigo, status, quantidade in rows}
     except:
         mapa_quantidade = {}
+        mapa_status = {}
 
     conn.close()
 
@@ -167,16 +365,8 @@ def exportar_excel():
     tela = request.args.get("tela", "")
 
     if tela:
-        conn = sqlite3.connect("status.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT codigo, status FROM status_cards")
-        rows = cursor.fetchall()
-        conn.close()
-
-        status_dict = {str(codigo): status for codigo, status in rows}
-
         def destino(codigo):
-            status = status_dict.get(str(codigo), "")
+            status = mapa_status.get(str(codigo), "")
             if status == "enviando":
                 return "enviando"
             if status in ["nao_enviar", "naoEnviar"]:
@@ -214,6 +404,259 @@ def exportar_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
+    if df_lote.empty or not numero_lote:
+        return
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        INSERT INTO lotes_conferencia (numero_lote, tipo_lote, status, data_criacao)
+        VALUES (?, ?, 'PENDENTE', ?)
+        ON CONFLICT(numero_lote) DO UPDATE SET
+            tipo_lote=excluded.tipo_lote
+    """, (numero_lote, tipo_lote, agora))
+
+    for _, item in df_lote.iterrows():
+        codigo = str(item.get("Código do Anúncio", "") or "")
+        sku = str(item.get("SKU", "") or "")
+        titulo = str(item.get("Título", "") or "")
+        quantidade_esperada = int(float(item.get("Enviar", 0) or 0))
+        endereco = str(item.get("ENDEREÇO", "") or "")
+        lote_filete = str(item.get("Lote", "") or "")
+
+        cursor.execute("""
+            INSERT INTO lotes_itens (
+                numero_lote, codigo, sku, titulo,
+                quantidade_esperada, endereco, lote_filete
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(numero_lote, codigo) DO UPDATE SET
+                sku=excluded.sku,
+                titulo=excluded.titulo,
+                quantidade_esperada=excluded.quantidade_esperada,
+                endereco=excluded.endereco,
+                lote_filete=excluded.lote_filete
+        """, (
+            numero_lote, codigo, sku, titulo,
+            quantidade_esperada, endereco, lote_filete
+        ))
+
+    conn.commit()
+    conn.close()
+
+@app.route("/gerar-filete")
+def gerar_filete():
+    numero_lote = request.args.get("numero_lote", "").strip()
+    tipo_lote = request.args.get("tipo_lote", "Diversos").strip() or "Diversos"
+
+    dados = carregar_dados_base()
+    df = pd.DataFrame(dados)
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
+    rows = cursor.fetchall()
+    conn.close()
+
+    mapa_status = {str(codigo): status or "" for codigo, status, quantidade in rows}
+    mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade in rows}
+
+    df["STATUS_CARD"] = df["Código do Anúncio"].astype(str).map(mapa_status).fillna("principal")
+    df["Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+
+    df = df[(df["STATUS_CARD"] == "enviando") & (df["Enviar"].astype(float) > 0)].copy()
+
+    colunas_necessarias = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Título",
+        "ENDEREÇO"
+    ]
+
+    for col in colunas_necessarias:
+        if col not in df.columns:
+            df[col] = ""
+
+    df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
+
+    if "ENDEREÇO" in df.columns:
+        df = df.sort_values(by="ENDEREÇO", kind="stable")
+        registrar_lote_conferencia(numero_lote, tipo_lote, df)
+
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        workbook = writer.book
+        worksheet = workbook.create_sheet("Filete", 0)
+
+        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
+        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
+        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
+
+        border = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        fonte_titulo = Font(bold=True, size=16)
+        fonte_label = Font(bold=True, size=11)
+        fonte_valor = Font(size=12)
+        fonte_codigo = Font(bold=True, size=14)
+        fonte_qtd = Font(bold=True, size=16)
+
+        alinhamento_centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        alinhamento_esquerda = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        # Larguras para impressão/recorte
+        worksheet.column_dimensions["A"].width = 16
+        worksheet.column_dimensions["B"].width = 18
+        worksheet.column_dimensions["C"].width = 14
+        worksheet.column_dimensions["D"].width = 52
+        worksheet.column_dimensions["E"].width = 12
+        worksheet.column_dimensions["F"].width = 30
+        worksheet.column_dimensions["G"].width = 28
+
+        linha = 1
+
+        for _, item in df.iterrows():
+            conta = str(item.get("Nickname", ""))
+            codigo = str(item.get("Código do Anúncio", ""))
+            sku = str(item.get("SKU", ""))
+            titulo = str(item.get("Título", ""))
+            enviar = int(float(item.get("Enviar", 0) or 0))
+            endereco = str(item.get("ENDEREÇO", ""))
+            lote = str(item.get("Lote", ""))
+
+            # altura das linhas do bloco
+            worksheet.row_dimensions[linha].height = 28
+            worksheet.row_dimensions[linha + 1].height = 26
+            worksheet.row_dimensions[linha + 2].height = 26
+            worksheet.row_dimensions[linha + 3].height = 42
+            worksheet.row_dimensions[linha + 4].height = 28
+            worksheet.row_dimensions[linha + 5].height = 12  # espaço entre filetes
+
+            # linha 1 - topo
+            worksheet.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=4)
+            worksheet.merge_cells(start_row=linha, start_column=5, end_row=linha, end_column=5)
+            worksheet.merge_cells(start_row=linha, start_column=6, end_row=linha, end_column=7)
+
+            c = worksheet.cell(row=linha, column=1)
+            c.value = f"CONTA: {conta}"
+            c.font = fonte_titulo
+            c.fill = fill_topo
+            c.alignment = alinhamento_esquerda
+
+            c = worksheet.cell(row=linha, column=5)
+            c.value = "ENVIAR"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha, column=6)
+            c.value = "ENDEREÇO"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            # linha 2
+            worksheet.merge_cells(start_row=linha + 1, start_column=1, end_row=linha + 1, end_column=2)
+            worksheet.merge_cells(start_row=linha + 1, start_column=3, end_row=linha + 1, end_column=4)
+            worksheet.merge_cells(start_row=linha + 1, start_column=5, end_row=linha + 1, end_column=5)
+            worksheet.merge_cells(start_row=linha + 1, start_column=6, end_row=linha + 1, end_column=7)
+
+            c = worksheet.cell(row=linha + 1, column=1)
+            c.value = "CÓDIGO"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 1, column=3)
+            c.value = "SKU"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 1, column=5)
+            c.value = enviar
+            c.font = fonte_qtd
+            c.fill = fill_valor
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 1, column=6)
+            c.value = endereco
+            c.font = fonte_valor
+            c.fill = fill_valor
+            c.alignment = alinhamento_centro
+
+            # linha 3
+            worksheet.merge_cells(start_row=linha + 2, start_column=1, end_row=linha + 2, end_column=2)
+            worksheet.merge_cells(start_row=linha + 2, start_column=3, end_row=linha + 2, end_column=4)
+            worksheet.merge_cells(start_row=linha + 2, start_column=5, end_row=linha + 2, end_column=7)
+
+            c = worksheet.cell(row=linha + 2, column=1)
+            c.value = codigo
+            c.font = fonte_codigo
+            c.fill = fill_valor
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 2, column=3)
+            c.value = sku
+            c.font = fonte_codigo
+            c.fill = fill_valor
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 2, column=5)
+            c.value = lote
+            c.font = Font(bold=True, size=12)
+            c.fill = fill_topo
+            c.alignment = alinhamento_centro
+
+            # linha 4 - título
+            worksheet.merge_cells(start_row=linha + 3, start_column=1, end_row=linha + 3, end_column=7)
+            c = worksheet.cell(row=linha + 3, column=1)
+            c.value = titulo
+            c.font = Font(bold=True, size=13)
+            c.fill = fill_valor
+            c.alignment = alinhamento_esquerda
+
+            # linha 5 - rodapé curto
+            worksheet.merge_cells(start_row=linha + 4, start_column=1, end_row=linha + 4, end_column=7)
+            c = worksheet.cell(row=linha + 4, column=1)
+            c.value = "FILETE DE SEPARAÇÃO"
+            c.font = Font(bold=True, size=11)
+            c.fill = fill_topo
+            c.alignment = alinhamento_centro
+
+            # bordas do bloco
+            for r in range(linha, linha + 5):
+                for col in range(1, 8):
+                    cell = worksheet.cell(row=r, column=col)
+                    cell.border = border
+
+            linha += 6  # próximo filete
+
+        worksheet.sheet_view.showGridLines = False
+        worksheet.freeze_panes = "A1"
+
+    output.seek(0)
+
+    nome_arquivo = "filete.xlsx"
+    if numero_lote:
+        nome_arquivo = f"filete_{numero_lote}.xlsx"
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=nome_arquivo,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 @app.route("/dados-full")
 def dados_full():

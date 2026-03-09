@@ -66,6 +66,22 @@ h1{ margin-bottom:15px; }
     background:#157347;
 }
 
+.btn-filete{
+    padding:8px 15px;
+    margin-right:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    background:#0d6efd;
+    color:white;
+    font-weight:bold;
+    display:none;
+}
+
+.btn-filete:hover{
+    background:#0b5ed7;
+}
+
 .contador{
     font-weight:bold;
     margin:10px 0;
@@ -214,7 +230,7 @@ h1{ margin-bottom:15px; }
 .bloco{
     background:#f1f3f5;
     padding:10px;
-    border-radius:px;
+    border-radius:8px;
 }
 
 .metric{
@@ -290,7 +306,8 @@ h1{ margin-bottom:15px; }
     box-shadow:0 6px 15px rgba(0,0,0,0.25);
 }
 
-.modal-comentario{
+.modal-comentario,
+.modal-filete{
     display:none;
     position:fixed;
     top:0;
@@ -316,13 +333,19 @@ h1{ margin-bottom:15px; }
     animation:fadeIn 0.2s ease;
 }
 
-.modal-conteudo textarea{
+.modal-conteudo textarea,
+.modal-conteudo input,
+.modal-conteudo select{
     width:100%;
-    height:120px;
-    resize:none;
     padding:10px;
     border-radius:8px;
     border:1px solid #ccc;
+    box-sizing:border-box;
+}
+
+.modal-conteudo textarea{
+    height:120px;
+    resize:none;
 }
 
 .modal-botoes{
@@ -343,15 +366,17 @@ h1{ margin-bottom:15px; }
     color:white;
 }
 
+.filete-info{
+    font-size:13px;
+    color:#555;
+    line-height:1.4;
+}
+
 @keyframes fadeIn{
     from{ transform:scale(0.95); opacity:0; }
     to{ transform:scale(1); opacity:1; }
 }
 </style>
-
-</head>
-
-<body>
 
 <h1>📦 Painel Estratégico Full</h1>
 
@@ -360,7 +385,8 @@ h1{ margin-bottom:15px; }
     <button onclick="mostrarTela('enviando')">🚚 Enviando (<span id="contEnv">0</span>)</button>
     <button onclick="mostrarTela('naoEnviar')">❌ Não Enviar (<span id="contNao">0</span>)</button>
     <a id="btnExportarExcel" class="btn-exportar" href="#">📥 Exportar Excel</a>
-    </div>
+    <button id="btnGerarFilete" class="btn-filete" onclick="abrirModalFilete()">🧾 Gerar Filete</button>
+</div>
 
 <div class="menu">
 
@@ -373,15 +399,15 @@ h1{ margin-bottom:15px; }
 <input type="text" id="filtroBusca" placeholder="SKU ou MLB" oninput="renderCards()">
 
 <select id="filtroSelo" onchange="renderCards()">
-<option value="">Selo</option>
+<option value="">Todos os selos</option>
 </select>
 
 <select id="filtroLogica" onchange="renderCards()">
-<option value="">ANALISE</option>
+<option value="">Toda lógica</option>
 </select>
 
 <select id="filtroSaude" onchange="renderCards()">
-<option value="">SAUDE DO ESTOQUE 4i</option>
+<option value="">Toda saúde</option>
 </select>
 
 <button onclick="setFiltro('valor500')">Valor > 500</button>
@@ -403,6 +429,7 @@ const naoEnviar = document.getElementById("naoEnviar");
 const contEnv = document.getElementById("contEnv");
 const contNao = document.getElementById("contNao");
 const contadorPrincipal = document.getElementById("contadorPrincipal");
+const btnGerarFilete = document.getElementById("btnGerarFilete");
 
 const filtroConta = document.getElementById("filtroConta");
 const filtroBusca = document.getElementById("filtroBusca");
@@ -433,6 +460,7 @@ let indiceRender = 0;
 const LOTE_RENDER = 80;
 let renderizando = false;
 let debounceTimer = null;
+let skuAtualComentario = null;
 
 function valorParaNumero(v){
     if(!v) return 0;
@@ -448,40 +476,9 @@ function numeroInteiro(v){
     return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
 }
 
-function textoNormalizado(v){
-    return String(v || "").toUpperCase().trim();
-}
-
-function numeroInteiro(v){
-    if (v === null || v === undefined || v === "") return 0;
-    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
-}
-
-function textoNormalizado(v){
-    return String(v || "").toUpperCase().trim();
-}
-
-function numeroInteiro(v){
-    if (v === null || v === undefined || v === "") return 0;
-    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
-}
-
-function textoNormalizado(v){
-    return String(v || "").toUpperCase().trim();
-}
-
-function numeroInteiro(v){
-    if (v === null || v === undefined || v === "") return 0;
-    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
-}
-
-function textoNormalizado(v){
-    return String(v || "").toUpperCase().trim();
-}
-
-function numeroInteiro(v){
-    if (v === null || v === undefined || v === "") return 0;
-    return Math.round(Number(String(v).replaceAll(".", "").replace(",", ".")) || 0);
+function obterQuantidadeSalva(codigo){
+    const registro = statusSalvos[String(codigo)] || {};
+    return registro.quantidade || 0;
 }
 
 function sugestaoIA(item){
@@ -689,6 +686,12 @@ function atualizarContadores(){
     }
 }
 
+function atualizarVisibilidadeFilete(){
+    if (!btnGerarFilete) return;
+    const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    btnGerarFilete.style.display = (telaAtual === "enviando" && totalEnviando > 0) ? "inline-block" : "none";
+}
+
 function mostrarTela(tela){
     telaAtual = tela;
 
@@ -744,9 +747,9 @@ function aplicarFiltrosBase(){
         if (conta && String(item["Nickname"] || "").toLowerCase() !== conta.toLowerCase()) return false;
 
         if (
-    filtroUrlConta &&
-    String(item["Nickname"] || "").toUpperCase().trim() !== filtroUrlConta.toUpperCase().trim()
-) return false;
+            filtroUrlConta &&
+            String(item["Nickname"] || "").toUpperCase().trim() !== filtroUrlConta.toUpperCase().trim()
+        ) return false;
 
         if (
             busca &&
@@ -792,16 +795,6 @@ function aplicarFiltrosBase(){
     });
 }
 
-function obterDestino(item){
-    const codigo = String(item["Código do Anúncio"]);
-    const registro = statusSalvos[codigo] || {};
-    const status = registro.status || "principal";
-
-    if (status === "enviando") return "enviando";
-    if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
-    return "principal";
-}
-
 function montarHTMLCard(item){
     const sugestoes = sugestaoIA(item);
     const analise = analisarSKU(item);
@@ -817,12 +810,12 @@ function montarHTMLCard(item){
             </div>
 
             <div class="ia-box ${sugestoes.classe}">
-    <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
-    <div>${sugestoes.detalhe}</div>
-    <div class="ia-tooltip">
-        ${sugestoes.tooltip}
-    </div>
-</div>
+                <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
+                <div>${sugestoes.detalhe}</div>
+                <div class="ia-tooltip">
+                    ${sugestoes.tooltip}
+                </div>
+            </div>
 
             <div class="comentario-topo"
                 onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
@@ -835,9 +828,7 @@ function montarHTMLCard(item){
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
             <strong>Título:</strong>
             <span>${item["Título"] || ""}</span>
-            ${tituloDuplicado(item["Título"])
-                ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>'
-                : ''}
+            ${tituloDuplicado(item["Título"]) ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>' : ''}
         </div>
 
         <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
@@ -848,8 +839,7 @@ function montarHTMLCard(item){
         <div class="envio-area">
             <input type="number" id="qtd-${item["Código do Anúncio"]}" value="${obterQuantidadeSalva(item["Código do Anúncio"])}">
             <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
-            <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')"
-                    style="background:#6c757d; color:white;">
+            <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
                 ↩ Voltar
             </button>
         </div>
@@ -872,7 +862,6 @@ function montarHTMLCard(item){
 
                 <div class="bloco">
                     <h3>📅 HISTÓRICO MENSAL</h3>
-
                     <div class="metric">AGOSTO: ${item["AGOSTO"] || 0} | Seconds: ${item["AGOSTO SECONDS"] || 0} | Balcão/site: ${item["AGOSTO BALCAO/SITE"] || 0}</div>
                     <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0} | Seconds: ${item["SETEMBRO SECONDS"] || 0} | Balcão/site: ${item["SETEMBRO BALCAO/SITE"] || 0}</div>
                     <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0} | Seconds: ${item["OUTUBRO SECONDS"] || 0} | Balcão/site: ${item["OUTUBRO BALCAO/SITE"] || 0}</div>
@@ -885,7 +874,6 @@ function montarHTMLCard(item){
             <div class="duplo-bloco">
                 <div class="bloco">
                     <h3>📊 VENDAS</h3>
-
                     <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 07 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 7 DIAS"] || 0}</div>
                     <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 15 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 15 DIAS"] || 0}</div>
                     <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 30 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 30 DIAS"] || 0}</div>
@@ -962,6 +950,7 @@ function renderCards(){
     renderProximoLote();
     atualizarContadores();
     atualizarLinkExportacao();
+    atualizarVisibilidadeFilete();
 }
 
 function moverCard(codigo){
@@ -1010,39 +999,9 @@ function voltarPrincipal(codigo){
     });
 }
 
-function toggleComentario(codigo, sku){
-    const box = document.getElementById("comentario-box-" + codigo);
-    box.style.display = box.style.display === "none" ? "block" : "none";
-
-    if(comentariosSalvos[sku]){
-        document.getElementById("comentario-" + codigo).value = comentariosSalvos[sku];
-    }
-}
-
-function salvarComentario(codigo, sku){
-    const texto = document.getElementById("comentario-" + codigo).value;
-
-    fetch("/salvar-comentario",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-            sku: sku,
-            comentario: texto
-        })
-    }).then(()=>{
-        comentariosSalvos[sku] = texto;
-        alert("Comentário salvo!");
-    });
-}
-
-let skuAtualComentario = null;
-
 function abrirComentario(codigo, sku){
     skuAtualComentario = sku;
-
-    document.getElementById("textoComentario").value =
-        localStorage.getItem("comentario_" + sku) || "";
-
+    document.getElementById("textoComentario").value = comentariosSalvos[sku] || "";
     document.getElementById("modalComentario").style.display = "flex";
 }
 
@@ -1052,8 +1011,53 @@ function fecharComentario(){
 
 function salvarComentarioModal(){
     const texto = document.getElementById("textoComentario").value;
-    localStorage.setItem("comentario_" + skuAtualComentario, texto);
-    fecharComentario();
+
+    fetch("/salvar-comentario", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            sku: skuAtualComentario,
+            comentario: texto
+        })
+    }).then(() => {
+        comentariosSalvos[skuAtualComentario] = texto;
+        fecharComentario();
+    });
+}
+
+function abrirModalFilete(){
+    if (telaAtual !== "enviando") return;
+
+    const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    if (totalEnviando === 0){
+        alert("Não há itens na tela Enviando para gerar o filete.");
+        return;
+    }
+
+    document.getElementById("numeroLoteFilete").value = "";
+    document.getElementById("tipoLoteFilete").value = "Diversos";
+    document.getElementById("modalFilete").style.display = "flex";
+}
+
+function fecharModalFilete(){
+    document.getElementById("modalFilete").style.display = "none";
+}
+
+function gerarFilete(){
+    const numeroLote = document.getElementById("numeroLoteFilete").value.trim();
+    const tipoLote = document.getElementById("tipoLoteFilete").value;
+
+    if (!numeroLote){
+        alert("Informe o número do lote.");
+        return;
+    }
+
+    const params = new URLSearchParams();
+    params.set("numero_lote", numeroLote);
+    params.set("tipo_lote", tipoLote);
+
+    window.location.href = "/gerar-filete?" + params.toString();
+    fecharModalFilete();
 }
 
 function aplicarRenderComDebounce(){
@@ -1079,7 +1083,7 @@ Promise.all([
     fetch("/dados").then(r => r.json()),
     fetch("/status").then(r => r.json()),
     fetch("/comentarios").then(r => r.json())
-]).then(([dados,status,comentarios])=>{
+]).then(([dados, status, comentarios]) => {
     dadosOriginais = dados;
     statusSalvos = status;
     comentariosSalvos = comentarios;
@@ -1096,6 +1100,8 @@ Promise.all([
     }
 
     renderCards();
+}).catch((erro) => {
+    console.error("Erro ao carregar dados:", erro);
 });
 </script>
 
@@ -1108,6 +1114,34 @@ Promise.all([
         <div class="modal-botoes">
             <button onclick="salvarComentarioModal()">Salvar</button>
             <button onclick="fecharComentario()" class="btn-fechar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalFilete" class="modal-filete">
+    <div class="modal-conteudo">
+        <h3>Gerar Filete</h3>
+
+        <div class="filete-info">
+            Informe os dados do filete para gerar o relatório da expedição com os itens da tela <strong>Enviando</strong>.
+        </div>
+
+        <div>
+            <label for="numeroLoteFilete"><strong>Nº do lote</strong></label>
+            <input type="text" id="numeroLoteFilete" placeholder="Ex: 59618562">
+        </div>
+
+        <div>
+            <label for="tipoLoteFilete"><strong>Tipo do lote</strong></label>
+            <select id="tipoLoteFilete">
+                <option value="Diversos">Diversos</option>
+                <option value="Caixa">Caixa</option>
+            </select>
+        </div>
+
+        <div class="modal-botoes">
+            <button onclick="gerarFilete()">Gerar</button>
+            <button onclick="fecharModalFilete()" class="btn-fechar">Cancelar</button>
         </div>
     </div>
 </div>
