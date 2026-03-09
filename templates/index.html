@@ -49,6 +49,23 @@ h1{ margin-bottom:15px; }
     color:white;
 }
 
+.btn-exportar{
+    padding:8px 15px;
+    margin-right:10px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    background:#198754;
+    color:white;
+    font-weight:bold;
+    text-decoration:none;
+    display:inline-block;
+}
+
+.btn-exportar:hover{
+    background:#157347;
+}
+
 .contador{
     font-weight:bold;
     margin:10px 0;
@@ -339,10 +356,11 @@ h1{ margin-bottom:15px; }
 <h1>📦 Painel Estratégico Full</h1>
 
 <div class="top-menu">
-<button onclick="mostrarTela('principal')">📊 Principal</button>
-<button onclick="mostrarTela('enviando')">🚚 Enviando (<span id="contEnv">0</span>)</button>
-<button onclick="mostrarTela('naoEnviar')">❌ Não Enviar (<span id="contNao">0</span>)</button>
-</div>
+    <button onclick="mostrarTela('principal')">📊 Principal</button>
+    <button onclick="mostrarTela('enviando')">🚚 Enviando (<span id="contEnv">0</span>)</button>
+    <button onclick="mostrarTela('naoEnviar')">❌ Não Enviar (<span id="contNao">0</span>)</button>
+    <a id="btnExportarExcel" class="btn-exportar" href="#">📥 Exportar Excel</a>
+    </div>
 
 <div class="menu">
 
@@ -900,6 +918,27 @@ function renderProximoLote(){
     renderizando = false;
 }
 
+function atualizarLinkExportacao(){
+    const params = new URLSearchParams();
+
+    if (filtroConta.value) params.set("conta", filtroConta.value);
+    if (filtroBusca.value) params.set("busca", filtroBusca.value);
+    if (filtroSelo.value) params.set("selo", filtroSelo.value);
+    if (filtroLogica.value) params.set("logica", filtroLogica.value);
+    if (filtroSaude.value) params.set("saude", filtroSaude.value);
+
+    if (filtroUrlMagic) params.set("magic", filtroUrlMagic);
+    if (filtroUrlCobertura) params.set("cobertura", filtroUrlCobertura);
+    if (filtroUrlFull) params.set("full", filtroUrlFull);
+    if (filtroUrlSaudeFull) params.set("saudeFull", filtroUrlSaudeFull);
+    if (filtroUrlConta) params.set("conta", filtroUrlConta);
+
+    if (filtroEspecial) params.set("filtroEspecial", filtroEspecial);
+    if (telaAtual) params.set("tela", telaAtual);
+
+    document.getElementById("btnExportarExcel").href = "/exportar-excel?" + params.toString();
+}
+
 function renderCards(){
     dadosFiltradosBase = aplicarFiltrosBase();
     dadosTelaAtual = dadosFiltradosBase.filter(item => obterDestino(item) === telaAtual);
@@ -911,6 +950,7 @@ function renderCards(){
     indiceRender = 0;
     renderProximoLote();
     atualizarContadores();
+    atualizarLinkExportacao();
 }
 
 function moverCard(codigo){

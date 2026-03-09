@@ -1,8 +1,9 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 import pandas as pd
 import sqlite3
 import time
-from collections import Counter
+from io import BytesIO
+from collections import Counter 
 
 app = Flask(__name__)
 
@@ -57,24 +58,34 @@ def carregar_csv_com_cache(url, tipo="dados"):
 
     return []
 
+def normalizar_texto(valor):
+    return str(valor or "").strip().upper()
+
+def numero_float(valor):
+    if valor is None or valor == "":
+        return 0
+    try:
+        return float(str(valor).replace(".", "").replace(",", "."))
+    except:
+        return 0
 
 def init_db():
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS status_cards (
-            codigo TEXT PRIMARY KEY,
-            status TEXT
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS status_cards (
+        codigo TEXT PRIMARY KEY,
+        status TEXT,
+        quantidade INTEGER DEFAULT 0
+    )
+""")
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS comentarios (
-            sku TEXT PRIMARY KEY,
-            comentario TEXT
-        )
-    """)
+    cursor.execute("PRAGMA table_info(status_cards)")
+    colunas_status = [col[1] for col in cursor.fetchall()]
+
+    if "quantidade" not in colunas_status:
+        cursor.execute("ALTER TABLE status_cards ADD COLUMN quantidade INTEGER DEFAULT 0")
 
     conn.commit()
     conn.close()
@@ -127,6 +138,74 @@ def dados():
 def dados_dashboard():
     return jsonify(carregar_dados_base())
 
+@app.route("/exportar-excel")
+def exportar_excel():
+    dados = carregar_dados_base()
+    df = pd.DataFrame(dados)
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
+        rows = cursor.fetchall()
+        mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade in rows}
+    except:
+        mapa_quantidade = {}
+
+    conn.close()
+
+    df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+
+    tela = request.args.get("tela", "")
+
+    if tela:
+        conn = sqlite3.connect("status.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT codigo, status FROM status_cards")
+        rows = cursor.fetchall()
+        conn.close()
+
+        status_dict = {str(codigo): status for codigo, status in rows}
+
+        def destino(codigo):
+            status = status_dict.get(str(codigo), "")
+            if status == "enviando":
+                return "enviando"
+            if status in ["nao_enviar", "naoEnviar"]:
+                return "naoEnviar"
+            return "principal"
+
+        df = df[df["Código do Anúncio"].apply(destino) == tela]
+
+    colunas_exportar = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Título",
+        "LOTE",
+        "Quantidade para Enviar"
+    ]
+
+    for col in colunas_exportar:
+        if col not in df.columns:
+            df[col] = ""
+
+    df_export = df[colunas_exportar].copy()
+
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df_export.to_excel(writer, index=False, sheet_name="Relatorio")
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="relatorio_envio.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 @app.route("/dados-full")
 def dados_full():
@@ -138,33 +217,46 @@ def salvar_status():
     data = request.json
     codigo = data.get("codigo")
     status = data.get("status")
+    quantidade = data.get("quantidade", 0)
+
+    try:
+        quantidade = int(quantidade)
+    except:
+        quantidade = 0
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO status_cards (codigo, status)
-        VALUES (?, ?)
-        ON CONFLICT(codigo) DO UPDATE SET status=excluded.status
-    """, (codigo, status))
+        INSERT INTO status_cards (codigo, status, quantidade)
+        VALUES (?, ?, ?)
+        ON CONFLICT(codigo) DO UPDATE SET
+            status=excluded.status,
+            quantidade=excluded.quantidade
+    """, (codigo, status, quantidade))
 
     conn.commit()
     conn.close()
 
     return jsonify({"success": True})
 
-
 @app.route("/status")
 def get_status():
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
-    cursor.execute("SELECT codigo, status FROM status_cards")
+    cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
     rows = cursor.fetchall()
 
     conn.close()
 
-    status_dict = {codigo: status for codigo, status in rows}
+    status_dict = {}
+    for codigo, status, quantidade in rows:
+        status_dict[str(codigo)] = {
+            "status": status,
+            "quantidade": quantidade or 0
+        }
+
     return jsonify(status_dict)
 
 
@@ -238,7 +330,6 @@ def dashboard():
         "metricas_full.html",
         mais_vendidos=mais_vendidos
     )
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
