@@ -79,6 +79,7 @@ def numero_float(valor):
     except:
         return 0
 
+
 @app.route("/conferencia")
 def conferencia():
     conn = sqlite3.connect("status.db")
@@ -107,6 +108,7 @@ def conferencia():
     conn.close()
 
     return render_template("conferencia.html", lotes=lotes, lote=None, itens=[])
+
 
 @app.route("/conferencia/<numero_lote>")
 def conferencia_lote(numero_lote):
@@ -176,75 +178,8 @@ def conferencia_lote(numero_lote):
 
     conn.close()
 
-    return render_template("conferencia.html", lotes=lotes, lote=lote, itens=itens)@app.route("/conferencia/<numero_lote>")
-def conferencia_lote(numero_lote):
-    conn = sqlite3.connect("status.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            lc.numero_lote,
-            lc.tipo_lote,
-            lc.status,
-            lc.data_criacao,
-            COUNT(li.id) AS total_itens,
-            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
-            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
-            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
-        FROM lotes_conferencia lc
-        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
-        LEFT JOIN conferencia_itens ci
-            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
-        WHERE lc.numero_lote = ?
-        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
-    """, (numero_lote,))
-    lote = cursor.fetchone()
-
-    cursor.execute("""
-        SELECT
-            li.numero_lote,
-            li.codigo,
-            li.sku,
-            li.titulo,
-            li.quantidade_esperada,
-            li.endereco,
-            li.lote_filete,
-            ci.quantidade_conferida,
-            ci.foto_path,
-            ci.status_item,
-            ci.observacao,
-            ci.conferido_em
-        FROM lotes_itens li
-        LEFT JOIN conferencia_itens ci
-            ON li.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
-        WHERE li.numero_lote = ?
-        ORDER BY li.endereco, li.sku
-    """, (numero_lote,))
-    itens = cursor.fetchall()
-
-    cursor.execute("""
-        SELECT
-            lc.numero_lote,
-            lc.tipo_lote,
-            lc.status,
-            lc.data_criacao,
-            COUNT(li.id) AS total_itens,
-            SUM(CASE WHEN ci.status_item = 'OK' THEN 1 ELSE 0 END) AS itens_ok,
-            SUM(CASE WHEN ci.status_item = 'DIVERGENTE' THEN 1 ELSE 0 END) AS itens_divergentes,
-            SUM(CASE WHEN ci.id IS NOT NULL THEN 1 ELSE 0 END) AS itens_conferidos
-        FROM lotes_conferencia lc
-        LEFT JOIN lotes_itens li ON lc.numero_lote = li.numero_lote
-        LEFT JOIN conferencia_itens ci
-            ON lc.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
-        GROUP BY lc.numero_lote, lc.tipo_lote, lc.status, lc.data_criacao
-        ORDER BY lc.data_criacao DESC
-    """)
-    lotes = cursor.fetchall()
-
-    conn.close()
-
     return render_template("conferencia.html", lotes=lotes, lote=lote, itens=itens)
+
 
 def init_db():
     conn = sqlite3.connect("status.db")
@@ -261,6 +196,13 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comentarios (
             sku TEXT PRIMARY KEY,
+            comentario TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comentarios_mlb (
+            codigo TEXT PRIMARY KEY,
             comentario TEXT
         )
     """)
@@ -331,8 +273,6 @@ def metricas_full():
 
 @app.route("/dados")
 def dados():
-    # Retorna toda a base.
-    # A separação entre principal / enviando / naoEnviar já é feita no front.
     return jsonify(carregar_dados_base())
 
 
@@ -358,9 +298,25 @@ def exportar_excel():
         mapa_quantidade = {}
         mapa_status = {}
 
+    try:
+        cursor.execute("SELECT sku, comentario FROM comentarios")
+        rows_comentarios = cursor.fetchall()
+        mapa_comentarios = {str(sku): comentario or "" for sku, comentario in rows_comentarios}
+    except:
+        mapa_comentarios = {}
+
+    try:
+        cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
+        rows_comentarios_mlb = cursor.fetchall()
+        mapa_comentarios_mlb = {str(codigo): comentario or "" for codigo, comentario in rows_comentarios_mlb}
+    except:
+        mapa_comentarios_mlb = {}
+
     conn.close()
 
     df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+    df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
+    df["LETICIA"] = ""
 
     tela = request.args.get("tela", "")
 
@@ -381,7 +337,9 @@ def exportar_excel():
         "SKU",
         "Título",
         "LOTE",
-        "Quantidade para Enviar"
+        "Quantidade para Enviar",
+        "Comentário",
+        "LETICIA"
     ]
 
     for col in colunas_exportar:
@@ -403,6 +361,7 @@ def exportar_excel():
         download_name="relatorio_envio.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
     if df_lote.empty or not numero_lote:
@@ -447,6 +406,7 @@ def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
 
     conn.commit()
     conn.close()
+
 
 @app.route("/gerar-filete")
 def gerar_filete():
@@ -514,7 +474,6 @@ def gerar_filete():
         alinhamento_centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
         alinhamento_esquerda = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-        # Larguras para impressão/recorte
         worksheet.column_dimensions["A"].width = 16
         worksheet.column_dimensions["B"].width = 18
         worksheet.column_dimensions["C"].width = 14
@@ -534,15 +493,13 @@ def gerar_filete():
             endereco = str(item.get("ENDEREÇO", ""))
             lote = str(item.get("Lote", ""))
 
-            # altura das linhas do bloco
             worksheet.row_dimensions[linha].height = 28
             worksheet.row_dimensions[linha + 1].height = 26
             worksheet.row_dimensions[linha + 2].height = 26
             worksheet.row_dimensions[linha + 3].height = 42
             worksheet.row_dimensions[linha + 4].height = 28
-            worksheet.row_dimensions[linha + 5].height = 12  # espaço entre filetes
+            worksheet.row_dimensions[linha + 5].height = 12
 
-            # linha 1 - topo
             worksheet.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=4)
             worksheet.merge_cells(start_row=linha, start_column=5, end_row=linha, end_column=5)
             worksheet.merge_cells(start_row=linha, start_column=6, end_row=linha, end_column=7)
@@ -565,7 +522,6 @@ def gerar_filete():
             c.fill = fill_label
             c.alignment = alinhamento_centro
 
-            # linha 2
             worksheet.merge_cells(start_row=linha + 1, start_column=1, end_row=linha + 1, end_column=2)
             worksheet.merge_cells(start_row=linha + 1, start_column=3, end_row=linha + 1, end_column=4)
             worksheet.merge_cells(start_row=linha + 1, start_column=5, end_row=linha + 1, end_column=5)
@@ -595,7 +551,6 @@ def gerar_filete():
             c.fill = fill_valor
             c.alignment = alinhamento_centro
 
-            # linha 3
             worksheet.merge_cells(start_row=linha + 2, start_column=1, end_row=linha + 2, end_column=2)
             worksheet.merge_cells(start_row=linha + 2, start_column=3, end_row=linha + 2, end_column=4)
             worksheet.merge_cells(start_row=linha + 2, start_column=5, end_row=linha + 2, end_column=7)
@@ -618,7 +573,6 @@ def gerar_filete():
             c.fill = fill_topo
             c.alignment = alinhamento_centro
 
-            # linha 4 - título
             worksheet.merge_cells(start_row=linha + 3, start_column=1, end_row=linha + 3, end_column=7)
             c = worksheet.cell(row=linha + 3, column=1)
             c.value = titulo
@@ -626,7 +580,6 @@ def gerar_filete():
             c.fill = fill_valor
             c.alignment = alinhamento_esquerda
 
-            # linha 5 - rodapé curto
             worksheet.merge_cells(start_row=linha + 4, start_column=1, end_row=linha + 4, end_column=7)
             c = worksheet.cell(row=linha + 4, column=1)
             c.value = "FILETE DE SEPARAÇÃO"
@@ -634,13 +587,12 @@ def gerar_filete():
             c.fill = fill_topo
             c.alignment = alinhamento_centro
 
-            # bordas do bloco
             for r in range(linha, linha + 5):
                 for col in range(1, 8):
                     cell = worksheet.cell(row=r, column=col)
                     cell.border = border
 
-            linha += 6  # próximo filete
+            linha += 6
 
         worksheet.sheet_view.showGridLines = False
         worksheet.freeze_panes = "A1"
@@ -657,6 +609,7 @@ def gerar_filete():
         download_name=nome_arquivo,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 @app.route("/dados-full")
 def dados_full():
@@ -726,6 +679,20 @@ def get_comentarios():
     return jsonify(comentarios_dict)
 
 
+@app.route("/comentarios-mlb")
+def get_comentarios_mlb():
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    comentarios_dict = {str(codigo): comentario for codigo, comentario in rows}
+    return jsonify(comentarios_dict)
+
+
 @app.route("/salvar-comentario", methods=["POST"])
 def salvar_comentario():
     data = request.json
@@ -740,6 +707,27 @@ def salvar_comentario():
         VALUES (?, ?)
         ON CONFLICT(sku) DO UPDATE SET comentario=excluded.comentario
     """, (sku, comentario))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+@app.route("/salvar-comentario-mlb", methods=["POST"])
+def salvar_comentario_mlb():
+    data = request.json
+    codigo = data.get("codigo")
+    comentario = data.get("comentario", "")
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO comentarios_mlb (codigo, comentario)
+        VALUES (?, ?)
+        ON CONFLICT(codigo) DO UPDATE SET comentario=excluded.comentario
+    """, (codigo, comentario))
 
     conn.commit()
     conn.close()

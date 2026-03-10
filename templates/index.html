@@ -280,6 +280,35 @@ h1{ margin-bottom:15px; }
     font-weight:bold;
     margin-left:10px;
     font-size:12px;
+    position:relative;
+    cursor:help;
+    display:inline-block;
+}
+
+.titulo-duplicado-tooltip{
+    display:none;
+    position:absolute;
+    top:115%;
+    left:0;
+    width:360px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:9999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.titulo-duplicado:hover .titulo-duplicado-tooltip{
+    display:block;
+}
+
+.titulo-duplicado-tooltip strong{
+    color:#fca5a5;
 }
 
 .bloco-titulo{
@@ -439,6 +468,7 @@ const filtroSaude = document.getElementById("filtroSaude");
 
 let dadosOriginais = [];
 let comentariosSalvos = {};
+let comentariosMlb = {};
 let filtroEspecial = "";
 let statusSalvos = {};
 let telaAtual = "principal";
@@ -461,6 +491,7 @@ const LOTE_RENDER = 80;
 let renderizando = false;
 let debounceTimer = null;
 let skuAtualComentario = null;
+let codigoAtualComentario = null;
 
 function valorParaNumero(v){
     if(!v) return 0;
@@ -479,6 +510,10 @@ function numeroInteiro(v){
 function obterQuantidadeSalva(codigo){
     const registro = statusSalvos[String(codigo)] || {};
     return registro.quantidade || 0;
+}
+
+function calcularSaldoProjetado(estoqueEmpresa, quantidadeEnviar){
+    return numeroInteiro(estoqueEmpresa) - numeroInteiro(quantidadeEnviar);
 }
 
 function sugestaoIA(item){
@@ -659,6 +694,47 @@ function tituloDuplicado(titulo){
     return (tituloCounts[t] || 0) > 1;
 }
 
+function montarTooltipTituloDuplicado(item){
+    const tituloAtual = String(item["Título"] || "").trim();
+    if (!tituloAtual) return "";
+
+    const duplicados = dadosOriginais.filter(x =>
+        String(x["Título"] || "").trim() === tituloAtual
+    );
+
+    if (duplicados.length <= 1) return "";
+
+    const linhas = duplicados
+        .sort((a, b) => numeroInteiro(b["30 DIAS"] || 0) - numeroInteiro(a["30 DIAS"] || 0))
+        .map(x => {
+            const codigo = x["Código do Anúncio"] || "";
+            const conta = x["Nickname"] || "";
+            const sku = x["SKU"] || "";
+            const vendas30 = numeroInteiro(x["30 DIAS"] || 0);
+            const valor30 = x["Total de Vendas 30 DIAS"] || "0,00";
+
+            const destaque = String(codigo) === String(item["Código do Anúncio"])
+                ? ' <strong>(este card)</strong>'
+                : '';
+
+            return `
+                <div style="margin-bottom:8px;">
+                    <strong>${codigo}</strong>${destaque}<br>
+                    Conta: ${conta} | SKU: ${sku}<br>
+                    Venda 30 dias: ${vendas30} | R$ ${valor30}
+                </div>
+            `;
+        })
+        .join("");
+
+    return `
+        <div class="titulo-duplicado-tooltip">
+            <div style="margin-bottom:8px;"><strong>Títulos iguais encontrados:</strong> ${duplicados.length}</div>
+            ${linhas}
+        </div>
+    `;
+}
+
 function obterDestino(item){
     const codigo = String(item["Código do Anúncio"]);
     const registro = statusSalvos[codigo] || {};
@@ -828,7 +904,7 @@ function montarHTMLCard(item){
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
             <strong>Título:</strong>
             <span>${item["Título"] || ""}</span>
-            ${tituloDuplicado(item["Título"]) ? '<span class="titulo-duplicado">TÍTULO DUPLICADO</span>' : ''}
+            ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
         </div>
 
         <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
@@ -837,11 +913,21 @@ function montarHTMLCard(item){
         <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
 
         <div class="envio-area">
-            <input type="number" id="qtd-${item["Código do Anúncio"]}" value="${obterQuantidadeSalva(item["Código do Anúncio"])}">
+            <input
+                type="number"
+                id="qtd-${item["Código do Anúncio"]}"
+                value="${obterQuantidadeSalva(item["Código do Anúncio"])}"
+                oninput="atualizarSaldoCard('${item["Código do Anúncio"]}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
+            >
             <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
             <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
                 ↩ Voltar
             </button>
+        </div>
+
+        <div id="saldo-restante-${item["Código do Anúncio"]}" data-sku="${item["SKU"]}" style="margin-top:8px; font-weight:700; color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? '#c62828' : '#1b5e20'};">
+            Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"]))}
+            ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? ' | Estoque insuficiente' : ''}
         </div>
 
         <hr style="margin:15px 0">
@@ -915,6 +1001,8 @@ function renderProximoLote(){
     container.appendChild(fragment);
     indiceRender = fim;
     renderizando = false;
+
+    atualizarTodosSaldosSkuVisiveis();
 }
 
 function atualizarLinkExportacao(){
@@ -951,6 +1039,57 @@ function renderCards(){
     atualizarContadores();
     atualizarLinkExportacao();
     atualizarVisibilidadeFilete();
+}
+
+function atualizarSaldoCard(codigo, estoqueEmpresa, sku){
+    let somaSku = 0;
+
+    dadosOriginais.forEach(item => {
+        if (String(item["SKU"] || "") === String(sku)) {
+            const codigoItem = String(item["Código do Anúncio"] || "");
+            let quantidade = 0;
+
+            if (codigoItem === String(codigo)) {
+                const inputAtual = document.getElementById("qtd-" + codigo);
+                quantidade = Number(inputAtual ? inputAtual.value : 0);
+            } else {
+                quantidade = Number(obterQuantidadeSalva(codigoItem) || 0);
+                const inputVisivel = document.getElementById("qtd-" + codigoItem);
+                if (inputVisivel) {
+                    quantidade = Number(inputVisivel.value || 0);
+                }
+            }
+
+            somaSku += quantidade;
+        }
+    });
+
+    const saldo = numeroInteiro(estoqueEmpresa) - numeroInteiro(somaSku);
+
+    document.querySelectorAll(`[data-sku='${sku}']`).forEach(campoSaldo => {
+        campoSaldo.textContent = saldo < 0
+            ? `Saldo 4i após envio: ${saldo} | Estoque insuficiente`
+            : `Saldo 4i após envio: ${saldo}`;
+
+        campoSaldo.style.color = saldo < 0 ? "#c62828" : "#1b5e20";
+    });
+}
+
+function atualizarTodosSaldosSkuVisiveis(){
+    const skusProcessados = new Set();
+
+    dadosTelaAtual.forEach(item => {
+        const sku = String(item["SKU"] || "");
+        if (!sku || skusProcessados.has(sku)) return;
+
+        skusProcessados.add(sku);
+
+        atualizarSaldoCard(
+            String(item["Código do Anúncio"] || ""),
+            numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0),
+            sku
+        );
+    });
 }
 
 function moverCard(codigo){
@@ -1001,7 +1140,10 @@ function voltarPrincipal(codigo){
 
 function abrirComentario(codigo, sku){
     skuAtualComentario = sku;
+    codigoAtualComentario = codigo;
+
     document.getElementById("textoComentario").value = comentariosSalvos[sku] || "";
+    document.getElementById("textoComentarioMlb").value = comentariosMlb[codigo] || "";
     document.getElementById("modalComentario").style.display = "flex";
 }
 
@@ -1010,17 +1152,28 @@ function fecharComentario(){
 }
 
 function salvarComentarioModal(){
-    const texto = document.getElementById("textoComentario").value;
+    const textoSku = document.getElementById("textoComentario").value;
+    const textoMlb = document.getElementById("textoComentarioMlb").value;
 
     fetch("/salvar-comentario", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             sku: skuAtualComentario,
-            comentario: texto
+            comentario: textoSku
+        })
+    });
+
+    fetch("/salvar-comentario-mlb", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigoAtualComentario,
+            comentario: textoMlb
         })
     }).then(() => {
-        comentariosSalvos[skuAtualComentario] = texto;
+        comentariosSalvos[skuAtualComentario] = textoSku;
+        comentariosMlb[codigoAtualComentario] = textoMlb;
         fecharComentario();
     });
 }
@@ -1082,11 +1235,13 @@ window.addEventListener("scroll", () => {
 Promise.all([
     fetch("/dados").then(r => r.json()),
     fetch("/status").then(r => r.json()),
-    fetch("/comentarios").then(r => r.json())
-]).then(([dados, status, comentarios]) => {
+    fetch("/comentarios").then(r => r.json()),
+    fetch("/comentarios-mlb").then(r => r.json())
+]).then(([dados, status, comentarios, comentariosmlb]) => {
     dadosOriginais = dados;
     statusSalvos = status;
     comentariosSalvos = comentarios;
+    comentariosMlb = comentariosmlb;
 
     montarIndices();
     popularFiltros();
@@ -1107,9 +1262,13 @@ Promise.all([
 
 <div id="modalComentario" class="modal-comentario">
     <div class="modal-conteudo">
-        <h3>Comentário do Produto</h3>
+        <h3>Informações do SKU</h3>
 
-        <textarea id="textoComentario" placeholder="Digite seu comentário aqui..."></textarea>
+        <textarea id="textoComentario" placeholder="Digite as informações gerais do SKU aqui..."></textarea>
+
+        <h3>Comentário do MLB</h3>
+
+        <textarea id="textoComentarioMlb" placeholder="Digite o comentário específico deste anúncio aqui..."></textarea>
 
         <div class="modal-botoes">
             <button onclick="salvarComentarioModal()">Salvar</button>
