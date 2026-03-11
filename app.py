@@ -482,6 +482,7 @@ def gerar_filete():
         worksheet.column_dimensions["F"].width = 30
         worksheet.column_dimensions["G"].width = 28
 
+        
         linha = 1
 
         for _, item in df.iterrows():
@@ -495,14 +496,11 @@ def gerar_filete():
 
             worksheet.row_dimensions[linha].height = 28
             worksheet.row_dimensions[linha + 1].height = 26
-            worksheet.row_dimensions[linha + 2].height = 26
-            worksheet.row_dimensions[linha + 3].height = 42
-            worksheet.row_dimensions[linha + 4].height = 28
-            worksheet.row_dimensions[linha + 5].height = 12
+            worksheet.row_dimensions[linha + 2].height = 38
+            worksheet.row_dimensions[linha + 3].height = 12
 
             worksheet.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=4)
-            worksheet.merge_cells(start_row=linha, start_column=5, end_row=linha, end_column=5)
-            worksheet.merge_cells(start_row=linha, start_column=6, end_row=linha, end_column=7)
+            worksheet.merge_cells(start_row=linha, start_column=5, end_row=linha, end_column=7)
 
             c = worksheet.cell(row=linha, column=1)
             c.value = f"CONTA: {conta}"
@@ -511,21 +509,10 @@ def gerar_filete():
             c.alignment = alinhamento_esquerda
 
             c = worksheet.cell(row=linha, column=5)
-            c.value = "ENVIAR"
-            c.font = fonte_label
-            c.fill = fill_label
+            c.value = lote
+            c.font = Font(bold=True, size=12)
+            c.fill = fill_topo
             c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha, column=6)
-            c.value = "ENDEREÇO"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
-
-            worksheet.merge_cells(start_row=linha + 1, start_column=1, end_row=linha + 1, end_column=2)
-            worksheet.merge_cells(start_row=linha + 1, start_column=3, end_row=linha + 1, end_column=4)
-            worksheet.merge_cells(start_row=linha + 1, start_column=5, end_row=linha + 1, end_column=5)
-            worksheet.merge_cells(start_row=linha + 1, start_column=6, end_row=linha + 1, end_column=7)
 
             c = worksheet.cell(row=linha + 1, column=1)
             c.value = "CÓDIGO"
@@ -533,27 +520,30 @@ def gerar_filete():
             c.fill = fill_label
             c.alignment = alinhamento_centro
 
-            c = worksheet.cell(row=linha + 1, column=3)
+            c = worksheet.cell(row=linha + 1, column=2)
             c.value = "SKU"
             c.font = fonte_label
             c.fill = fill_label
             c.alignment = alinhamento_centro
 
+            c = worksheet.cell(row=linha + 1, column=3)
+            c.value = "ENVIAR"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            c = worksheet.cell(row=linha + 1, column=4)
+            c.value = "ENDEREÇO"
+            c.font = fonte_label
+            c.fill = fill_label
+            c.alignment = alinhamento_centro
+
+            worksheet.merge_cells(start_row=linha + 1, start_column=5, end_row=linha + 1, end_column=7)
             c = worksheet.cell(row=linha + 1, column=5)
-            c.value = enviar
-            c.font = fonte_qtd
-            c.fill = fill_valor
+            c.value = "TÍTULO"
+            c.font = fonte_label
+            c.fill = fill_label
             c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha + 1, column=6)
-            c.value = endereco
-            c.font = fonte_valor
-            c.fill = fill_valor
-            c.alignment = alinhamento_centro
-
-            worksheet.merge_cells(start_row=linha + 2, start_column=1, end_row=linha + 2, end_column=2)
-            worksheet.merge_cells(start_row=linha + 2, start_column=3, end_row=linha + 2, end_column=4)
-            worksheet.merge_cells(start_row=linha + 2, start_column=5, end_row=linha + 2, end_column=7)
 
             c = worksheet.cell(row=linha + 2, column=1)
             c.value = codigo
@@ -561,38 +551,37 @@ def gerar_filete():
             c.fill = fill_valor
             c.alignment = alinhamento_centro
 
-            c = worksheet.cell(row=linha + 2, column=3)
+            c = worksheet.cell(row=linha + 2, column=2)
             c.value = sku
             c.font = fonte_codigo
             c.fill = fill_valor
             c.alignment = alinhamento_centro
 
-            c = worksheet.cell(row=linha + 2, column=5)
-            c.value = lote
-            c.font = Font(bold=True, size=12)
-            c.fill = fill_topo
+            c = worksheet.cell(row=linha + 2, column=3)
+            c.value = enviar
+            c.font = fonte_qtd
+            c.fill = fill_valor
             c.alignment = alinhamento_centro
 
-            worksheet.merge_cells(start_row=linha + 3, start_column=1, end_row=linha + 3, end_column=7)
-            c = worksheet.cell(row=linha + 3, column=1)
+            c = worksheet.cell(row=linha + 2, column=4)
+            c.value = endereco
+            c.font = fonte_valor
+            c.fill = fill_valor
+            c.alignment = alinhamento_centro
+
+            worksheet.merge_cells(start_row=linha + 2, start_column=5, end_row=linha + 2, end_column=7)
+            c = worksheet.cell(row=linha + 2, column=5)
             c.value = titulo
-            c.font = Font(bold=True, size=13)
+            c.font = Font(bold=True, size=11)
             c.fill = fill_valor
             c.alignment = alinhamento_esquerda
 
-            worksheet.merge_cells(start_row=linha + 4, start_column=1, end_row=linha + 4, end_column=7)
-            c = worksheet.cell(row=linha + 4, column=1)
-            c.value = "FILETE DE SEPARAÇÃO"
-            c.font = Font(bold=True, size=11)
-            c.fill = fill_topo
-            c.alignment = alinhamento_centro
-
-            for r in range(linha, linha + 5):
+            for r in range(linha, linha + 3):
                 for col in range(1, 8):
                     cell = worksheet.cell(row=r, column=col)
                     cell.border = border
 
-            linha += 6
+            linha += 4
 
         worksheet.sheet_view.showGridLines = False
         worksheet.freeze_panes = "A1"
