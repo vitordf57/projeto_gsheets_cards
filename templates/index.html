@@ -13,7 +13,7 @@ body{
 h1{ margin-bottom:15px; }
 
 .menu{
-    background:#1c5ed6;
+    background:#244179;
     padding:15px;
     border-radius:10px;
     margin-bottom:20px;
@@ -90,7 +90,7 @@ h1{ margin-bottom:15px; }
 .grid{
     display:grid;
     grid-template-columns:1fr;
-    gap:20px;
+    gap:70px;
 }
 
 .card{
@@ -109,8 +109,9 @@ h1{ margin-bottom:15px; }
 
 .mlb-area{
     display:flex;
-    align-items:center;
-    gap:20px;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
 }
 
 .mlb{
@@ -135,7 +136,7 @@ h1{ margin-bottom:15px; }
 .badge-orange{ background:#ffe5d0; color:#7a4100; }
 
 .ia-box{
-    margin-left:40px;
+    margin-left:12px;
     font-size:12px;
     background:#eef2ff;
     padding:8px 12px;
@@ -253,7 +254,7 @@ h1{ margin-bottom:15px; }
 }
 
 .linha-quatro .duplo-bloco:nth-child(1){
-    flex:1.2;
+    flex:1.7;
 }
 
 .linha-quatro .duplo-bloco:nth-child(2){
@@ -309,6 +310,43 @@ h1{ margin-bottom:15px; }
 
 .titulo-duplicado-tooltip strong{
     color:#fca5a5;
+}
+
+.sku-relacionado{
+    background:#fff3cd;
+    color:#7a5a00;
+    padding:2px 6px;
+    border-radius:6px;
+    font-weight:bold;
+    display:inline-block;
+    position:relative;
+    cursor:help;
+}
+
+.sku-relacionado-tooltip{
+    display:none;
+    position:absolute;
+    top:115%;
+    left:0;
+    width:380px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:9999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.sku-relacionado:hover .sku-relacionado-tooltip{
+    display:block;
+}
+
+.sku-relacionado-tooltip strong{
+    color:#fde68a;
 }
 
 .bloco-titulo{
@@ -471,6 +509,18 @@ let comentariosSalvos = {};
 let comentariosMlb = {};
 let filtroEspecial = "";
 let statusSalvos = {};
+
+const estrategiasNaoEnvio = [
+"30+7 (30 dias + 7 gordura)",
+"Não temos estoque suficiente",
+"SKU divergente",
+"MLB divergente",
+"Arthur",
+"Matheus",
+"Compras (Matheus)",
+"Compras (Victor)"
+];
+
 let telaAtual = "principal";
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -479,6 +529,7 @@ let filtroUrlCobertura = urlParams.get("cobertura") || "";
 let filtroUrlFull = urlParams.get("full") || "";
 let filtroUrlSaudeFull = urlParams.get("saudeFull") || "";
 let filtroUrlConta = urlParams.get("conta") || "";
+let filtroUrlStatusFull = urlParams.get("statusFullFiltro") || "";
 
 let skuCounts = {};
 let tituloCounts = {};
@@ -694,6 +745,47 @@ function tituloDuplicado(titulo){
     return (tituloCounts[t] || 0) > 1;
 }
 
+function montarTooltipSkuRelacionado(item){
+    const skuAtual = String(item["SKU"] || "").trim();
+    if (!skuAtual) return "";
+
+    const relacionados = dadosOriginais.filter(x =>
+        String(x["SKU"] || "").trim() === skuAtual &&
+        String(x["Código do Anúncio"] || "").trim() !== String(item["Código do Anúncio"] || "").trim()
+    );
+
+    if (relacionados.length === 0) return "";
+
+    const linhas = relacionados
+        .sort((a, b) => numeroInteiro(b["30 DIAS"] || 0) - numeroInteiro(a["30 DIAS"] || 0))
+        .map(x => {
+            const codigo = x["Código do Anúncio"] || "";
+            const conta = x["Nickname"] || "";
+            const titulo = x["Título"] || "";
+            const vendas30 = numeroInteiro(x["30 DIAS"] || 0);
+            const valor30 = x["Total de Vendas 30 DIAS"] || "0,00";
+            const full = x["Full"] || "";
+
+            return `
+                <div style="margin-bottom:10px;">
+                    <strong>${codigo}</strong><br>
+                    Conta: ${conta}<br>
+                    Full: ${full}<br>
+                    Venda 30 dias: ${vendas30} | R$ ${valor30}<br>
+                    Título: ${titulo}
+                </div>
+            `;
+        })
+        .join("");
+
+    return `
+        <div class="sku-relacionado-tooltip">
+            <div style="margin-bottom:8px;"><strong>Outros MLBs com mesmo SKU:</strong> ${relacionados.length}</div>
+            ${linhas}
+        </div>
+    `;
+}
+
 function montarTooltipTituloDuplicado(item){
     const tituloAtual = String(item["Título"] || "").trim();
     if (!tituloAtual) return "";
@@ -742,6 +834,8 @@ function obterDestino(item){
 
     if (status === "enviando") return "enviando";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
+    if (status === "filetado") return "filetado";
+
     return "principal";
 }
 
@@ -794,6 +888,7 @@ function limparFiltros(){
     filtroUrlFull = "";
     filtroUrlSaudeFull = "";
     filtroUrlConta = "";
+    filtroUrlStatusFull = "";
     history.replaceState({}, "", "/");
     renderCards();
 }
@@ -852,6 +947,21 @@ function aplicarFiltrosBase(){
             String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() !== filtroUrlSaudeFull.toUpperCase().trim()
         ) return false;
 
+        if (filtroUrlStatusFull === "nao_ofereco_mais_full") {
+            if (String(item["OBSERVAÇÃO MELI"] || "").trim() !== "Você deixou de oferecer o Full.") return false;
+        }
+
+        if (filtroUrlStatusFull === "esta_no_full") {
+            if (String(item["Full"] || "").trim().toUpperCase() !== "NO FULL") return false;
+        }
+
+        if (filtroUrlStatusFull === "nunca_foi_full") {
+            const observacaoMeli = String(item["OBSERVAÇÃO MELI"] || "").trim();
+            const full = String(item["Full"] || "").trim().toUpperCase();
+
+            if (observacaoMeli === "Você deixou de oferecer o Full." || full === "NO FULL") return false;
+        }
+
         if (filtroUrlCobertura === "baixo30"){
             const textoCobertura = String(item["Cobertura"] || "");
             const matchDias = textoCobertura.match(/(\d+)\s*dias/i);
@@ -879,19 +989,32 @@ function montarHTMLCard(item){
     <div class="linha-topo">
         <div class="mlb-area">
             <div class="mlb">${item["Código do Anúncio"]}</div>
-            <div class="badges">
-                <span class="badge badge-green">${item["SELO"] || ""}</span>
-                <span class="badge badge-blue">${item["ANALISE"] || ""}</span>
-                <span class="badge badge-orange">${item["SAUDE DO ESTOQUE 4i"] || ""}</span>
-            </div>
+           <div class="badges">
+    <span class="badge badge-green">${item["SELO"] || ""}</span>
+    <span class="badge badge-blue">${item["OBSERVAÇÃO MELI"] || ""}</span>
 
-            <div class="ia-box ${sugestoes.classe}">
-                <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
-                <div>${sugestoes.detalhe}</div>
-                <div class="ia-tooltip">
-                    ${sugestoes.tooltip}
-                </div>
-            </div>
+    ${
+    statusSalvos[String(item["Código do Anúncio"])]?.estrategia
+    ? `<span class="badge badge-orange">
+        Estratégia: ${statusSalvos[String(item["Código do Anúncio"])]?.estrategia}
+      </span>`
+    : ""
+}
+    
+</div>
+
+<button onclick="abrirModalEstrategia('${item["Código do Anúncio"]}')" 
+style="background:#dc3545;color:white;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;">
+Estratégia
+</button>
+
+<div class="ia-box ${sugestoes.classe}">
+    <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
+    <div>${sugestoes.detalhe}</div>
+    <div class="ia-tooltip">
+        ${sugestoes.tooltip}
+    </div>
+</div>
 
             <div class="comentario-topo"
                 onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
@@ -909,7 +1032,15 @@ function montarHTMLCard(item){
 
         <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
         <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
-        <div><strong>Outros MLBs mesmo SKU:</strong> ${analise.qtdSKU}</div>
+        <div><strong>Full:</strong> ${item["Full"] || ""}</div>
+        <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
+        <div><strong>Exposição:</strong> ${item["EXPOSIÇÃO"] || ""}</div>
+        <div>
+    <strong>Outros MLBs mesmo SKU:</strong>
+    ${analise.qtdSKU > 0
+        ? `<span class="sku-relacionado">${analise.qtdSKU}${montarTooltipSkuRelacionado(item)}</span>`
+        : analise.qtdSKU}
+</div>
         <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
 
         <div class="envio-area">
@@ -920,6 +1051,7 @@ function montarHTMLCard(item){
                 oninput="atualizarSaldoCard('${item["Código do Anúncio"]}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
             >
             <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
+            
             <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
                 ↩ Voltar
             </button>
@@ -954,6 +1086,7 @@ function montarHTMLCard(item){
                     <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0} | Seconds: ${item["NOVEMBRO SECONDS"] || 0} | Balcão/site: ${item["NOVEMBRO BALCAO/SITE"] || 0}</div>
                     <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0} | Seconds: ${item["DEZEMBRO SECONDS"] || 0} | Balcão/site: ${item["DEZEMBRO BALCAO/SITE"] || 0}</div>
                     <div class="metric">JANEIRO: ${item["JANEIRO"] || 0} | Seconds: ${item["JANEIRO SECONDS"] || 0} | Balcão/site: ${item["JANEIRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0} | Seconds: ${item["FEVEREIRO SECONDS"] || 0} | Balcão/site: ${item["FEVEREIRO BALCAO/SITE"] || 0}</div>
                 </div>
             </div>
 
@@ -1019,6 +1152,7 @@ function atualizarLinkExportacao(){
     if (filtroUrlFull) params.set("full", filtroUrlFull);
     if (filtroUrlSaudeFull) params.set("saudeFull", filtroUrlSaudeFull);
     if (filtroUrlConta) params.set("conta", filtroUrlConta);
+    if (filtroUrlStatusFull) params.set("statusFullFiltro", filtroUrlStatusFull);
 
     if (filtroEspecial) params.set("filtroEspecial", filtroEspecial);
     if (telaAtual) params.set("tela", telaAtual);
@@ -1134,6 +1268,53 @@ function voltarPrincipal(codigo){
             status: "principal",
             quantidade: quantidadeAtual
         };
+        renderCards();
+    });
+}
+
+let codigoEstrategiaAtual = null;
+
+function abrirModalEstrategia(codigo){
+    codigoEstrategiaAtual = codigo;
+
+    const select = document.getElementById("selectEstrategia");
+    select.innerHTML = "";
+
+    estrategiasNaoEnvio.forEach(e => {
+        const op = document.createElement("option");
+        op.value = e;
+        op.textContent = e;
+        select.appendChild(op);
+    });
+
+    document.getElementById("modalEstrategia").style.display = "flex";
+}
+
+function fecharModalEstrategia(){
+    document.getElementById("modalEstrategia").style.display = "none";
+}
+
+function salvarEstrategia(){
+    const estrategia = document.getElementById("selectEstrategia").value;
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigoEstrategiaAtual,
+            status: "nao_enviar",
+            estrategia: estrategia,
+            quantidade: 0
+        })
+    }).then(() => {
+
+        statusSalvos[String(codigoEstrategiaAtual)] = {
+            status: "nao_enviar",
+            estrategia: estrategia,
+            quantidade: 0
+        };
+
+        fecharModalEstrategia();
         renderCards();
     });
 }
@@ -1274,6 +1455,21 @@ Promise.all([
             <button onclick="salvarComentarioModal()">Salvar</button>
             <button onclick="fecharComentario()" class="btn-fechar">Cancelar</button>
         </div>
+    </div>
+</div>
+
+<div id="modalEstrategia" class="modal-filete">
+    <div class="modal-conteudo">
+
+        <h3>Definir Estratégia de Não Envio</h3>
+
+        <select id="selectEstrategia"></select>
+
+        <div class="modal-botoes">
+            <button onclick="salvarEstrategia()">Salvar</button>
+            <button onclick="fecharModalEstrategia()" class="btn-fechar">Cancelar</button>
+        </div>
+
     </div>
 </div>
 

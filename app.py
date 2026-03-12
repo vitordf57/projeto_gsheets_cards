@@ -189,7 +189,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS status_cards (
             codigo TEXT PRIMARY KEY,
             status TEXT,
-            quantidade INTEGER DEFAULT 0
+            quantidade INTEGER DEFAULT 0,
+            estrategia TEXT DEFAULT ''
         )
     """)
 
@@ -246,11 +247,30 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS historico_filetes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            tipo_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT,
+            nickname TEXT,
+            quantidade INTEGER DEFAULT 0,
+            endereco TEXT,
+            lote_filete TEXT,
+            data_geracao TEXT
+        )
+    """)
+
     cursor.execute("PRAGMA table_info(status_cards)")
     colunas_status = [col[1] for col in cursor.fetchall()]
 
     if "quantidade" not in colunas_status:
         cursor.execute("ALTER TABLE status_cards ADD COLUMN quantidade INTEGER DEFAULT 0")
+
+    if "estrategia" not in colunas_status:
+        cursor.execute("ALTER TABLE status_cards ADD COLUMN estrategia TEXT DEFAULT ''")
 
     conn.commit()
     conn.close()
@@ -290,10 +310,10 @@ def exportar_excel():
     cursor = conn.cursor()
 
     try:
-        cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
+        cursor.execute("SELECT codigo, status, quantidade, estrategia FROM status_cards")
         rows = cursor.fetchall()
-        mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade in rows}
-        mapa_status = {str(codigo): status or "" for codigo, status, quantidade in rows}
+        mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade, estrategia in rows}
+        mapa_status = {str(codigo): status or "" for codigo, status, quantidade, estrategia in rows}
     except:
         mapa_quantidade = {}
         mapa_status = {}
@@ -408,6 +428,53 @@ def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
     conn.close()
 
 
+def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
+    if df_lote.empty:
+        return
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    for _, item in df_lote.iterrows():
+        codigo = str(item.get("Código do Anúncio", "") or "")
+        sku = str(item.get("SKU", "") or "")
+        titulo = str(item.get("Título", "") or "")
+        nickname = str(item.get("Nickname", "") or "")
+        endereco = str(item.get("ENDEREÇO", "") or "")
+        lote_filete = str(item.get("Lote", "") or "")
+        quantidade = int(float(item.get("Enviar", 0) or 0))
+
+        cursor.execute("""
+            INSERT INTO historico_filetes (
+                numero_lote, tipo_lote, codigo, sku, titulo,
+                nickname, quantidade, endereco, lote_filete, data_geracao
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            numero_lote,
+            tipo_lote,
+            codigo,
+            sku,
+            titulo,
+            nickname,
+            quantidade,
+            endereco,
+            lote_filete,
+            agora
+        ))
+
+        cursor.execute("""
+            UPDATE status_cards
+            SET status = ?, quantidade = 0, estrategia = ''
+            WHERE codigo = ?
+        """, ("filetado", codigo))
+
+    conn.commit()
+    conn.close()
+
+
 @app.route("/gerar-filete")
 def gerar_filete():
     numero_lote = request.args.get("numero_lote", "").strip()
@@ -418,12 +485,12 @@ def gerar_filete():
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
+    cursor.execute("SELECT codigo, status, quantidade, estrategia FROM status_cards")
     rows = cursor.fetchall()
     conn.close()
 
-    mapa_status = {str(codigo): status or "" for codigo, status, quantidade in rows}
-    mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade in rows}
+    mapa_status = {str(codigo): status or "" for codigo, status, quantidade, estrategia in rows}
+    mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade, estrategia in rows}
 
     df["STATUS_CARD"] = df["Código do Anúncio"].astype(str).map(mapa_status).fillna("principal")
     df["Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
@@ -442,11 +509,13 @@ def gerar_filete():
         if col not in df.columns:
             df[col] = ""
 
-    df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
+        df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
 
     if "ENDEREÇO" in df.columns:
         df = df.sort_values(by="ENDEREÇO", kind="stable")
-        registrar_lote_conferencia(numero_lote, tipo_lote, df)
+
+    registrar_lote_conferencia(numero_lote, tipo_lote, df)
+    salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df)
 
     output = BytesIO()
 
@@ -482,7 +551,6 @@ def gerar_filete():
         worksheet.column_dimensions["F"].width = 30
         worksheet.column_dimensions["G"].width = 28
 
-        
         linha = 1
 
         for _, item in df.iterrows():
@@ -611,6 +679,7 @@ def salvar_status():
     codigo = data.get("codigo")
     status = data.get("status")
     quantidade = data.get("quantidade", 0)
+    estrategia = data.get("estrategia", "")
 
     try:
         quantidade = int(quantidade)
@@ -621,12 +690,13 @@ def salvar_status():
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO status_cards (codigo, status, quantidade)
-        VALUES (?, ?, ?)
+        INSERT INTO status_cards (codigo, status, quantidade, estrategia)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(codigo) DO UPDATE SET
             status=excluded.status,
-            quantidade=excluded.quantidade
-    """, (codigo, status, quantidade))
+            quantidade=excluded.quantidade,
+            estrategia=excluded.estrategia
+    """, (codigo, status, quantidade, estrategia))
 
     conn.commit()
     conn.close()
@@ -639,16 +709,17 @@ def get_status():
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
-    cursor.execute("SELECT codigo, status, quantidade FROM status_cards")
+    cursor.execute("SELECT codigo, status, quantidade, estrategia FROM status_cards")
     rows = cursor.fetchall()
 
     conn.close()
 
     status_dict = {}
-    for codigo, status, quantidade in rows:
+    for codigo, status, quantidade, estrategia in rows:
         status_dict[str(codigo)] = {
             "status": status,
-            "quantidade": quantidade or 0
+            "quantidade": quantidade or 0,
+            "estrategia": estrategia or ""
         }
 
     return jsonify(status_dict)

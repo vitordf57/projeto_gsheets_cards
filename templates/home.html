@@ -107,6 +107,11 @@
         transform:translateY(-2px);
     }
 
+    .kpi-item.ativo{
+        background:#eef4ff;
+        border:2px solid #1c5ed6;
+    }
+
     .kpi-item-label{
         font-size:12px;
         font-weight:bold;
@@ -180,6 +185,11 @@
 <h1>🏠 Dashboard Geral</h1>
 
 <div class="dashboard-grid">
+
+    <div class="kpi-card kpi-card-wide">
+        <div class="kpi-title">Status Full</div>
+        <div class="kpi-lista" id="kpiStatusFull"></div>
+    </div>
 
     <div class="kpi-card">
         <div class="kpi-title">Ruptura</div>
@@ -275,6 +285,8 @@
 </div>
 
 <script>
+const urlParamsHome = new URLSearchParams(window.location.search);
+
 function numero(v){
     if(v === null || v === undefined || v === "") return 0;
     return Number(String(v).replaceAll(".","").replace(",","."));
@@ -284,6 +296,19 @@ function extrairDiasCobertura(texto){
     const t = String(texto || "");
     const match = t.match(/(\d+)\s*dias/i);
     return match ? Number(match[1]) : null;
+}
+
+function atualizarUrlFiltroStatusFull(){
+    const params = new URLSearchParams(window.location.search);
+
+    if (filtroStatusFullAtivo) {
+        params.set("statusFullFiltro", filtroStatusFullAtivo);
+    } else {
+        params.delete("statusFullFiltro");
+    }
+
+    const query = params.toString();
+    history.replaceState({}, "", "/home" + (query ? "?" + query : ""));
 }
 
 function irParaPainel(filtros){
@@ -297,6 +322,10 @@ function irParaPainel(filtros){
     if (filtros.full) params.set("full", filtros.full);
     if (filtros.conta) params.set("conta", filtros.conta);
 
+    if (filtroStatusFullAtivo) {
+        params.set("statusFullFiltro", filtroStatusFullAtivo);
+    }
+
     window.location.href = "/?" + params.toString();
 }
 
@@ -306,12 +335,61 @@ function porConta(dados, nickname){
     );
 }
 
-fetch("/dados-dashboard")
-.then(r => r.json())
-.then(dados => {
+let filtroStatusFullAtivo = urlParamsHome.get("statusFullFiltro") || "";
+let chartQtdInstance = null;
+let chartValorInstance = null;
+let chartSaudeInstance = null;
+let chartAnaliseInstance = null;
 
-    const renaf = porConta(dados, "RENAFCAR");
-    const conta4i = porConta(dados, "4IDISTRIBUIDORA");
+function aplicarFiltroStatusFull(lista){
+    if (filtroStatusFullAtivo === "nao_ofereco_mais_full"){
+        return lista.filter(item =>
+            String(item["OBSERVAÇÃO MELI"] || "").trim() === "Você deixou de oferecer o Full."
+        );
+    }
+
+    if (filtroStatusFullAtivo === "esta_no_full"){
+        return lista.filter(item =>
+            String(item["Full"] || "").trim().toUpperCase() === "NO FULL"
+        );
+    }
+
+    if (filtroStatusFullAtivo === "nunca_foi_full"){
+        return lista.filter(item => {
+            const observacaoMeli = String(item["OBSERVAÇÃO MELI"] || "").trim();
+            const full = String(item["Full"] || "").trim().toUpperCase();
+
+            return observacaoMeli !== "Você deixou de oferecer o Full." && full !== "NO FULL";
+        });
+    }
+
+    return lista;
+}
+
+function destruirGraficos(){
+    if (chartQtdInstance) {
+        chartQtdInstance.destroy();
+        chartQtdInstance = null;
+    }
+    if (chartValorInstance) {
+        chartValorInstance.destroy();
+        chartValorInstance = null;
+    }
+    if (chartSaudeInstance) {
+        chartSaudeInstance.destroy();
+        chartSaudeInstance = null;
+    }
+    if (chartAnaliseInstance) {
+        chartAnaliseInstance.destroy();
+        chartAnaliseInstance = null;
+    }
+}
+
+function renderDashboard(dados){
+    const dadosFiltrados = aplicarFiltroStatusFull(dados);
+
+    const renaf = porConta(dadosFiltrados, "RENAFCAR");
+    const conta4i = porConta(dadosFiltrados, "4IDISTRIBUIDORA");
 
     const rupturaRenaf = renaf.filter(item =>
         String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() === "RUPTURA"
@@ -354,10 +432,9 @@ fetch("/dados-dashboard")
     document.getElementById("kpiAcompanharRenaf").innerText = acompanharRenaf;
     document.getElementById("kpiAcompanhar4i").innerText = acompanhar4i;
 
-    // CARD DINÂMICO DE INFORMAÇÃO DE ESTOQUE
     const infoEstoqueMap = {};
 
-    dados.forEach(item => {
+    dadosFiltrados.forEach(item => {
         const valorOriginal = String(item["SAUDE DO ESTOQUE 4i"] || "").trim();
         const chave = valorOriginal !== "" ? valorOriginal : "SEM DADO";
         infoEstoqueMap[chave] = (infoEstoqueMap[chave] || 0) + 1;
@@ -382,27 +459,75 @@ fetch("/dados-dashboard")
         containerInfoEstoque.appendChild(item);
     });
 
-    const topQtd = [...dados]
+    const totalNaoOferecoMaisFull = dados.filter(item =>
+        String(item["OBSERVAÇÃO MELI"] || "").trim() === "Você deixou de oferecer o Full."
+    ).length;
+
+    const totalEstaNoFull = dados.filter(item =>
+        String(item["Full"] || "").trim().toUpperCase() === "NO FULL"
+    ).length;
+
+    const totalNuncaFoiFull = dados.filter(item => {
+        const observacaoMeli = String(item["OBSERVAÇÃO MELI"] || "").trim();
+        const full = String(item["Full"] || "").trim().toUpperCase();
+
+        return observacaoMeli !== "Você deixou de oferecer o Full." && full !== "NO FULL";
+    }).length;
+
+    const containerStatusFull = document.getElementById("kpiStatusFull");
+    containerStatusFull.innerHTML = "";
+
+    const cardsStatusFull = [
+        { chave: "nao_ofereco_mais_full", label: "NÃO OFEREÇO MAIS NO FULL", valor: totalNaoOferecoMaisFull },
+        { chave: "esta_no_full", label: "ESTÁ NO FULL", valor: totalEstaNoFull },
+        { chave: "nunca_foi_full", label: "NUNCA FOI NO FULL", valor: totalNuncaFoiFull }
+    ];
+
+    cardsStatusFull.forEach(card => {
+        const item = document.createElement("div");
+        item.className = "kpi-item" + (filtroStatusFullAtivo === card.chave ? " ativo" : "");
+        item.onclick = () => {
+            if (filtroStatusFullAtivo === card.chave){
+                filtroStatusFullAtivo = "";
+            } else {
+                filtroStatusFullAtivo = card.chave;
+            }
+
+            atualizarUrlFiltroStatusFull();
+            renderDashboard(dados);
+        };
+
+        item.innerHTML = `
+            <div class="kpi-item-label">${card.label}</div>
+            <div class="kpi-item-value">${card.valor}</div>
+        `;
+
+        containerStatusFull.appendChild(item);
+    });
+
+    const topQtd = [...dadosFiltrados]
         .sort((a,b) => numero(b["30 DIAS"]) - numero(a["30 DIAS"]))
         .slice(0, 10);
 
-    const topValor = [...dados]
+    const topValor = [...dadosFiltrados]
         .sort((a,b) => numero(b["Total de Vendas 30 DIAS"]) - numero(a["Total de Vendas 30 DIAS"]))
         .slice(0, 10);
 
     const saudeMap = {};
-    dados.forEach(item => {
+    dadosFiltrados.forEach(item => {
         const chave = String(item["SAUDE DO ESTOQUE 4i"] || "SEM DADO").trim();
         saudeMap[chave] = (saudeMap[chave] || 0) + 1;
     });
 
     const analiseMap = {};
-    dados.forEach(item => {
+    dadosFiltrados.forEach(item => {
         const chave = String(item["ANALISE"] || "SEM DADO").trim();
         analiseMap[chave] = (analiseMap[chave] || 0) + 1;
     });
 
-    new Chart(document.getElementById("chartQtd"), {
+    destruirGraficos();
+
+    chartQtdInstance = new Chart(document.getElementById("chartQtd"), {
         type: "bar",
         data: {
             labels: topQtd.map(item => item["Código do Anúncio"]),
@@ -421,7 +546,7 @@ fetch("/dados-dashboard")
         }
     });
 
-    new Chart(document.getElementById("chartValor"), {
+    chartValorInstance = new Chart(document.getElementById("chartValor"), {
         type: "bar",
         data: {
             labels: topValor.map(item => item["Código do Anúncio"]),
@@ -440,7 +565,7 @@ fetch("/dados-dashboard")
         }
     });
 
-    new Chart(document.getElementById("chartSaude"), {
+    chartSaudeInstance = new Chart(document.getElementById("chartSaude"), {
         type: "doughnut",
         data: {
             labels: Object.keys(saudeMap),
@@ -454,7 +579,7 @@ fetch("/dados-dashboard")
         }
     });
 
-    new Chart(document.getElementById("chartAnalise"), {
+    chartAnaliseInstance = new Chart(document.getElementById("chartAnalise"), {
         type: "doughnut",
         data: {
             labels: Object.keys(analiseMap),
@@ -467,7 +592,12 @@ fetch("/dados-dashboard")
             maintainAspectRatio: false
         }
     });
+}
 
+fetch("/dados-dashboard")
+.then(r => r.json())
+.then(dados => {
+    renderDashboard(dados);
 });
 </script>
 
