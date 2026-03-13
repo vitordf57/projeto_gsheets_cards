@@ -466,10 +466,10 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         ))
 
         cursor.execute("""
-            UPDATE status_cards
-            SET status = ?, quantidade = 0, estrategia = ''
-            WHERE codigo = ?
-        """, ("filetado", codigo))
+    UPDATE status_cards
+    SET status = ?, quantidade = 0
+    WHERE codigo = ?
+""", ("filetado", codigo))
 
     conn.commit()
     conn.close()

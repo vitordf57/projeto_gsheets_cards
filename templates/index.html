@@ -103,15 +103,24 @@ h1{ margin-bottom:15px; }
 .linha-topo{
     display:flex;
     justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
+    align-items:flex-start;
+    flex-wrap:nowrap;
+    width:100%;
 }
 
 .mlb-area{
     display:flex;
     align-items:flex-start;
     gap:12px;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
+    width:100%;
+}
+
+.topo-direita{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-left:auto;
 }
 
 .mlb{
@@ -202,9 +211,52 @@ h1{ margin-bottom:15px; }
 
 .envio-area{
     display:flex;
-    justify-content: flex-end;
+    justify-content:flex-end;
     align-items:center;
     gap:8px;
+    margin-bottom:0;
+    flex-shrink:0;
+}
+
+.linha-acao-final{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    margin-top:8px;
+}
+
+.saldo-final{
+    font-weight:700;
+    min-width:220px;
+    flex-shrink:0;
+}
+
+.estrategia-meio{
+    font-size:12px;
+    background:#fff4db;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid #f7d58b;
+    color:#8a5a00;
+    min-width:260px;
+    max-width:360px;
+    cursor:pointer;
+    transition:0.2s;
+    flex:1;
+}
+
+.estrategia-meio:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,0.10);
+}
+
+.estrategia-titulo{
+    font-weight:bold;
+}
+
+.estrategia-subtitulo{
+    margin-top:2px;
 }
 
 .envio-area input{
@@ -225,7 +277,7 @@ h1{ margin-bottom:15px; }
     display:grid;
     grid-template-columns: 1fr 1fr 1.3fr 1fr;
     gap:20px;
-    margin-top:15px;
+    margin-top:35px;
 }
 
 .bloco{
@@ -518,7 +570,8 @@ const estrategiasNaoEnvio = [
 "Arthur",
 "Matheus",
 "Compras (Matheus)",
-"Compras (Victor)"
+"Compras (Victor)",
+"TESTE VALIDAR DIRETORIA"
 ];
 
 let telaAtual = "principal";
@@ -993,33 +1046,22 @@ function montarHTMLCard(item){
     <span class="badge badge-green">${item["SELO"] || ""}</span>
     <span class="badge badge-blue">${item["OBSERVAÇÃO MELI"] || ""}</span>
 
-    ${
-    statusSalvos[String(item["Código do Anúncio"])]?.estrategia
-    ? `<span class="badge badge-orange">
-        Estratégia: ${statusSalvos[String(item["Código do Anúncio"])]?.estrategia}
-      </span>`
-    : ""
-}
-    
 </div>
 
-<button onclick="abrirModalEstrategia('${item["Código do Anúncio"]}')" 
-style="background:#dc3545;color:white;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;">
-Estratégia
-</button>
+<div class="topo-direita">
+    <div class="ia-box ${sugestoes.classe}">
+        <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
+        <div>${sugestoes.detalhe}</div>
+        <div class="ia-tooltip">
+            ${sugestoes.tooltip}
+        </div>
+    </div>
 
-<div class="ia-box ${sugestoes.classe}">
-    <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
-    <div>${sugestoes.detalhe}</div>
-    <div class="ia-tooltip">
-        ${sugestoes.tooltip}
+    <div class="comentario-topo"
+        onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
+        💬
     </div>
 </div>
-
-            <div class="comentario-topo"
-                onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
-                💬
-            </div>
         </div>
     </div>
 
@@ -1043,26 +1085,43 @@ Estratégia
 </div>
         <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
 
-        <div class="envio-area">
-            <input
-                type="number"
-                id="qtd-${item["Código do Anúncio"]}"
-                value="${obterQuantidadeSalva(item["Código do Anúncio"])}"
-                oninput="atualizarSaldoCard('${item["Código do Anúncio"]}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
-            >
-            <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
-            
-            <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
-                ↩ Voltar
-            </button>
-        </div>
+        <div class="linha-acao-final">
 
-        <div id="saldo-restante-${item["Código do Anúncio"]}" data-sku="${item["SKU"]}" style="margin-top:8px; font-weight:700; color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? '#c62828' : '#1b5e20'};">
-            Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"]))}
-            ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? ' | Estoque insuficiente' : ''}
-        </div>
+    <div id="saldo-restante-${item["Código do Anúncio"]}" data-sku="${item["SKU"]}" class="saldo-final" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? '#c62828' : '#1b5e20'};">
+        Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"]))}
+    </div>
 
-        <hr style="margin:15px 0">
+    <div class="estrategia-meio" onclick="abrirModalEstrategia('${item["Código do Anúncio"]}')">
+        ${
+            statusSalvos[String(item["Código do Anúncio"])]?.estrategia
+            ? `
+            <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(item["Código do Anúncio"])]?.estrategia}</div>
+            <div class="estrategia-subtitulo">Definida manualmente</div>
+            `
+            : `
+            <div class="estrategia-titulo">Estratégia → Selecionar</div>
+            <div class="estrategia-subtitulo">Clique para escolher</div>
+            `
+        }
+    </div>
+
+    <div class="envio-area">
+        <input
+            type="number"
+            id="qtd-${item["Código do Anúncio"]}"
+            value="${obterQuantidadeSalva(item["Código do Anúncio"])}"
+            oninput="atualizarSaldoCard('${item["Código do Anúncio"]}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
+        >
+        <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
+        
+        <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
+            ↩ Voltar
+        </button>
+    </div>
+
+</div>
+
+        <hr style="margin:4px 0 0 0">
 
         <div class="linha-quatro">
             <div class="duplo-bloco">
@@ -1280,10 +1339,17 @@ function abrirModalEstrategia(codigo){
     const select = document.getElementById("selectEstrategia");
     select.innerHTML = "";
 
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+
     estrategiasNaoEnvio.forEach(e => {
         const op = document.createElement("option");
         op.value = e;
         op.textContent = e;
+
+        if (e === estrategiaAtual){
+            op.selected = true;
+        }
+
         select.appendChild(op);
     });
 
@@ -1297,21 +1363,24 @@ function fecharModalEstrategia(){
 function salvarEstrategia(){
     const estrategia = document.getElementById("selectEstrategia").value;
 
+    const statusAtual = statusSalvos[String(codigoEstrategiaAtual)]?.status || "principal";
+    const quantidadeAtual = statusSalvos[String(codigoEstrategiaAtual)]?.quantidade || 0;
+
     fetch("/salvar-status", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             codigo: codigoEstrategiaAtual,
-            status: "nao_enviar",
+            status: statusAtual,
             estrategia: estrategia,
-            quantidade: 0
+            quantidade: quantidadeAtual
         })
     }).then(() => {
 
         statusSalvos[String(codigoEstrategiaAtual)] = {
-            status: "nao_enviar",
+            status: statusAtual,
             estrategia: estrategia,
-            quantidade: 0
+            quantidade: quantidadeAtual
         };
 
         fecharModalEstrategia();
