@@ -3,36 +3,229 @@
 {% block content %}
 
 <style>
-body{
+
+.page-wrap{
     font-family: Arial;
     background:#f4f6f8;
     margin:0;
-    padding:20px;
+    padding:0;
+    min-height:100vh;
+    box-sizing:border-box;
 }
 
 h1{ margin-bottom:15px; }
 
 .menu{
-    background:#244179;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:20px;
-    color:white;
+    margin:20px 0 30px 0;
+    padding:0;
 }
 
-.menu select,
-.menu input{
-    padding:6px;
-    margin:5px;
-    border-radius:5px;
-    border:none;
+.barra-acoes-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
 }
 
-.menu button{
-    padding:6px 10px;
+.barra-esquerda{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex:1;
+    min-width:0;
+    flex-wrap:wrap;
+}
+
+.busca-box{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:white;
+    border:1px solid #dbe1ea;
+    border-radius:16px;
+    padding:8px 10px 8px 14px;
+    min-width:320px;
+    max-width:620px;
+    width:100%;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+
+.busca-icone{
+    font-size:18px;
+    opacity:0.7;
+}
+
+.busca-box input{
     border:none;
-    border-radius:5px;
+    outline:none;
+    width:100%;
+    font-size:15px;
+    background:transparent;
+}
+
+.btn-filtros{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:11px 16px;
+    border-radius:14px;
+    border:1px solid #dbe1ea;
+    background:white;
     cursor:pointer;
+    font-weight:600;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+    transition:0.2s ease;
+}
+
+.btn-filtros:hover{
+    transform:translateY(-1px);
+    background:#f8fafc;
+}
+
+.info-contador-topo{
+    font-weight:bold;
+    color:#1f2937;
+    white-space:nowrap;
+    font-size:15px;
+}
+
+.acoes-direita{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.btn-acao-icone{
+    width:56px;
+    height:56px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:18px;
+    border:none;
+    background:#198754;
+    color:white;
+    text-decoration:none;
+    font-size:22px;
+    font-weight:bold;
+    box-shadow:0 6px 20px rgba(0,0,0,0.10);
+    transition:0.2s ease;
+    cursor:pointer;
+}
+
+.btn-acao-icone:hover{
+    transform:translateY(-1px);
+    background:#157347;
+}
+
+.btn-filete-topo{
+    display:none;
+    background:#0d6efd;
+}
+
+.btn-filete-topo:hover{
+    background:#0b5ed7;
+}
+
+.filtros-painel{
+    display:none;
+    margin-top:14px;
+    padding:14px;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    background:#ffffff;
+    box-shadow:0 6px 20px rgba(0,0,0,0.05);
+}
+
+.filtros-painel.aberto{
+    display:block;
+}
+
+.filtros-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.filtros-grid select,
+.filtros-grid button{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:white;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.filtros-grid button:hover{
+    background:#f3f4f6;
+}
+
+.indicador-filtro{
+    display:none;
+    margin-top:10px;
+    font-size:13px;
+    color:#b45309;
+    font-weight:bold;
+}
+
+.indicador-filtro.ativo{
+    display:block;
+}
+
+.contador{
+    display:none;
+}
+
+@media (max-width: 900px){
+    .barra-acoes-topo{
+        align-items:stretch;
+    }
+
+    .barra-esquerda{
+        width:100%;
+    }
+
+    .busca-box{
+        max-width:100%;
+        min-width:unset;
+    }
+
+    .acoes-direita{
+        width:100%;
+        justify-content:flex-start;
+    }
+
+    .info-contador-topo{
+        order:1;
+    }
+}
+
+@media (max-width: 900px){
+    .busca-central input{
+        font-size:18px;
+        padding:14px 16px;
+    }
+
+    .btn-filtros{
+        width:100%;
+    }
+
+    .filtros-topo{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .busca-central{
+        max-width:100%;
+        width:100%;
+    }
+
+    .filtros-grid select,
+    .filtros-grid button{
+        width:100%;
+    }
 }
 
 .top-menu{
@@ -131,6 +324,7 @@ h1{ margin-bottom:15px; }
 .badges{
     display:flex;
     gap:10px;
+    flex-wrap:wrap;
 }
 
 .badge{
@@ -183,7 +377,7 @@ h1{ margin-bottom:15px; }
     position:absolute;
     top:110%;
     left:0;
-    width:320px;
+    width:360px;
     max-width:90vw;
     background:#111827;
     color:#fff;
@@ -495,58 +689,123 @@ h1{ margin-bottom:15px; }
     from{ transform:scale(0.95); opacity:0; }
     to{ transform:scale(1); opacity:1; }
 }
+
 </style>
 
-<h1>📦 Painel Estratégico Full</h1>
+<div class="page-wrap">
+    <div style="padding: 30px;">
 
-<div class="top-menu">
-    <button onclick="mostrarTela('principal')">📊 Principal</button>
-    <button onclick="mostrarTela('enviando')">🚚 Enviando (<span id="contEnv">0</span>)</button>
-    <button onclick="mostrarTela('naoEnviar')">❌ Não Enviar (<span id="contNao">0</span>)</button>
-    <a id="btnExportarExcel" class="btn-exportar" href="#">📥 Exportar Excel</a>
-    <button id="btnGerarFilete" class="btn-filete" onclick="abrirModalFilete()">🧾 Gerar Filete</button>
+    <h1>📦 Painel Estratégico Full</h1>
+
+    <div class="top-menu" style="display:none;"></div>
+
+    <div class="menu">
+
+        <div class="barra-acoes-topo">
+    
+            <div class="barra-esquerda">
+                <div class="busca-box">
+                    <span class="busca-icone">🔎</span>
+                    <input
+                        type="text"
+                        id="filtroBusca"
+                        placeholder="Pesquisar por SKU, MLB ou título..."
+                        oninput="aplicarRenderComDebounce()"
+                    >
+                </div>
+    
+                <button type="button" class="btn-filtros" onclick="togglePainelFiltros()">
+                    ⚙️ <span>Filtros</span>
+                </button>
+            </div>
+    
+            <div class="acoes-direita">
+                <div id="contadorTopo" class="info-contador-topo">0 MLBs</div>
+    
+                <a
+                    id="btnExportarExcel"
+                    class="btn-acao-icone"
+                    href="#"
+                    title="Exportar p Excel"
+                    aria-label="Exportar p Excel"
+                >
+                    ⬇️
+                </a>
+    
+                <button
+                    id="btnGerarFilete"
+                    type="button"
+                    class="btn-acao-icone btn-filete-topo"
+                    onclick="abrirModalFilete()"
+                    title="Gerar filete"
+                    aria-label="Gerar filete"
+                >
+                    🧾
+                </button>
+            </div>
+    
+        </div>
+    
+        <div id="indicadorFiltro" class="indicador-filtro">
+            Tela filtrada
+        </div>
+    
+        <div id="painelFiltros" class="filtros-painel">
+            <div class="filtros-grid">
+    
+                <select id="filtroConta" onchange="renderCards()">
+                    <option value="">Contas</option>
+                    <option value="renafcar">RENAFCAR</option>
+                    <option value="4idistribuidora">4IDISTRIBUIDORA</option>
+                </select>
+    
+                <select id="filtroSelo" onchange="renderCards()">
+                    <option value="">Todos os selos</option>
+                </select>
+    
+                <select id="filtroLogica" onchange="renderCards()">
+                    <option value="">Toda lógica</option>
+                </select>
+    
+                <select id="filtroSaude" onchange="renderCards()">
+                    <option value="">Toda saúde</option>
+                </select>
+
+                <select id="filtroCondicao" onchange="renderCards()">
+                    <option value="">Toda condição</option>
+                </select>
+
+                <select id="filtroLote" onchange="renderCards()">
+                    <option value="">Todos os lotes</option>
+                </select>
+    
+                <button type="button" onclick="setFiltro('valor500')">Valor &gt; 500</button>
+                <button type="button" onclick="setFiltro('unidades10')">Unid &gt; 10</button>
+                <button type="button" onclick="setFiltro('critico')">-10 vendas + 500</button>
+                <button type="button" onclick="limparFiltros()">Limpar</button>
+    
+            </div>
+        </div>
+    
+        <div id="contadorPrincipal" class="contador"></div>
+    </div>        
+
+    <div id="principal" class="grid"></div>
+    <div id="enviando" class="grid hidden"></div>
+    <div id="naoEnviar" class="grid hidden"></div>
+    <div id="historico" class="grid hidden"></div>
 </div>
-
-<div class="menu">
-
-<select id="filtroConta" onchange="renderCards()">
-<option value="">Contas</option>
-<option value="renafcar">RENAFCAR</option>
-<option value="4idistribuidora">4IDISTRIBUIDORA</option>
-</select>
-
-<input type="text" id="filtroBusca" placeholder="SKU ou MLB" oninput="renderCards()">
-
-<select id="filtroSelo" onchange="renderCards()">
-<option value="">Todos os selos</option>
-</select>
-
-<select id="filtroLogica" onchange="renderCards()">
-<option value="">Toda lógica</option>
-</select>
-
-<select id="filtroSaude" onchange="renderCards()">
-<option value="">Toda saúde</option>
-</select>
-
-<button onclick="setFiltro('valor500')">Valor > 500</button>
-<button onclick="setFiltro('unidades10')">Unid > 10</button>
-<button onclick="setFiltro('critico')">-10 VENDAS + 500 VALOR</button>
-<button onclick="limparFiltros()">Limpar</button>
-
-<div id="contadorPrincipal" class="contador"></div>
-</div>
-
-<div id="principal" class="grid"></div>
-<div id="enviando" class="grid hidden"></div>
-<div id="naoEnviar" class="grid hidden"></div>
 
 <script>
 const principal = document.getElementById("principal");
 const enviando = document.getElementById("enviando");
 const naoEnviar = document.getElementById("naoEnviar");
-const contEnv = document.getElementById("contEnv");
-const contNao = document.getElementById("contNao");
+const historico = document.getElementById("historico");
+
+const contEnv = document.getElementById("contEnvSidebar");
+const contNao = document.getElementById("contNaoSidebar");
+const contHist = document.getElementById("contHistSidebar");
+const contPrincipalSidebar = null;
 const contadorPrincipal = document.getElementById("contadorPrincipal");
 const btnGerarFilete = document.getElementById("btnGerarFilete");
 
@@ -555,6 +814,8 @@ const filtroBusca = document.getElementById("filtroBusca");
 const filtroSelo = document.getElementById("filtroSelo");
 const filtroLogica = document.getElementById("filtroLogica");
 const filtroSaude = document.getElementById("filtroSaude");
+const filtroCondicao = document.getElementById("filtroCondicao");
+const filtroLote = document.getElementById("filtroLote");
 
 let dadosOriginais = [];
 let comentariosSalvos = {};
@@ -572,6 +833,14 @@ const estrategiasNaoEnvio = [
 "Compras (Matheus)",
 "Compras (Victor)",
 "TESTE VALIDAR DIRETORIA"
+];
+
+const motivosEnvio = [
+"FALTA DE ESTOQUE",
+"OTIMIZAR",
+"VERIFICAR PREÇO",
+"BEM PERFORMANDO",
+"TESTE"
 ];
 
 let telaAtual = "principal";
@@ -620,9 +889,46 @@ function calcularSaldoProjetado(estoqueEmpresa, quantidadeEnviar){
     return numeroInteiro(estoqueEmpresa) - numeroInteiro(quantidadeEnviar);
 }
 
+function togglePainelFiltros(){
+    const painel = document.getElementById("painelFiltros");
+    painel.classList.toggle("aberto");
+}
+
+function existeFiltroAtivo(){
+    return Boolean(
+        filtroConta.value ||
+        filtroBusca.value.trim() ||
+        filtroSelo.value ||
+        filtroLogica.value ||
+        filtroSaude.value ||
+        filtroCondicao.value ||
+        filtroLote.value ||
+        filtroEspecial ||
+        filtroUrlMagic ||
+        filtroUrlCobertura ||
+        filtroUrlFull ||
+        filtroUrlSaudeFull ||
+        filtroUrlConta ||
+        filtroUrlStatusFull
+    );
+}
+
+function atualizarIndicadorFiltro(){
+    const indicador = document.getElementById("indicadorFiltro");
+    const painel = document.getElementById("painelFiltros");
+
+    if (existeFiltroAtivo()){
+        indicador.classList.add("ativo");
+        painel.classList.add("aberto");
+    } else {
+        indicador.classList.remove("ativo");
+    }
+}
+
 function sugestaoIA(item){
     const estoqueEmpresa = numeroInteiro(item["ESTOQUE TOTAL SIGNUS"]);
     const estoqueFull = numeroInteiro(item["ESTOQUE FULL"]);
+    const vendas7 = numeroInteiro(item["7 DIAS"]);
     const vendas30 = numeroInteiro(item["30 DIAS"]);
     const valor30 = valorParaNumero(item["Total de Vendas 30 DIAS"]);
     const metrica30 = numeroInteiro(item["METRICAS 30 DIAS DO MELI"]);
@@ -635,9 +941,30 @@ function sugestaoIA(item){
     const acao = textoNormalizado(item["Ação Recomendada"]);
     const sugestaoMeli = textoNormalizado(item["SUGESTAO MELI"]);
 
+    const prazoCriacaoLote = 2;
+    const prazoOperacao = 4;
+    const prazoAptoVenda = 3;
+    const diasReposicao = prazoCriacaoLote + prazoOperacao + prazoAptoVenda;
+
+    const mediaDia30 = vendas30 > 0 ? (vendas30 / 30) : 0;
+    const mediaDia7 = vendas7 > 0 ? (vendas7 / 7) : 0;
+    const mediaDiaConsiderada = Math.max(mediaDia30, mediaDia7);
+
+    const demandaProjetada30 = Math.ceil(mediaDiaConsiderada * 30);
+    const consumoAteApto = Math.ceil(mediaDiaConsiderada * diasReposicao);
+    const estoqueFullQuandoApto = Math.max(estoqueFull - consumoAteApto, 0);
+    const necessidade30Dias = Math.max(demandaProjetada30 - estoqueFullQuandoApto, 0);
+
     let score = 0;
     const motivosPositivos = [];
     const motivosNegativos = [];
+
+    if (vendas7 >= 2){
+        score += 1;
+        motivosPositivos.push("Venda de 7 dias mostra giro recente");
+    } else {
+        motivosNegativos.push("Venda de 7 dias está baixa");
+    }
 
     if (vendas30 >= 4){
         score += 1;
@@ -704,8 +1031,14 @@ function sugestaoIA(item){
         motivosPositivos.push("Anúncio tem selo relevante");
     }
 
-    const metricasBoas = score >= 4 && vendas30 > 0;
-    const necessidade30Dias = Math.max(vendas30 - estoqueFull, 0);
+    if (consumoAteApto >= estoqueFull && mediaDiaConsiderada > 0){
+        score += 1;
+        motivosPositivos.push("O estoque atual pode não segurar até o item ficar apto");
+    } else {
+        motivosNegativos.push("O estoque atual ainda segura o prazo operacional");
+    }
+
+    const metricasBoas = score >= 5 && (vendas30 > 0 || vendas7 > 0);
 
     let sugestao = 0;
     let statusIA = "NÃO ENVIAR";
@@ -718,37 +1051,42 @@ function sugestaoIA(item){
         statusIA = "NÃO ENVIAR";
         detalhe = "Métricas insuficientes";
         classe = "ia-nao-enviar";
-        explicacao = "O MLB não está performando bem o suficiente para justificar reposição agora.";
+        explicacao = "O MLB não está performando bem o suficiente para justificar reposição agora, considerando também o giro recente e o prazo operacional até ficar apto.";
     }
     else if (necessidade30Dias <= 0){
         sugestao = 0;
         statusIA = "NÃO ENVIAR";
-        detalhe = "Full já cobre 30 dias";
+        detalhe = "Full ainda cobre o prazo + 30 dias";
         classe = "ia-nao-enviar";
-        explicacao = "O estoque que já está no Full é suficiente para cobrir pelo menos 30 dias de venda.";
+        explicacao = "Mesmo considerando 2 dias para criar lote, 4 dias de operação e 3 dias até ficar apto, o estoque atual do Full ainda sustenta a demanda projetada.";
     }
     else if (estoqueEmpresa < necessidade30Dias){
         sugestao = 0;
         statusIA = "REPOR ESTOQUE EMPRESA";
         detalhe = `Precisa ${necessidade30Dias} e empresa tem ${estoqueEmpresa}`;
         classe = "ia-repor";
-        explicacao = "Mesmo com bom potencial de venda, a empresa não tem estoque suficiente para repor 30 dias completos. O ideal é repor o estoque interno antes de enviar.";
+        explicacao = "Há necessidade de envio considerando o tempo até o produto ficar apto, mas o estoque da empresa não é suficiente para repor o ideal projetado.";
     }
     else{
         sugestao = necessidade30Dias;
         statusIA = `ENVIAR ${sugestao} UN.`;
-        detalhe = "Reposição completa de 30 dias";
+        detalhe = `Reposição considerando ${diasReposicao} dias de prazo operacional`;
         classe = "ia-enviar";
-        explicacao = "O MLB tem bom potencial, o Full não cobre 30 dias e a empresa tem estoque suficiente para fazer a reposição completa.";
+        explicacao = "O MLB tem bom potencial, o giro recente ajuda a decisão e a sugestão já considera o tempo até o item ficar apto para venda novamente no Full.";
     }
 
     const motivosHtml = `
         <div><strong>Motivo principal:</strong> ${explicacao}</div>
         <div class="ia-score"><strong>Score:</strong> ${score}</div>
+        <div><strong>Venda 7 dias:</strong> ${vendas7}</div>
         <div><strong>Venda 30 dias:</strong> ${vendas30}</div>
-        <div><strong>Estoque Full:</strong> ${estoqueFull}</div>
+        <div><strong>Média diária considerada:</strong> ${mediaDiaConsiderada.toFixed(2)}</div>
+        <div><strong>Prazo até apto:</strong> ${diasReposicao} dias</div>
+        <div><strong>Consumo até ficar apto:</strong> ${consumoAteApto}</div>
+        <div><strong>Estoque Full atual:</strong> ${estoqueFull}</div>
+        <div><strong>Estoque Full quando ficar apto:</strong> ${estoqueFullQuandoApto}</div>
         <div><strong>Estoque empresa:</strong> ${estoqueEmpresa}</div>
-        <div><strong>Necessidade p/ 30 dias:</strong> ${necessidade30Dias}</div>
+        <div><strong>Necessidade projetada:</strong> ${necessidade30Dias}</div>
         <div><strong>Saúde:</strong> ${saude || "SEM DADO"}</div>
         <div><strong>Análise:</strong> ${analise || "SEM DADO"}</div>
         <div style="margin-top:8px;"><strong>Pontos positivos:</strong> ${motivosPositivos.length ? motivosPositivos.join(" | ") : "Nenhum"}</div>
@@ -887,7 +1225,7 @@ function obterDestino(item){
 
     if (status === "enviando") return "enviando";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
-    if (status === "filetado") return "filetado";
+    if (status === "filetado") return "historico";
 
     return "principal";
 }
@@ -896,23 +1234,46 @@ function atualizarContadores(){
     const totalPrincipal = dadosFiltradosBase.filter(item => obterDestino(item) === "principal").length;
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
     const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
+    const totalHistorico = dadosFiltradosBase.filter(item => obterDestino(item) === "historico").length;
 
-    contEnv.innerText = totalEnviando;
-    contNao.innerText = totalNao;
+    if (contPrincipalSidebar) contPrincipalSidebar.innerText = totalPrincipal;
+    if (contEnv) contEnv.innerText = totalEnviando;
+    if (contNao) contNao.innerText = totalNao;
+    if (contHist) contHist.innerText = totalHistorico;
+
+    let textoContador = "0 MLBs";
 
     if (telaAtual === "principal"){
-        contadorPrincipal.innerText = `${totalPrincipal} MLBs`;
+        textoContador = `${totalPrincipal} MLBs`;
+        contadorPrincipal.innerText = textoContador;
     } else if (telaAtual === "enviando"){
-        contadorPrincipal.innerText = `${totalEnviando} MLBs`;
+        textoContador = `${totalEnviando} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    } else if (telaAtual === "naoEnviar"){
+        textoContador = `${totalNao} MLBs`;
+        contadorPrincipal.innerText = textoContador;
     } else {
-        contadorPrincipal.innerText = `${totalNao} MLBs`;
+        textoContador = `${totalHistorico} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    }
+
+    const contadorTopo = document.getElementById("contadorTopo");
+    if (contadorTopo){
+        contadorTopo.innerText = textoContador;
     }
 }
 
 function atualizarVisibilidadeFilete(){
-    if (!btnGerarFilete) return;
+    const btnFilete = document.getElementById("btnGerarFilete");
+    if (!btnFilete) return;
+
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
-    btnGerarFilete.style.display = (telaAtual === "enviando" && totalEnviando > 0) ? "inline-block" : "none";
+
+    if (telaAtual === "enviando" && totalEnviando > 0){
+        btnFilete.style.display = "flex";
+    } else {
+        btnFilete.style.display = "none";
+    }
 }
 
 function mostrarTela(tela){
@@ -921,6 +1282,7 @@ function mostrarTela(tela){
     principal.classList.add("hidden");
     enviando.classList.add("hidden");
     naoEnviar.classList.add("hidden");
+    historico.classList.add("hidden");
 
     document.getElementById(tela).classList.remove("hidden");
 
@@ -943,6 +1305,18 @@ function limparFiltros(){
     filtroUrlConta = "";
     filtroUrlStatusFull = "";
     history.replaceState({}, "", "/");
+
+    const indicador = document.getElementById("indicadorFiltro");
+    const painel = document.getElementById("painelFiltros");
+
+    if (indicador){
+        indicador.classList.remove("ativo");
+    }
+
+    if (painel){
+        painel.classList.remove("aberto");
+    }
+
     renderCards();
 }
 
@@ -954,10 +1328,21 @@ function popularFiltros(){
     filtroSelo.innerHTML = '<option value="">Todos os selos</option>';
     filtroLogica.innerHTML = '<option value="">Toda lógica</option>';
     filtroSaude.innerHTML = '<option value="">Toda saúde</option>';
+    filtroCondicao.innerHTML = '<option value="">Toda condição</option>';
+    filtroLote.innerHTML = '<option value="">Todos os lotes</option>';
 
     unique("SELO").forEach(v => filtroSelo.innerHTML += `<option value="${v}">${v}</option>`);
     unique("ANALISE").forEach(v => filtroLogica.innerHTML += `<option value="${v}">${v}</option>`);
     unique("SAUDE DO ESTOQUE 4i").forEach(v => filtroSaude.innerHTML += `<option value="${v}">${v}</option>`);
+
+    const listaCondicao = [
+        ...new Set(
+            dadosOriginais.map(d => d["CONDIÇÃO"] || d["CONDIÇAO"]).filter(v => v)
+        )
+    ];
+    listaCondicao.forEach(v => filtroCondicao.innerHTML += `<option value="${v}">${v}</option>`);
+
+    unique("LOTE").forEach(v => filtroLote.innerHTML += `<option value="${v}">${v}</option>`);
 }
 
 function aplicarFiltrosBase(){
@@ -966,6 +1351,8 @@ function aplicarFiltrosBase(){
     const selo = filtroSelo.value;
     const logica = filtroLogica.value;
     const saude = filtroSaude.value;
+    const condicao = filtroCondicao.value;
+    const lote = filtroLote.value;
 
     return dadosOriginais.filter(item => {
         if (conta && String(item["Nickname"] || "").toLowerCase() !== conta.toLowerCase()) return false;
@@ -978,12 +1365,18 @@ function aplicarFiltrosBase(){
         if (
             busca &&
             !String(item["SKU"] || "").toLowerCase().includes(busca) &&
-            !String(item["Código do Anúncio"] || "").toLowerCase().includes(busca)
+            !String(item["Código do Anúncio"] || "").toLowerCase().includes(busca) &&
+            !String(item["Título"] || "").toLowerCase().includes(busca)
         ) return false;
 
         if (selo && String(item["SELO"] || "").trim() !== String(selo).trim()) return false;
         if (logica && String(item["ANALISE"] || "").trim() !== String(logica).trim()) return false;
         if (saude && String(item["SAUDE DO ESTOQUE 4i"] || "").trim() !== String(saude).trim()) return false;
+
+        const valorCondicaoItem = String(item["CONDIÇÃO"] || item["CONDIÇAO"] || "").trim();
+        if (condicao && valorCondicaoItem !== String(condicao).trim()) return false;
+
+        if (lote && String(item["LOTE"] || "").trim() !== String(lote).trim()) return false;
 
         if (
             filtroUrlMagic &&
@@ -1037,6 +1430,9 @@ function aplicarFiltrosBase(){
 function montarHTMLCard(item){
     const sugestoes = sugestaoIA(item);
     const analise = analisarSKU(item);
+    const codigo = String(item["Código do Anúncio"] || "");
+    const destinoAtual = obterDestino(item);
+    const emHistorico = destinoAtual === "historico";
 
     return `
     <div class="linha-topo">
@@ -1045,7 +1441,7 @@ function montarHTMLCard(item){
            <div class="badges">
     <span class="badge badge-green">${item["SELO"] || ""}</span>
     <span class="badge badge-blue">${item["OBSERVAÇÃO MELI"] || ""}</span>
-
+    ${emHistorico ? '<span class="badge badge-orange">HISTÓRICO</span>' : ''}
 </div>
 
 <div class="topo-direita">
@@ -1076,6 +1472,7 @@ function montarHTMLCard(item){
         <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
         <div><strong>Full:</strong> ${item["Full"] || ""}</div>
         <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
+        <div><strong>Lote:</strong> ${item["LOTE"] || ""}</div>
         <div><strong>Exposição:</strong> ${item["EXPOSIÇÃO"] || ""}</div>
         <div>
     <strong>Outros MLBs mesmo SKU:</strong>
@@ -1087,15 +1484,15 @@ function montarHTMLCard(item){
 
         <div class="linha-acao-final">
 
-    <div id="saldo-restante-${item["Código do Anúncio"]}" data-sku="${item["SKU"]}" class="saldo-final" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"])) < 0 ? '#c62828' : '#1b5e20'};">
-        Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(item["Código do Anúncio"]))}
+    <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
+        Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo))}
     </div>
 
-    <div class="estrategia-meio" onclick="abrirModalEstrategia('${item["Código do Anúncio"]}')">
+    <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
         ${
-            statusSalvos[String(item["Código do Anúncio"])]?.estrategia
+            statusSalvos[String(codigo)]?.estrategia
             ? `
-            <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(item["Código do Anúncio"])]?.estrategia}</div>
+            <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
             <div class="estrategia-subtitulo">Definida manualmente</div>
             `
             : `
@@ -1105,16 +1502,31 @@ function montarHTMLCard(item){
         }
     </div>
 
+<div class="estrategia-meio" onclick="abrirModalMotivo('${codigo}')">
+    ${
+        statusSalvos[String(codigo)]?.motivo_envio
+        ? `
+        <div class="estrategia-titulo">Motivo do envio → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
+        <div class="estrategia-subtitulo">Definido manualmente</div>
+        `
+        : `
+        <div class="estrategia-titulo">Motivo do envio → Selecionar</div>
+        <div class="estrategia-subtitulo">Clique para escolher</div>
+        `
+    }
+</div>
+
     <div class="envio-area">
         <input
             type="number"
-            id="qtd-${item["Código do Anúncio"]}"
-            value="${obterQuantidadeSalva(item["Código do Anúncio"])}"
-            oninput="atualizarSaldoCard('${item["Código do Anúncio"]}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
+            id="qtd-${codigo}"
+            value="${obterQuantidadeSalva(codigo)}"
+            oninput="atualizarSaldoCard('${codigo}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
+            ${emHistorico ? 'disabled' : ''}
         >
-        <button onclick="moverCard('${item["Código do Anúncio"]}')">Enviar</button>
+        ${emHistorico ? '' : `<button onclick="moverCard('${codigo}')">Enviar</button>`}
         
-        <button onclick="voltarPrincipal('${item["Código do Anúncio"]}')" style="background:#6c757d; color:white;">
+        <button onclick="voltarPrincipal('${codigo}')" style="background:#6c757d; color:white;">
             ↩ Voltar
         </button>
     </div>
@@ -1205,6 +1617,8 @@ function atualizarLinkExportacao(){
     if (filtroSelo.value) params.set("selo", filtroSelo.value);
     if (filtroLogica.value) params.set("logica", filtroLogica.value);
     if (filtroSaude.value) params.set("saude", filtroSaude.value);
+    if (filtroCondicao.value) params.set("condicao", filtroCondicao.value);
+    if (filtroLote.value) params.set("lote", filtroLote.value);
 
     if (filtroUrlMagic) params.set("magic", filtroUrlMagic);
     if (filtroUrlCobertura) params.set("cobertura", filtroUrlCobertura);
@@ -1226,12 +1640,14 @@ function renderCards(){
     principal.innerHTML = "";
     enviando.innerHTML = "";
     naoEnviar.innerHTML = "";
+    historico.innerHTML = "";
 
     indiceRender = 0;
     renderProximoLote();
     atualizarContadores();
     atualizarLinkExportacao();
     atualizarVisibilidadeFilete();
+    atualizarIndicadorFiltro();
 }
 
 function atualizarSaldoCard(codigo, estoqueEmpresa, sku){
@@ -1303,29 +1719,36 @@ function moverCard(codigo){
             quantidade: quantidade
         })
     }).then(() => {
-        statusSalvos[String(codigo)] = {
-            status: status,
-            quantidade: quantidade
-        };
+        const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+        const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+
+statusSalvos[String(codigo)] = {
+    status: status,
+    quantidade: quantidade,
+    estrategia: estrategiaAtual,
+    motivo_envio: motivoAtual
+};
         renderCards();
     });
 }
 
 function voltarPrincipal(codigo){
     const quantidadeAtual = obterQuantidadeSalva(codigo);
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
 
-    fetch("/salvar-status", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-            codigo: codigo,
-            status: "principal",
-            quantidade: quantidadeAtual
-        })
-    }).then(() => {
+      statusSalvos[String(codigo)] = {
+      status: "principal",
+      quantidade: quantidadeAtual,
+      estrategia: estrategiaAtual,
+      motivo_envio: motivoAtual
+};    
+
+    then(() => {
         statusSalvos[String(codigo)] = {
             status: "principal",
-            quantidade: quantidadeAtual
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual
         };
         renderCards();
     });
@@ -1384,6 +1807,70 @@ function salvarEstrategia(){
         };
 
         fecharModalEstrategia();
+        renderCards();
+    });
+}
+
+let codigoMotivoAtual = null;
+
+function abrirModalMotivo(codigo){
+    codigoMotivoAtual = codigo;
+
+    const select = document.getElementById("selectMotivoEnvio");
+    select.innerHTML = "";
+
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+
+    motivosEnvio.forEach(motivo => {
+        const op = document.createElement("option");
+        op.value = motivo;
+        op.textContent = motivo;
+
+        if (motivo === motivoAtual){
+            op.selected = true;
+        }
+
+        select.appendChild(op);
+    });
+
+    document.getElementById("modalMotivoEnvio").style.display = "flex";
+}
+
+function fecharModalMotivo(){
+    document.getElementById("modalMotivoEnvio").style.display = "none";
+}
+
+function salvarMotivo(){
+    const motivo = document.getElementById("selectMotivoEnvio").value;
+
+    const statusAtual = statusSalvos[String(codigoMotivoAtual)]?.status || "principal";
+    const quantidadeAtual = statusSalvos[String(codigoMotivoAtual)]?.quantidade || 0;
+    const estrategiaAtual = statusSalvos[String(codigoMotivoAtual)]?.estrategia || "";
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigoMotivoAtual,
+            status: statusAtual,
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivo
+        })
+    }).then(() => {
+
+        if (!statusSalvos[String(codigoMotivoAtual)]) {
+            statusSalvos[String(codigoMotivoAtual)] = {};
+        }
+
+        statusSalvos[String(codigoMotivoAtual)] = {
+            status: statusAtual,
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivo
+        };
+
+        fecharModalMotivo();
         renderCards();
     });
 }
@@ -1474,6 +1961,8 @@ filtroConta.addEventListener("change", renderCards);
 filtroSelo.addEventListener("change", renderCards);
 filtroLogica.addEventListener("change", renderCards);
 filtroSaude.addEventListener("change", renderCards);
+filtroCondicao.addEventListener("change", renderCards);
+filtroLote.addEventListener("change", renderCards);
 filtroBusca.addEventListener("input", aplicarRenderComDebounce);
 
 window.addEventListener("scroll", () => {
@@ -1503,6 +1992,18 @@ Promise.all([
     if(urlParams.get("analise")){
         filtroLogica.value = urlParams.get("analise");
     }
+
+    const telaUrl = urlParams.get("tela");
+    if (telaUrl === "enviando" || telaUrl === "naoEnviar" || telaUrl === "principal" || telaUrl === "historico") {
+        telaAtual = telaUrl;
+    }
+
+    principal.classList.add("hidden");
+    enviando.classList.add("hidden");
+    naoEnviar.classList.add("hidden");
+    historico.classList.add("hidden");
+
+    document.getElementById(telaAtual).classList.remove("hidden");
 
     renderCards();
 }).catch((erro) => {
@@ -1542,13 +2043,28 @@ Promise.all([
     </div>
 </div>
 
+<div id="modalMotivoEnvio" class="modal-filete">
+    <div class="modal-conteudo">
+
+        <h3>Definir Motivo do Envio</h3>
+
+        <select id="selectMotivoEnvio"></select>
+
+        <div class="modal-botoes">
+            <button onclick="salvarMotivo()">Salvar</button>
+            <button onclick="fecharModalMotivo()" class="btn-fechar">Cancelar</button>
+        </div>
+
+    </div>
+</div>
+
 <div id="modalFilete" class="modal-filete">
     <div class="modal-conteudo">
         <h3>Gerar Filete</h3>
 
         <div class="filete-info">
-            Informe os dados do filete para gerar o relatório da expedição com os itens da tela <strong>Enviando</strong>.
-        </div>
+            Informe o número de um lote <strong>já criado manualmente</strong> para gerar o filete com os itens da tela <strong>Enviando</strong>.
+        </div>        
 
         <div>
             <label for="numeroLoteFilete"><strong>Nº do lote</strong></label>
@@ -1568,6 +2084,7 @@ Promise.all([
             <button onclick="fecharModalFilete()" class="btn-fechar">Cancelar</button>
         </div>
     </div>
+</div>
 </div>
 
 {% endblock %}

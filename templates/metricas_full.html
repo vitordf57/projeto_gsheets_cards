@@ -3,209 +3,815 @@
 {% block content %}
 
 <style>
-body {
-    font-family: Arial;
-    background: #f4f6f9;
+.page-wrap{
     padding: 20px;
 }
 
-.kpis {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+.topo-lotes{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
 }
 
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    flex: 1;
-    min-width: 200px;
+.topo-acoes{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
 }
 
-table {
-    border-collapse: collapse;
+.busca-lote{
+    min-width:280px;
 }
 
-th, td {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    text-align: left;
+.busca-lote input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    font-size:14px;
+    outline:none;
+    box-sizing:border-box;
 }
 
-th {
-    cursor: pointer;
+.busca-lote input:focus{
+    border-color:#1c5ed6;
+    box-shadow:0 0 0 3px rgba(28,94,214,0.12);
 }
 
-tr:hover {
-    background: #f3f4f6;
+.btn-novo-lote{
+    background:#198754;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:12px 18px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.kpis-lotes{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:16px;
+    margin-bottom:24px;
+}
+
+.kpi-card{
+    background:white;
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+}
+
+.kpi-titulo{
+    font-size:12px;
+    color:#666;
+    text-transform:uppercase;
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.kpi-valor{
+    font-size:30px;
+    font-weight:bold;
+}
+
+.kpi-subinfos{
+    margin-top:10px;
+    font-size:13px;
+    color:#4b5563;
+    line-height:1.6;
+}
+
+.grid-lotes{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(370px, 1fr));
+    gap:20px;
+}
+
+.card-lote{
+    background:white;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+}
+
+.card-lote-layout{
+    display:grid;
+    grid-template-columns: 1.45fr 1fr 1fr;
+    gap:16px;
+    align-items:start;
+}
+
+.bloco-lote-principal,
+.bloco-lote-status,
+.bloco-lote-observacao{
+    min-height:100%;
+}
+
+.status-lote-box{
+    background:#fff4db;
+    border:1px solid #f7d58b;
+    color:#8a5a00;
+    border-radius:12px;
+    padding:12px 14px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.2s;
+    margin-bottom:10px;
+}
+
+.status-lote-box:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,0.08);
+}
+
+.status-lote-titulo{
+    font-size:12px;
+    text-transform:uppercase;
+    color:#666;
+    margin-bottom:6px;
+    font-weight:bold;
+}
+
+.status-lote-valor{
+    font-size:18px;
+    font-weight:bold;
+    color:#111827;
+}
+
+@media (max-width: 1100px){
+    .card-lote-layout{
+        grid-template-columns: 1fr;
+    }
+}
+
+.card-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.titulo-lote{
+    font-size:26px;
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+.sub-lote{
+    color:#555;
+    font-size:14px;
+}
+
+.badge-status{
+    display:inline-block;
+    padding:8px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+    background:#e8f0ff;
+    color:#1d4ed8;
+}
+
+.info-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.info-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px;
+}
+
+.info-box strong{
+    display:block;
+    font-size:12px;
+    color:#666;
+    text-transform:uppercase;
+    margin-bottom:6px;
+}
+
+.info-box span{
+    font-size:22px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.campos{
+    display:grid;
+    grid-template-columns: repeat(4,1fr);
+    gap:10px;
+}
+
+.campo{
+    background:#f8fafc;
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+    padding:10px 12px;
+    font-size:14px;
+}
+
+.campo strong{
+    display:block;
+    margin-bottom:4px;
+    color:#666;
+    font-size:12px;
+    text-transform:uppercase;
+}
+
+.checklist{
+    grid-template-columns: repeat(4,1fr);
+}
+
+.check-item{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:10px 12px;
+    font-weight:bold;
+    font-size:14px;
+}
+
+.check-ok{
+    color:#0f5132;
+    background:#d1e7dd;
+    border-color:#b7dfc8;
+}
+
+.check-pendente{
+    color:#664d03;
+    background:#fff3cd;
+    border-color:#f3df8b;
+}
+
+.card-acoes{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+
+.btn-card{
+    border:none;
+    border-radius:10px;
+    padding:10px 14px;
+    font-weight:bold;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-block;
+}
+
+.btn-editar{
+    background:#0d6efd;
+    color:white;
+}
+
+.btn-conferencia{
+    background:#198754;
+    color:white;
+}
+
+.observacao-box{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:12px;
+    margin-top:12px;
+    font-size:14px;
+    line-height:1.45;
+}
+
+.vazio{
+    background:white;
+    border-radius:16px;
+    padding:30px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    color:#666;
+    font-style:italic;
+}
+
+.modal-lote{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+
+.modal-conteudo{
+    background:white;
+    width:760px;
+    max-width:95%;
+    max-height:90vh;
+    overflow:auto;
+    border-radius:16px;
+    padding:24px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+}
+
+.modal-conteudo h3{
+    margin-top:0;
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #cfd8e3;
+    box-sizing:border-box;
+}
+
+.form-grid textarea{
+    min-height:100px;
+    resize:vertical;
+    grid-column:span 2;
+}
+
+.form-checks{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    margin-top:14px;
+}
+
+.form-check{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:10px 12px;
+}
+
+.modal-botoes{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:20px;
+}
+
+.modal-botoes button{
+    border:none;
+    border-radius:10px;
+    padding:10px 16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.btn-fechar{
+    background:#6c757d;
+    color:white;
+}
+
+.btn-salvar{
+    background:#198754;
+    color:white;
+}
+
+.sem-resultado{
+    display:none;
+    background:white;
+    border-radius:16px;
+    padding:30px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    color:#666;
+    font-style:italic;
+    margin-top:20px;
+}
+
+@media (max-width: 900px){
+    .kpis-lotes{
+        grid-template-columns:1fr 1fr;
+    }
+
+    .form-grid,
+    .campos,
+    .info-grid,
+    .checklist,
+    .form-checks{
+        grid-template-columns:1fr;
+    }
+
+    .form-grid textarea{
+        grid-column:span 1;
+    }
+}
+
+@media (max-width: 600px){
+    .kpis-lotes{
+        grid-template-columns:1fr;
+    }
+
+    .busca-lote{
+        min-width:100%;
+    }
 }
 </style>
 
-<h1>📊 Dashboard Métricas FULL 15 dias</h1>
+<div class="page-wrap">
+    <div class="topo-lotes">
+        <div>
+            <h1 style="margin:0;">📦 Lotes de Envio</h1>
+            <div style="color:#666; margin-top:6px;">Lotes criados manualmente e lotes gerados pelo filete.</div>
+        </div>
 
-<div class="kpis">
-    <div class="card">
-        <h3>💰 Vendas Brutas</h3>
-        <h2 id="totalVendas"></h2>
+        <div class="topo-acoes">
+            <div class="busca-lote">
+                <input
+                    type="text"
+                    id="buscaLote"
+                    placeholder="Pesquisar número do lote, tipo, responsável, observação..."
+                    oninput="filtrarLotes()"
+                >
+            </div>
+
+            <button class="btn-novo-lote" onclick="abrirModalNovoLote()">➕ Novo lote</button>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>🛒 Unidades Vendidas</h3>
-        <h2 id="totalUnidades"></h2>
+    <div class="kpis-lotes">
+        <div class="kpi-card">
+            <div class="kpi-titulo">Total de lotes</div>
+            <div class="kpi-valor">{{ total_lotes }}</div>
+            <div class="kpi-subinfos">
+                MLBs: <strong>{{ total_mlbs }}</strong><br>
+                Peças: <strong>{{ total_pecas }}</strong>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-titulo">Tela</div>
+            <div style="font-size:15px; line-height:1.6;">
+                Gestão dos lotes<br>
+                criados manualmente<br>
+                ou via filete
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-titulo">Ações</div>
+            <div style="font-size:15px; line-height:1.6;">
+                ➕ Criar lote<br>
+                ✏️ Editar lote<br>
+                📋 Ir para conferência
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-titulo">Origem</div>
+            <div style="font-size:15px; line-height:1.6;">
+                Filete e manual
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>👁 Visitas</h3>
-        <h2 id="totalVisitas"></h2>
-    </div>
+    {% if lotes %}
+        <div class="grid-lotes" id="gridLotes">
+            {% for lote in lotes %}
+                <div
+                    class="card-lote"
+                    data-lote-card
+                    data-busca="{{ (lote['numero_lote'] ~ ' ' ~ (lote['tipo_lote'] or '') ~ ' ' ~ (lote['responsavel'] or '') ~ ' ' ~ (lote['status'] or '') ~ ' ' ~ (lote['observacao'] or '') ~ ' ' ~ (lote['origem'] or ''))|lower|e }}"
+                >
+                    <div class="card-lote-layout">
+                        <div class="bloco-lote-principal">
+                            <div class="card-topo">
+                                <div>
+                                    <div class="titulo-lote">Lote #{{ lote['numero_lote'] }}</div>
+                                    <div class="sub-lote">
+                                        Tipo: <strong>{{ lote['tipo_lote'] or '-' }}</strong> |
+                                        Origem: <strong>{{ lote['origem'] or 'MANUAL' }}</strong> |
+                                        MLBs: <strong>{{ lote['total_mlbs'] or 0 }}</strong> |
+                                        Peças: <strong>{{ lote['total_pecas'] or 0 }}</strong>
+                                    </div>
+                                </div>
 
-    <div class="card">
-        <h3>🎯 Conversão Média</h3>
-        <h2 id="mediaConversao"></h2>
-    </div>
+                                <div class="badge-status">{{ lote['status'] or 'CRIADO' }}</div>
+                            </div>
+
+                            <div class="campos">
+                                <div class="campo">
+                                    <strong>Responsável</strong>
+                                    {{ lote['responsavel'] or '-' }}
+                                </div>
+
+                                <div class="campo">
+                                    <strong>Prioridade</strong>
+                                    {{ lote['prioridade'] or '-' }}
+                                </div>
+
+                                <div class="campo">
+                                    <strong>Data de criação</strong>
+                                    {{ lote['data_criacao'] or '-' }}
+                                </div>
+
+                                <div class="campo">
+                                    <strong>Tipo</strong>
+                                    {{ lote['tipo_lote'] or '-' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bloco-lote-status">
+                            <div
+                                class="status-lote-box"
+                                data-numero-lote="{{ lote['numero_lote'] }}"
+                                data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
+                                data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
+                                data-total-pecas="{{ lote['total_pecas'] or 0 }}"
+                                data-status="{{ lote['status'] or 'CRIADO' }}"
+                                data-responsavel="{{ lote['responsavel'] or '' }}"
+                                data-transportadora="{{ lote['transportadora'] or '' }}"
+                                data-observacao="{{ lote['observacao'] or '' }}"
+                                data-prioridade="{{ lote['prioridade'] or '' }}"
+                                data-data-envio="{{ lote['data_envio'] or '' }}"
+                                data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
+                                data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
+                                onclick="abrirModalEditarPorBotao(this)"
+                            >
+                                <div class="status-lote-titulo">Expedição</div>
+                                <div class="status-lote-valor">{{ lote['status_expedicao'] or 'AGUARDANDO' }}</div>
+                            </div>
+
+                            <div
+                                class="status-lote-box"
+                                data-numero-lote="{{ lote['numero_lote'] }}"
+                                data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
+                                data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
+                                data-total-pecas="{{ lote['total_pecas'] or 0 }}"
+                                data-status="{{ lote['status'] or 'CRIADO' }}"
+                                data-responsavel="{{ lote['responsavel'] or '' }}"
+                                data-transportadora="{{ lote['transportadora'] or '' }}"
+                                data-observacao="{{ lote['observacao'] or '' }}"
+                                data-prioridade="{{ lote['prioridade'] or '' }}"
+                                data-data-envio="{{ lote['data_envio'] or '' }}"
+                                data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
+                                data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
+                                onclick="abrirModalEditarPorBotao(this)"
+                            >
+                                <div class="status-lote-titulo">E-commerce</div>
+                                <div class="status-lote-valor">{{ lote['status_ecommerce'] or 'AGUARDANDO' }}</div>
+                            </div>
+                        </div>
+
+                        <div class="bloco-lote-observacao">
+                            <div class="observacao-box" style="margin-top:0;">
+                                <strong>Observação:</strong><br>
+                                {{ lote['observacao'] or 'Sem observações.' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-acoes">
+                        <button
+                            class="btn-card btn-editar"
+                            data-numero-lote="{{ lote['numero_lote'] }}"
+                            data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
+                            data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
+                            data-total-pecas="{{ lote['total_pecas'] or 0 }}"
+                            data-status="{{ lote['status'] or 'CRIADO' }}"
+                            data-responsavel="{{ lote['responsavel'] or '' }}"
+                            data-transportadora="{{ lote['transportadora'] or '' }}"
+                            data-observacao="{{ lote['observacao'] or '' }}"
+                            data-prioridade="{{ lote['prioridade'] or '' }}"
+                            data-data-envio="{{ lote['data_envio'] or '' }}"
+                            data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
+                            data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
+                            onclick="abrirModalEditarPorBotao(this)"
+                            type="button"
+                        >
+                            ✏️ Editar
+                        </button>
+
+                        <a class="btn-card btn-conferencia" href="/conferencia/{{ lote['numero_lote'] }}">
+                            📋 Conferência
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div id="semResultadoLote" class="sem-resultado">
+            Nenhum lote encontrado com essa pesquisa.
+        </div>
+    {% else %}
+        <div class="vazio">Nenhum lote cadastrado ainda.</div>
+    {% endif %}
 </div>
 
-<hr style="margin:40px 0;">
+<div id="modalLote" class="modal-lote">
+    <div class="modal-conteudo">
+        <h3 id="tituloModalLote">Novo lote</h3>
 
-<h2>📋 Detalhamento dos Anúncios</h2>
+        <form action="/salvar-lote-envio" method="POST">
+            <div class="form-grid">
+                <div>
+                    <label><strong>Número do lote</strong></label>
+                    <input type="text" name="numero_lote" id="numero_lote" required>
+                </div>
 
-<div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
-    <input type="text" id="filtroBusca" placeholder="Buscar por ID ou SKU..." 
-        style="padding:8px; border-radius:6px; border:1px solid #ccc;">
+                <div>
+                    <label><strong>Tipo do lote</strong></label>
+                    <select name="tipo_lote" id="tipo_lote">
+                        <option value="Diversos">Diversos</option>
+                        <option value="Caixa">Caixa</option>
+                    </select>
+                </div>
 
-    <select id="filtroSelo" style="padding:8px; border-radius:6px;">
-        <option value="">Todos os Selos</option>
-    </select>
-</div>
+                <div>
+                    <label><strong>Total MLBs</strong></label>
+                    <input type="number" name="total_mlbs" id="total_mlbs" value="0">
+                </div>
 
-<div style="overflow-x:auto;">
-<table id="tabelaAnuncios" style="width:100%; background:white; border-radius:10px; overflow:hidden;">
-    <thead style="background:#1f2937; color:white;">
-        <tr>
-            <th onclick="ordenar('ID do anúncio')">ID Anúncio</th>
-            <th onclick="ordenar('SKU')">SKU</th>
-            <th onclick="ordenar('Visitas únicas')">Visitas Únicas</th>
-            <th onclick="ordenar('Quantidade de vendas')">Qtd Vendas</th>
-            <th onclick="ordenar('Qualidade do anúncio')">Selo</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                <div>
+                    <label><strong>Total peças</strong></label>
+                    <input type="number" name="total_pecas" id="total_pecas" value="0">
+                </div>
+
+                <div>
+                    <label><strong>Status</strong></label>
+                    <select name="status" id="status">
+                        <option value="CRIADO">CRIADO</option>
+                        <option value="SEPARAÇÃO">SEPARAÇÃO</option>
+                        <option value="CONFERÊNCIA">CONFERÊNCIA</option>
+                        <option value="PRONTO">PRONTO</option>
+                        <option value="ENVIADO">ENVIADO</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label><strong>Prioridade</strong></label>
+                    <select name="prioridade" id="prioridade">
+                        <option value="">Selecione</option>
+                        <option value="BAIXA">BAIXA</option>
+                        <option value="MÉDIA">MÉDIA</option>
+                        <option value="ALTA">ALTA</option>
+                        <option value="URGENTE">URGENTE</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label><strong>Responsável</strong></label>
+                    <input type="text" name="responsavel" id="responsavel">
+                </div>
+
+                <div>
+                    <label><strong>Transportadora</strong></label>
+                    <input type="text" name="transportadora" id="transportadora">
+                </div>
+
+                <div>
+                    <label><strong>Data de envio</strong></label>
+                    <input type="date" name="data_envio" id="data_envio">
+                </div>
+
+                <div></div>
+
+                <textarea name="observacao" id="observacao" placeholder="Observações gerais do lote..."></textarea>
+            </div>
+
+            <div class="form-grid" style="margin-top:14px;">
+                <div>
+                    <label><strong>Status Expedição</strong></label>
+                    <select name="status_expedicao" id="status_expedicao">
+                        <option value="AGUARDANDO">AGUARDANDO</option>
+                        <option value="EM SEPARAÇÃO">EM SEPARAÇÃO</option>
+                        <option value="EM CONFERÊNCIA">EM CONFERÊNCIA</option>
+                        <option value="EMBALANDO">EMBALANDO</option>
+                        <option value="AGUARDANDO COLETA">AGUARDANDO COLETA</option>
+                        <option value="COLETADO">COLETADO</option>
+                        <option value="APTO PRA VENDA">APTO PRA VENDA</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label><strong>Status E-commerce</strong></label>
+                    <select name="status_ecommerce" id="status_ecommerce">
+                        <option value="AGUARDANDO">AGUARDANDO</option>
+                        <option value="ANALISANDO MLBS">ANALISANDO MLBS</option>
+                        <option value="PEDIDO SIGNUS OK">PEDIDO SIGNUS OK</option>
+                        <option value="LOTE CRIADO NO MELI">LOTE CRIADO NO MELI</option>
+                        <option value="DADOS FISCAIS CONFERIDOS">DADOS FISCAIS CONFERIDOS</option>
+                        <option value="TRELLO ABASTECIDO">TRELLO ABASTECIDO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-botoes">
+                <button type="button" class="btn-fechar" onclick="fecharModalLote()">Cancelar</button>
+                <button type="submit" class="btn-salvar">Salvar lote</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script>
+function abrirModalNovoLote(){
+    document.getElementById("tituloModalLote").innerText = "Novo lote";
 
-fetch("/dados-full")
-.then(res => res.json())
-.then(data => {
+    document.getElementById("numero_lote").value = "";
+    document.getElementById("numero_lote").readOnly = false;
+    document.getElementById("tipo_lote").value = "Diversos";
+    document.getElementById("total_mlbs").value = 0;
+    document.getElementById("total_pecas").value = 0;
+    document.getElementById("status").value = "CRIADO";
+    document.getElementById("responsavel").value = "";
+    document.getElementById("transportadora").value = "";
+    document.getElementById("observacao").value = "";
+    document.getElementById("prioridade").value = "";
+    document.getElementById("data_envio").value = "";
+    document.getElementById("status_expedicao").value = "AGUARDANDO";
+    document.getElementById("status_ecommerce").value = "AGUARDANDO";
 
-    let dadosAtuais = [...data];
-    let ordemAsc = true;
+    document.getElementById("modalLote").style.display = "flex";
+}
 
-    // ===== KPIs =====
-    let totalVendas = 0;
-    let totalUnidades = 0;
-    let totalVisitas = 0;
-    let totalConversao = 0;
+function preencherModalLote(dados){
+    document.getElementById("tituloModalLote").innerText = "Editar lote";
 
-    data.forEach(item => {
-        totalVendas += parseFloat(item["Vendas brutas (BRL)"] || 0);
-        totalUnidades += parseInt(item["Unidades vendidas"] || 0);
-        totalVisitas += parseInt(item["Visitas únicas"] || 0);
-        totalConversao += parseFloat(item["Conversão de visitas em vendas"] || 0);
+    document.getElementById("numero_lote").value = dados.numero_lote || "";
+    document.getElementById("numero_lote").readOnly = true;
+    document.getElementById("tipo_lote").value = dados.tipo_lote || "Diversos";
+    document.getElementById("total_mlbs").value = dados.total_mlbs || 0;
+    document.getElementById("total_pecas").value = dados.total_pecas || 0;
+    document.getElementById("status").value = dados.status || "CRIADO";
+    document.getElementById("responsavel").value = dados.responsavel || "";
+    document.getElementById("transportadora").value = dados.transportadora || "";
+    document.getElementById("observacao").value = dados.observacao || "";
+    document.getElementById("prioridade").value = dados.prioridade || "";
+    document.getElementById("data_envio").value = dados.data_envio || "";
+    document.getElementById("status_expedicao").value = dados.status_expedicao || "AGUARDANDO";
+    document.getElementById("status_ecommerce").value = dados.status_ecommerce || "AGUARDANDO";
+
+    document.getElementById("modalLote").style.display = "flex";
+}
+
+function abrirModalEditarPorBotao(elemento){
+    preencherModalLote({
+        numero_lote: elemento.dataset.numeroLote,
+        tipo_lote: elemento.dataset.tipoLote,
+        total_mlbs: elemento.dataset.totalMlbs,
+        total_pecas: elemento.dataset.totalPecas,
+        status: elemento.dataset.status,
+        responsavel: elemento.dataset.responsavel,
+        transportadora: elemento.dataset.transportadora,
+        observacao: elemento.dataset.observacao,
+        prioridade: elemento.dataset.prioridade,
+        data_envio: elemento.dataset.dataEnvio,
+        status_expedicao: elemento.dataset.statusExpedicao,
+        status_ecommerce: elemento.dataset.statusEcommerce
+    });
+}
+
+function fecharModalLote(){
+    document.getElementById("modalLote").style.display = "none";
+}
+
+function filtrarLotes(){
+    const termo = (document.getElementById("buscaLote").value || "").toLowerCase().trim();
+    const cards = document.querySelectorAll("[data-lote-card]");
+    const boxSemResultado = document.getElementById("semResultadoLote");
+
+    let visiveis = 0;
+
+    cards.forEach(card => {
+        const texto = card.dataset.busca || "";
+        const mostrar = termo === "" || texto.includes(termo);
+
+        card.style.display = mostrar ? "" : "none";
+
+        if (mostrar){
+            visiveis++;
+        }
     });
 
-    document.getElementById("totalVendas").innerText = 
-        "R$ " + totalVendas.toLocaleString("pt-BR");
-
-    document.getElementById("totalUnidades").innerText = totalUnidades;
-    document.getElementById("totalVisitas").innerText = totalVisitas;
-
-    document.getElementById("mediaConversao").innerText =
-        (totalConversao / data.length).toFixed(2) + "%";
-
-
-    const tabela = document.querySelector("#tabelaAnuncios tbody");
-    const filtroBusca = document.getElementById("filtroBusca");
-    const filtroSelo = document.getElementById("filtroSelo");
-
-    const selosUnicos = [...new Set(data.map(item => item["Qualidade do anúncio"]))];
-
-    selosUnicos.forEach(selo => {
-        const option = document.createElement("option");
-        option.value = selo;
-        option.textContent = selo;
-        filtroSelo.appendChild(option);
-    });
-
-    function renderTabela(lista) {
-        tabela.innerHTML = "";
-
-        let html = "";
-
-        lista.forEach(item => {
-            html += `
-                <tr>
-                    <td>${item["ID do anúncio"] || "-"}</td>
-                    <td>${item["SKU"] || "-"}</td>
-                    <td>${item["Visitas únicas"] || 0}</td>
-                    <td>${item["Quantidade de vendas"] || 0}</td>
-                    <td>${item["selo"] || "-"}</td>
-                </tr>
-            `;
-        });
-
-        tabela.innerHTML = html;
+    if (boxSemResultado){
+        boxSemResultado.style.display = visiveis === 0 ? "block" : "none";
     }
+}
 
-    renderTabela(dadosAtuais);
-
-    // ===== ORDENAÇÃO =====
-    window.ordenar = function(campo) {
-
-        dadosAtuais.sort((a, b) => {
-
-            let valorA = a[campo] || "";
-            let valorB = b[campo] || "";
-
-            if (!isNaN(valorA) && !isNaN(valorB)) {
-                valorA = Number(valorA);
-                valorB = Number(valorB);
-            }
-
-            if (valorA < valorB) return ordemAsc ? -1 : 1;
-            if (valorA > valorB) return ordemAsc ? 1 : -1;
-            return 0;
-        });
-
-        ordemAsc = !ordemAsc;
-
-        renderTabela(dadosAtuais);
-    };
-
-    // ===== FILTRO =====
-    function aplicarFiltros() {
-        const busca = filtroBusca.value.toLowerCase();
-        const selo = filtroSelo.value;
-
-        dadosAtuais = data.filter(item => {
-            const matchBusca =
-                (item["ID do anúncio"] || "").toLowerCase().includes(busca) ||
-                (item["SKU"] || "").toLowerCase().includes(busca);
-
-            const matchSelo = selo === "" || item["Qualidade do anúncio"] === selo;
-
-            return matchBusca && matchSelo;
-        });
-
-        renderTabela(dadosAtuais);
+window.addEventListener("click", function(e){
+    const modal = document.getElementById("modalLote");
+    if (e.target === modal){
+        fecharModalLote();
     }
-
-    filtroBusca.addEventListener("input", aplicarFiltros);
-    filtroSelo.addEventListener("change", aplicarFiltros);
-
 });
 </script>
 

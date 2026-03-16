@@ -192,6 +192,27 @@
     </div>
 
     <div class="kpi-card">
+        <div class="kpi-title">Fluxo de Decisão</div>
+        <div class="kpi-split">
+            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({ tela: 'enviando' })">
+                <div class="kpi-side-label">ENVIANDO</div>
+                <div class="kpi-side-value" id="kpiMlbEnviando">0</div>
+                <div style="font-size:12px; margin-top:8px; color:#374151;">
+                    Peças: <strong id="kpiPecasEnviando">0</strong>
+                </div>
+            </div>
+    
+            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({ tela: 'naoEnviar' })">
+                <div class="kpi-side-label">NÃO ENVIAR</div>
+                <div class="kpi-side-value" id="kpiMlbNaoEnviar">0</div>
+                <div style="font-size:12px; margin-top:8px; color:#374151;">
+                    Peças: <strong id="kpiPecasNaoEnviar">0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="kpi-card">
         <div class="kpi-title">Ruptura</div>
         <div class="kpi-split">
             <div class="kpi-side kpi-side-blue" onclick="irParaPainel({saudeFull: 'RUPTURA', conta: 'RENAFCAR'})">
@@ -321,6 +342,7 @@ function irParaPainel(filtros){
     if (filtros.cobertura) params.set("cobertura", filtros.cobertura);
     if (filtros.full) params.set("full", filtros.full);
     if (filtros.conta) params.set("conta", filtros.conta);
+    if (filtros.tela) params.set("tela", filtros.tela);
 
     if (filtroStatusFullAtivo) {
         params.set("statusFullFiltro", filtroStatusFullAtivo);
@@ -328,6 +350,7 @@ function irParaPainel(filtros){
 
     window.location.href = "/?" + params.toString();
 }
+
 
 function porConta(dados, nickname){
     return dados.filter(item =>
@@ -385,7 +408,7 @@ function destruirGraficos(){
     }
 }
 
-function renderDashboard(dados){
+function renderDashboard(dados, statusSalvos){
     const dadosFiltrados = aplicarFiltroStatusFull(dados);
 
     const renaf = porConta(dadosFiltrados, "RENAFCAR");
@@ -431,6 +454,33 @@ function renderDashboard(dados){
     document.getElementById("kpiBaixo304i").innerText = baixo304i;
     document.getElementById("kpiAcompanharRenaf").innerText = acompanharRenaf;
     document.getElementById("kpiAcompanhar4i").innerText = acompanhar4i;
+
+    let totalMlbEnviando = 0;
+    let totalMlbNaoEnviar = 0;
+    let totalPecasEnviando = 0;
+    let totalPecasNaoEnviar = 0;
+
+    dadosFiltrados.forEach(item => {
+        const codigo = String(item["Código do Anúncio"] || "");
+        const registro = statusSalvos[codigo] || {};
+        const status = String(registro.status || "principal");
+        const quantidade = Number(registro.quantidade || 0);
+
+        if (status === "enviando") {
+            totalMlbEnviando += 1;
+            totalPecasEnviando += quantidade;
+        }
+
+        if (status === "nao_enviar" || status === "naoEnviar") {
+            totalMlbNaoEnviar += 1;
+            totalPecasNaoEnviar += quantidade;
+        }
+    });
+
+    document.getElementById("kpiMlbEnviando").innerText = totalMlbEnviando;
+    document.getElementById("kpiMlbNaoEnviar").innerText = totalMlbNaoEnviar;
+    document.getElementById("kpiPecasEnviando").innerText = totalPecasEnviando;
+    document.getElementById("kpiPecasNaoEnviar").innerText = totalPecasNaoEnviar;
 
     const infoEstoqueMap = {};
 
@@ -594,11 +644,13 @@ function renderDashboard(dados){
     });
 }
 
-fetch("/dados-dashboard")
-.then(r => r.json())
-.then(dados => {
-    renderDashboard(dados);
+Promise.all([
+    fetch("/dados-dashboard").then(r => r.json()),
+    fetch("/status").then(r => r.json())
+]).then(([dados, statusSalvos]) => {
+    renderDashboard(dados, statusSalvos);
 });
+
 </script>
 
 {% endblock %}
