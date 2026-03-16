@@ -1733,18 +1733,33 @@ statusSalvos[String(codigo)] = {
 }
 
 function voltarPrincipal(codigo){
-    const quantidadeAtual = obterQuantidadeSalva(codigo);
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
     const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
     const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
 
-      statusSalvos[String(codigo)] = {
-      status: "principal",
-      quantidade: quantidadeAtual,
-      estrategia: estrategiaAtual,
-      motivo_envio: motivoAtual
-};    
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "principal",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            status: "principal",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        };
 
-    then(() => {
+        mostrarTela("principal");
+    });
+
+then(() => {
         statusSalvos[String(codigo)] = {
             status: "principal",
             quantidade: quantidadeAtual,
