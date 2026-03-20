@@ -1,3 +1,7 @@
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
 from flask import Flask, render_template, jsonify, request, send_file
 import pandas as pd
 import sqlite3
@@ -8,6 +12,7 @@ from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from calendar import month_name
 
 app = Flask(__name__)
 
@@ -78,6 +83,114 @@ def numero_float(valor):
     except:
         return 0
 
+@app.route("/api/historico-mensal")
+def api_historico_mensal():
+    mlb = str(request.args.get("mlb", "")).strip().upper()
+    mes = request.args.get("mes", "").strip()
+    ano = request.args.get("ano", "").strip()
+
+    if not mlb or not mes or not ano:
+        return jsonify({
+            "ok": False,
+            "erro": "Parâmetros obrigatórios: mlb, mes e ano."
+        }), 400
+
+    try:
+        mes = int(mes)
+        ano = int(ano)
+    except:
+        return jsonify({
+            "ok": False,
+            "erro": "Mês e ano inválidos."
+        }), 400
+
+    csv_url_acompanhamento = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=1492834688"
+
+    try:
+        df = pd.read_csv(csv_url_acompanhamento)
+        df = df.fillna("")
+
+        df.columns = [str(c).strip() for c in df.columns]
+
+        coluna_mlb = "# de anúncio"
+        coluna_data = "DATA DA VENDA"
+        coluna_qtd = "UNIDADE VENDIDA"
+
+        if coluna_mlb not in df.columns or coluna_data not in df.columns or coluna_qtd not in df.columns:
+            return jsonify({
+                "ok": False,
+                "erro": "Colunas esperadas não encontradas na planilha."
+            }), 400
+
+        df[coluna_mlb] = df[coluna_mlb].astype(str).str.strip().str.upper()
+        df[coluna_data] = pd.to_datetime(df[coluna_data], format="%d/%m/%Y", errors="coerce")
+        df[coluna_qtd] = pd.to_numeric(df[coluna_qtd], errors="coerce").fillna(0)
+
+        df_filtrado = df[
+            (df[coluna_mlb] == mlb) &
+            (df[coluna_data].dt.month == mes) &
+            (df[coluna_data].dt.year == ano)
+        ]
+
+        total_unidades = int(df_filtrado[coluna_qtd].sum())
+        total_pedidos = int(len(df_filtrado))
+
+        return jsonify({
+            "ok": True,
+            "mlb": mlb,
+            "mes": mes,
+            "ano": ano,
+            "mes_nome": month_name[mes],
+            "unidades_vendidas": total_unidades,
+            "pedidos": total_pedidos
+        })
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "erro": f"Erro ao processar histórico mensal: {str(e)}"
+        }), 500
+
+@app.route("/api/historico-mensal-resumo")
+def api_historico_mensal_resumo():
+    mlb = str(request.args.get("mlb", "")).strip().upper()
+
+    if not mlb:
+        return jsonify({"ok": False})
+
+    url = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=1492834688"
+
+    df = pd.read_csv(url)
+    df = df.fillna("")
+
+    df["# de anúncio"] = df["# de anúncio"].astype(str).str.upper().str.strip()
+    df["DATA DA VENDA"] = pd.to_datetime(df["DATA DA VENDA"], format="%d/%m/%Y", errors="coerce")
+    df["UNIDADE VENDIDA"] = pd.to_numeric(df["UNIDADE VENDIDA"], errors="coerce").fillna(0)
+
+    df = df[df["# de anúncio"] == mlb]
+
+    df["MES"] = df["DATA DA VENDA"].dt.month
+
+    resumo = df.groupby("MES")["UNIDADE VENDIDA"].sum().to_dict()
+
+    nomes_meses = {
+        1:"JANEIRO",2:"FEVEREIRO",3:"MARÇO",4:"ABRIL",
+        5:"MAIO",6:"JUNHO",7:"JULHO",8:"AGOSTO",
+        9:"SETEMBRO",10:"OUTUBRO",11:"NOVEMBRO",12:"DEZEMBRO"
+    }
+
+    resultado = []
+
+    for i in range(1,13):
+        resultado.append({
+            "mes": nomes_meses[i],
+            "valor": int(resumo.get(i, 0))
+        })
+
+    return jsonify({
+        "ok": True,
+        "dados": resultado
+    })
 
 @app.route("/conferencia")
 def conferencia():
@@ -493,42 +606,17 @@ def metricas_full():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT
-            numero_lote,
-            tipo_lote,
-            total_mlbs,
-            total_pecas,
-            status,
-            responsavel,
-            transportadora,
-            observacao,
-            prioridade,
-            data_envio,
-            status_expedicao,
-            status_ecommerce,
-            origem,
-            data_criacao
+        SELECT *
         FROM lotes_envio
         ORDER BY data_criacao DESC, numero_lote DESC
     """)
-
     lotes = cursor.fetchall()
-    conn.close()
 
     total_lotes = len(lotes)
-    total_mlbs = 0
-    total_pecas = 0
+    total_mlbs = sum(int(lote["total_mlbs"] or 0) for lote in lotes)
+    total_pecas = sum(int(lote["total_pecas"] or 0) for lote in lotes)
 
-    for lote in lotes:
-        try:
-            total_mlbs += int(lote["total_mlbs"] or 0)
-        except:
-            pass
-
-        try:
-            total_pecas += int(lote["total_pecas"] or 0)
-        except:
-            pass
+    conn.close()
 
     return render_template(
         "metricas_full.html",
@@ -587,26 +675,135 @@ def exportar_excel():
 
     conn.close()
 
+    if "Código do Anúncio" not in df.columns:
+        df["Código do Anúncio"] = ""
+
     df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
     df["Estratégia"] = df["Código do Anúncio"].astype(str).map(mapa_estrategia).fillna("")
     df["Motivo do Envio"] = df["Código do Anúncio"].astype(str).map(mapa_motivo_envio).fillna("")
     df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
     df["LETICIA"] = ""
 
-    tela = request.args.get("tela", "")
+    tela = request.args.get("tela", "").strip()
+    conta = request.args.get("conta", "").strip()
+    busca = request.args.get("busca", "").strip().lower()
+    selo = request.args.get("selo", "").strip()
+    logica = request.args.get("logica", "").strip()
+    saude = request.args.get("saude", "").strip()
+    condicao = request.args.get("condicao", "").strip()
+    lote = request.args.get("lote", "").strip()
+    magic = request.args.get("magic", "").strip()
+    cobertura = request.args.get("cobertura", "").strip()
+    full = request.args.get("full", "").strip()
+    saude_full = request.args.get("saudeFull", "").strip()
+    status_full_filtro = request.args.get("statusFullFiltro", "").strip()
+    filtro_especial = request.args.get("filtroEspecial", "").strip()
+
+    def valor_para_numero_excel(valor):
+        if valor is None or valor == "":
+            return 0
+        try:
+            return float(str(valor).replace(".", "").replace(",", "."))
+        except:
+            return 0
+
+    def destino(codigo):
+        status = mapa_status.get(str(codigo), "")
+        if status == "enviando":
+            return "enviando"
+        if status == "homologar":
+            return "homologar"
+        if status in ["nao_enviar", "naoEnviar"]:
+            return "naoEnviar"
+        if status == "filetado":
+            return "historico"
+        return "principal"
 
     if tela:
-        def destino(codigo):
-            status = mapa_status.get(str(codigo), "")
-            if status == "enviando":
-                return "enviando"
-            if status in ["nao_enviar", "naoEnviar"]:
-                return "naoEnviar"
-            if status == "filetado":
-                return "historico"
-            return "principal"
-
         df = df[df["Código do Anúncio"].apply(destino) == tela]
+
+    if conta:
+        df = df[df["Nickname"].astype(str).str.strip().str.upper() == conta.upper()]
+
+    if busca:
+        mask_busca = (
+            df["SKU"].astype(str).str.lower().str.contains(busca, na=False) |
+            df["Código do Anúncio"].astype(str).str.lower().str.contains(busca, na=False) |
+            df["Título"].astype(str).str.lower().str.contains(busca, na=False)
+        )
+        df = df[mask_busca]
+
+    if selo:
+        df = df[df["SELO"].astype(str).str.strip() == selo]
+
+    if logica:
+        df = df[df["ANALISE"].astype(str).str.strip() == logica]
+
+    if saude:
+        df = df[df["SAUDE DO ESTOQUE 4i"].astype(str).str.strip() == saude]
+
+    if condicao:
+        coluna_condicao = "CONDIÇÃO" if "CONDIÇÃO" in df.columns else "CONDIÇAO"
+        if coluna_condicao not in df.columns:
+            df[coluna_condicao] = ""
+        df = df[df[coluna_condicao].astype(str).str.strip() == condicao]
+
+    if lote:
+        if "LOTE" not in df.columns:
+            df["LOTE"] = ""
+        df = df[df["LOTE"].astype(str).str.strip() == lote]
+
+    if magic:
+        if "MAGIC" not in df.columns:
+            df["MAGIC"] = ""
+        df = df[df["MAGIC"].astype(str).str.strip().str.upper() == magic.upper()]
+
+    if full:
+        if "Full" not in df.columns:
+            df["Full"] = ""
+        df = df[df["Full"].astype(str).str.strip().str.upper() == full.upper()]
+
+    if saude_full:
+        if "SAUDE_ESTOQUE_FULL" not in df.columns:
+            df["SAUDE_ESTOQUE_FULL"] = ""
+        df = df[df["SAUDE_ESTOQUE_FULL"].astype(str).str.strip().str.upper() == saude_full.upper()]
+
+    if status_full_filtro == "nao_ofereco_mais_full":
+        if "OBSERVAÇÃO MELI" not in df.columns:
+            df["OBSERVAÇÃO MELI"] = ""
+        df = df[df["OBSERVAÇÃO MELI"].astype(str).str.strip() == "Você deixou de oferecer o Full."]
+
+    if status_full_filtro == "esta_no_full":
+        if "Full" not in df.columns:
+            df["Full"] = ""
+        df = df[df["Full"].astype(str).str.strip().str.upper() == "NO FULL"]
+
+    if status_full_filtro == "nunca_foi_full":
+        if "OBSERVAÇÃO MELI" not in df.columns:
+            df["OBSERVAÇÃO MELI"] = ""
+        if "Full" not in df.columns:
+            df["Full"] = ""
+        df = df[
+            (df["OBSERVAÇÃO MELI"].astype(str).str.strip() != "Você deixou de oferecer o Full.") &
+            (df["Full"].astype(str).str.strip().str.upper() != "NO FULL")
+        ]
+
+    if cobertura == "baixo30":
+        coluna_cobertura = df["Cobertura"].astype(str) if "Cobertura" in df.columns else pd.Series([""] * len(df), index=df.index)
+        dias = coluna_cobertura.str.extract(r"(\d+)\s*dias", expand=False)
+        dias = pd.to_numeric(dias, errors="coerce")
+        df = df[(dias.notna()) & (dias < 30)]
+
+    if filtro_especial:
+        unidades = pd.to_numeric(df["30 DIAS"], errors="coerce").fillna(0) if "30 DIAS" in df.columns else pd.Series([0] * len(df), index=df.index)
+        valores = df["Total de Vendas 30 DIAS"].apply(valor_para_numero_excel) if "Total de Vendas 30 DIAS" in df.columns else pd.Series([0] * len(df), index=df.index)
+
+        if filtro_especial == "valor500":
+            df = df[valores > 500]
+        elif filtro_especial == "unidades10":
+            df = df[unidades > 10]
+        elif filtro_especial == "critico":
+            df = df[(unidades < 10) & (valores > 500)]
 
     colunas_exportar = [
         "Nickname",
@@ -643,7 +840,7 @@ def exportar_excel():
 
 
 def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
-    if df_lote.empty or not numero_lote:
+    if df_lote.empty:
         return
 
     conn = sqlite3.connect("status.db")
@@ -653,18 +850,18 @@ def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
 
     cursor.execute("""
         INSERT INTO lotes_conferencia (numero_lote, tipo_lote, status, data_criacao)
-        VALUES (?, ?, 'PENDENTE', ?)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(numero_lote) DO UPDATE SET
             tipo_lote=excluded.tipo_lote
-    """, (numero_lote, tipo_lote, agora))
+    """, (numero_lote, tipo_lote, "PENDENTE", agora))
 
     for _, item in df_lote.iterrows():
         codigo = str(item.get("Código do Anúncio", "") or "")
         sku = str(item.get("SKU", "") or "")
         titulo = str(item.get("Título", "") or "")
-        quantidade_esperada = int(float(item.get("Enviar", 0) or 0))
         endereco = str(item.get("ENDEREÇO", "") or "")
         lote_filete = str(item.get("Lote", "") or "")
+        quantidade_esperada = int(float(item.get("Enviar", 0) or 0))
 
         cursor.execute("""
             INSERT INTO lotes_itens (
@@ -688,46 +885,53 @@ def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
 
 
 def atualizar_lote_envio_existente(numero_lote, tipo_lote, df_lote):
-    if not numero_lote:
-        raise ValueError("Número do lote não informado.")
+    if df_lote.empty:
+        return
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT numero_lote
-        FROM lotes_envio
-        WHERE numero_lote = ?
-    """, (numero_lote,))
-    lote_existente = cursor.fetchone()
+    cursor.execute("SELECT numero_lote FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    existe = cursor.fetchone()
 
-    if not lote_existente:
-        conn.close()
-        raise ValueError(f"Lote {numero_lote} não foi criado manualmente.")
+    total_mlbs = int(len(df_lote))
+    total_pecas = int(pd.to_numeric(df_lote["Enviar"], errors="coerce").fillna(0).sum())
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    total_mlbs = 0
-    total_pecas = 0
-
-    if df_lote is not None and not df_lote.empty:
-        total_mlbs = len(df_lote)
-        try:
-            total_pecas = int(pd.to_numeric(df_lote["Enviar"], errors="coerce").fillna(0).sum())
-        except:
-            total_pecas = 0
-
-    cursor.execute("""
-        UPDATE lotes_envio
-        SET
-            tipo_lote = ?,
-            total_mlbs = ?,
-            total_pecas = ?
-        WHERE numero_lote = ?
-    """, (
-        tipo_lote,
-        total_mlbs,
-        total_pecas,
-        numero_lote
-    ))
+    if existe:
+        cursor.execute("""
+            UPDATE lotes_envio
+            SET tipo_lote = ?,
+                total_mlbs = ?,
+                total_pecas = ?,
+                origem = 'FILETE'
+            WHERE numero_lote = ?
+        """, (tipo_lote, total_mlbs, total_pecas, numero_lote))
+    else:
+        cursor.execute("""
+            INSERT INTO lotes_envio (
+                numero_lote, tipo_lote, total_mlbs, total_pecas,
+                status, responsavel, transportadora, observacao,
+                prioridade, data_envio, status_expedicao,
+                status_ecommerce, origem, data_criacao
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            numero_lote,
+            tipo_lote,
+            total_mlbs,
+            total_pecas,
+            "CRIADO",
+            "",
+            "",
+            "Gerado via filete",
+            "",
+            "",
+            "AGUARDANDO",
+            "AGUARDANDO",
+            "FILETE",
+            agora
+        ))
 
     conn.commit()
     conn.close()
@@ -772,9 +976,9 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
 
         cursor.execute("""
             UPDATE status_cards
-            SET status = ?, quantidade = 0
+            SET status = ?, quantidade = ?
             WHERE codigo = ?
-        """, ("filetado", codigo))
+        """, ("filetado", quantidade, codigo))
 
     conn.commit()
     conn.close()
@@ -846,125 +1050,83 @@ def gerar_filete():
             bottom=Side(style="thin", color="000000")
         )
 
-        fonte_titulo = Font(bold=True, size=16)
-        fonte_label = Font(bold=True, size=11)
-        fonte_valor = Font(size=12)
-        fonte_codigo = Font(bold=True, size=14)
-        fonte_qtd = Font(bold=True, size=16)
+        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-        alinhamento_centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        alinhamento_esquerda = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        colunas = [
+            "Nickname",
+            "Código do Anúncio",
+            "SKU",
+            "Título",
+            "ENDEREÇO",
+            "Enviar",
+            "Lote"
+        ]
 
-        worksheet.column_dimensions["A"].width = 16
-        worksheet.column_dimensions["B"].width = 18
-        worksheet.column_dimensions["C"].width = 14
-        worksheet.column_dimensions["D"].width = 52
-        worksheet.column_dimensions["E"].width = 12
-        worksheet.column_dimensions["F"].width = 30
-        worksheet.column_dimensions["G"].width = 28
+        df_export = df[colunas].copy()
+        df_export.rename(columns={
+            "Código do Anúncio": "MLB",
+            "ENDEREÇO": "ENDEREÇO",
+            "Enviar": "QUANTIDADE"
+        }, inplace=True)
 
-        linha = 1
+        total_pecas = int(pd.to_numeric(df_export["QUANTIDADE"], errors="coerce").fillna(0).sum())
+        total_mlbs = int(len(df_export))
 
-        for _, item in df.iterrows():
-            conta = str(item.get("Nickname", ""))
-            codigo = str(item.get("Código do Anúncio", ""))
-            sku = str(item.get("SKU", ""))
-            titulo = str(item.get("Título", ""))
-            enviar = int(float(item.get("Enviar", 0) or 0))
-            endereco = str(item.get("ENDEREÇO", ""))
-            lote = str(item.get("Lote", ""))
+        worksheet.merge_cells("A1:G1")
+        worksheet["A1"] = "FILETE DE ENVIO"
+        worksheet["A1"].font = Font(bold=True, size=14)
+        worksheet["A1"].fill = fill_topo
+        worksheet["A1"].alignment = center
+        worksheet["A1"].border = border
 
-            worksheet.row_dimensions[linha].height = 28
-            worksheet.row_dimensions[linha + 1].height = 26
-            worksheet.row_dimensions[linha + 2].height = 38
-            worksheet.row_dimensions[linha + 3].height = 12
+        worksheet["A2"] = "Nº Lote"
+        worksheet["B2"] = numero_lote
+        worksheet["C2"] = "Tipo"
+        worksheet["D2"] = tipo_lote
+        worksheet["E2"] = "MLBs"
+        worksheet["F2"] = total_mlbs
+        worksheet["G2"] = f"Peças: {total_pecas}"
 
-            worksheet.merge_cells(start_row=linha, start_column=1, end_row=linha, end_column=4)
-            worksheet.merge_cells(start_row=linha, start_column=5, end_row=linha, end_column=7)
+        for cel in ["A2", "C2", "E2"]:
+            worksheet[cel].font = Font(bold=True)
+            worksheet[cel].fill = fill_label
+            worksheet[cel].alignment = center
+            worksheet[cel].border = border
 
-            c = worksheet.cell(row=linha, column=1)
-            c.value = f"CONTA: {conta}"
-            c.font = fonte_titulo
-            c.fill = fill_topo
-            c.alignment = alinhamento_esquerda
+        for cel in ["B2", "D2", "F2", "G2"]:
+            worksheet[cel].fill = fill_valor
+            worksheet[cel].alignment = center
+            worksheet[cel].border = border
 
-            c = worksheet.cell(row=linha, column=5)
-            c.value = lote
-            c.font = Font(bold=True, size=12)
-            c.fill = fill_topo
-            c.alignment = alinhamento_centro
+        linha_inicio = 4
 
-            c = worksheet.cell(row=linha + 1, column=1)
-            c.value = "CÓDIGO"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
+        for idx, coluna in enumerate(df_export.columns, start=1):
+            cell = worksheet.cell(row=linha_inicio, column=idx, value=coluna)
+            cell.font = Font(bold=True)
+            cell.fill = fill_label
+            cell.alignment = center
+            cell.border = border
 
-            c = worksheet.cell(row=linha + 1, column=2)
-            c.value = "SKU"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
+        for i, (_, row) in enumerate(df_export.iterrows(), start=linha_inicio + 1):
+            for j, valor in enumerate(row, start=1):
+                cell = worksheet.cell(row=i, column=j, value=valor)
+                cell.fill = fill_valor
+                cell.alignment = left if j in [3, 4, 5] else center
+                cell.border = border
 
-            c = worksheet.cell(row=linha + 1, column=3)
-            c.value = "ENVIAR"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
+        larguras = {
+            "A": 18,
+            "B": 18,
+            "C": 20,
+            "D": 50,
+            "E": 18,
+            "F": 14,
+            "G": 24
+        }
 
-            c = worksheet.cell(row=linha + 1, column=4)
-            c.value = "ENDEREÇO"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
-
-            worksheet.merge_cells(start_row=linha + 1, start_column=5, end_row=linha + 1, end_column=7)
-            c = worksheet.cell(row=linha + 1, column=5)
-            c.value = "TÍTULO"
-            c.font = fonte_label
-            c.fill = fill_label
-            c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha + 2, column=1)
-            c.value = codigo
-            c.font = fonte_codigo
-            c.fill = fill_valor
-            c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha + 2, column=2)
-            c.value = sku
-            c.font = fonte_codigo
-            c.fill = fill_valor
-            c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha + 2, column=3)
-            c.value = enviar
-            c.font = fonte_qtd
-            c.fill = fill_valor
-            c.alignment = alinhamento_centro
-
-            c = worksheet.cell(row=linha + 2, column=4)
-            c.value = endereco
-            c.font = fonte_valor
-            c.fill = fill_valor
-            c.alignment = alinhamento_centro
-
-            worksheet.merge_cells(start_row=linha + 2, start_column=5, end_row=linha + 2, end_column=7)
-            c = worksheet.cell(row=linha + 2, column=5)
-            c.value = titulo
-            c.font = Font(bold=True, size=11)
-            c.fill = fill_valor
-            c.alignment = alinhamento_esquerda
-
-            for r in range(linha, linha + 3):
-                for col in range(1, 8):
-                    cell = worksheet.cell(row=r, column=col)
-                    cell.border = border
-
-            linha += 4
-
-        worksheet.sheet_view.showGridLines = False
-        worksheet.freeze_panes = "A1"
+        for col, largura in larguras.items():
+            worksheet.column_dimensions[col].width = largura
 
     output.seek(0)
 
@@ -1050,11 +1212,11 @@ def get_status():
     status_dict = {}
     for codigo, status, quantidade, estrategia, motivo_envio in rows:
         status_dict[str(codigo)] = {
-    "status": status,
-    "quantidade": quantidade or 0,
-    "estrategia": estrategia or "",
-    "motivo_envio": motivo_envio or ""
-}
+            "status": status,
+            "quantidade": quantidade or 0,
+            "estrategia": estrategia or "",
+            "motivo_envio": motivo_envio or ""
+        }
 
     return jsonify(status_dict)
 
@@ -1069,8 +1231,8 @@ def get_comentarios():
 
     conn.close()
 
-    comentarios_dict = {str(sku): comentario for sku, comentario in rows}
-    return jsonify(comentarios_dict)
+    comentarios = {str(sku): comentario for sku, comentario in rows}
+    return jsonify(comentarios)
 
 
 @app.route("/comentarios-mlb")
@@ -1083,8 +1245,8 @@ def get_comentarios_mlb():
 
     conn.close()
 
-    comentarios_dict = {str(codigo): comentario for codigo, comentario in rows}
-    return jsonify(comentarios_dict)
+    comentarios = {str(codigo): comentario for codigo, comentario in rows}
+    return jsonify(comentarios)
 
 
 @app.route("/salvar-comentario", methods=["POST"])
@@ -1130,32 +1292,25 @@ def salvar_comentario_mlb():
 
 
 @app.route("/salvar-lote-envio", methods=["POST"])
-def salvar_lote_envio_manual():
-    numero_lote = request.form.get("numero_lote", "").strip()
-    tipo_lote = request.form.get("tipo_lote", "Diversos").strip() or "Diversos"
-    total_mlbs = request.form.get("total_mlbs", 0)
-    total_pecas = request.form.get("total_pecas", 0)
-    status = request.form.get("status", "CRIADO").strip() or "CRIADO"
-    responsavel = request.form.get("responsavel", "").strip()
-    transportadora = request.form.get("transportadora", "").strip()
-    observacao = request.form.get("observacao", "").strip()
-    prioridade = request.form.get("prioridade", "").strip()
-    data_envio = request.form.get("data_envio", "").strip()
-    status_expedicao = request.form.get("status_expedicao", "AGUARDANDO").strip() or "AGUARDANDO"
-    status_ecommerce = request.form.get("status_ecommerce", "AGUARDANDO").strip() or "AGUARDANDO"
+def salvar_lote_envio():
+    data = request.json or {}
 
-    try:
-        total_mlbs = int(total_mlbs)
-    except:
-        total_mlbs = 0
-
-    try:
-        total_pecas = int(total_pecas)
-    except:
-        total_pecas = 0
+    numero_lote = str(data.get("numero_lote", "")).strip()
+    tipo_lote = str(data.get("tipo_lote", "")).strip() or "Diversos"
+    total_mlbs = int(data.get("total_mlbs", 0) or 0)
+    total_pecas = int(data.get("total_pecas", 0) or 0)
+    status = str(data.get("status", "CRIADO")).strip() or "CRIADO"
+    responsavel = str(data.get("responsavel", "")).strip()
+    transportadora = str(data.get("transportadora", "")).strip()
+    observacao = str(data.get("observacao", "")).strip()
+    prioridade = str(data.get("prioridade", "")).strip()
+    data_envio = str(data.get("data_envio", "")).strip()
+    status_expedicao = str(data.get("status_expedicao", "AGUARDANDO")).strip() or "AGUARDANDO"
+    status_ecommerce = str(data.get("status_ecommerce", "AGUARDANDO")).strip() or "AGUARDANDO"
+    origem = str(data.get("origem", "MANUAL")).strip() or "MANUAL"
 
     if not numero_lote:
-        return render_template("redirect.html", target_url="/metricas-full")
+        return jsonify({"ok": False, "erro": "Número do lote é obrigatório."}), 400
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
@@ -1168,8 +1323,7 @@ def salvar_lote_envio_manual():
     if existe:
         cursor.execute("""
             UPDATE lotes_envio
-            SET
-                tipo_lote = ?,
+            SET tipo_lote = ?,
                 total_mlbs = ?,
                 total_pecas = ?,
                 status = ?,
@@ -1179,31 +1333,54 @@ def salvar_lote_envio_manual():
                 prioridade = ?,
                 data_envio = ?,
                 status_expedicao = ?,
-                status_ecommerce = ?
+                status_ecommerce = ?,
+                origem = ?
             WHERE numero_lote = ?
         """, (
-            tipo_lote, total_mlbs, total_pecas, status, responsavel,
-            transportadora, observacao, prioridade, data_envio,
-            status_expedicao, status_ecommerce, numero_lote
+            tipo_lote,
+            total_mlbs,
+            total_pecas,
+            status,
+            responsavel,
+            transportadora,
+            observacao,
+            prioridade,
+            data_envio,
+            status_expedicao,
+            status_ecommerce,
+            origem,
+            numero_lote
         ))
     else:
         cursor.execute("""
             INSERT INTO lotes_envio (
                 numero_lote, tipo_lote, total_mlbs, total_pecas, status,
                 responsavel, transportadora, observacao, prioridade,
-                data_envio, status_expedicao, status_ecommerce,
-                origem, data_criacao
+                data_envio, status_expedicao, status_ecommerce, origem, data_criacao
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            numero_lote, tipo_lote, total_mlbs, total_pecas, status,
-            responsavel, transportadora, observacao, prioridade,
-            data_envio, status_expedicao, status_ecommerce,
-            "MANUAL", agora
+            numero_lote,
+            tipo_lote,
+            total_mlbs,
+            total_pecas,
+            status,
+            responsavel,
+            transportadora,
+            observacao,
+            prioridade,
+            data_envio,
+            status_expedicao,
+            status_ecommerce,
+            origem,
+            agora
         ))
 
     conn.commit()
     conn.close()
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"ok": True})
 
     return render_template("redirect.html", target_url="/metricas-full")
 
@@ -1211,39 +1388,180 @@ def salvar_lote_envio_manual():
 @app.route("/debug-comentarios")
 def debug_comentarios():
     conn = sqlite3.connect("status.db")
-    c = conn.cursor()
-    c.execute("SELECT * FROM comentarios")
-    dados = c.fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM comentarios")
+    dados = cursor.fetchall()
     conn.close()
-    return jsonify({"dados": dados})
-
-
-def carregar_vendas():
-    dados = carregar_csv_com_cache(CSV_URL, "dados")
-    vendas = []
-
-    for row in dados:
-        vendas.append({
-            "produto": row.get("Código do Anúncio", "")
-        })
-
-    return vendas
+    return jsonify(dados)
 
 
 @app.route("/dashboard")
 def dashboard():
-    vendas = carregar_vendas()
-    contador = Counter([v["produto"] for v in vendas if v["produto"]])
-
-    mais_vendidos = contador.most_common(5)
-
     return render_template(
-        "metricas_full.html",
-        mais_vendidos=mais_vendidos
+        "dashboard.html"
     )
 
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
+
+def gerar_pdf_filete(dados):
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=20,
+        bottomMargin=20
+    )
+
+    styles = getSampleStyleSheet()
+
+    estilo_titulo = ParagraphStyle(
+        name="TituloCustom",
+        parent=styles["Title"],
+        fontSize=18,
+        leading=22,
+        alignment=1
+    )
+
+    estilo_label = ParagraphStyle(
+        name="LabelCustom",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11
+    )
+
+    estilo_valor = ParagraphStyle(
+        name="ValorCustom",
+        parent=styles["Normal"],
+        fontSize=9,
+        leading=11
+    )
+
+    estilo_comentario = ParagraphStyle(
+        name="ComentarioCustom",
+        parent=styles["Normal"],
+        fontSize=9,
+        leading=12
+    )
+
+    elementos = []
+
+    data_pdf = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    elementos.append(Paragraph("FILETE DE ENVIO", estilo_titulo))
+    elementos.append(Spacer(1, 8))
+    elementos.append(Paragraph(f"<b>Gerado em:</b> {data_pdf}", estilo_valor))
+    elementos.append(Spacer(1, 12))
+
+    for idx, item in enumerate(dados, start=1):
+        mlb = str(item.get("mlb", "") or "")
+        sku = str(item.get("sku", "") or "")
+        qtd = str(item.get("quantidade", "") or "")
+        titulo = str(item.get("titulo", "") or "")
+        vendas7 = str(item.get("vendas7", "") or "")
+        vendas15 = str(item.get("vendas15", "") or "")
+        vendas30 = str(item.get("vendas30", "") or "")
+        comentario = str(item.get("comentario", "") or "-")
+
+        linha_item = [
+    [Paragraph(f"ITEM {idx} - {titulo}", estilo_label)]
+]
+
+        tabela_item = Table(linha_item, colWidths=[555])
+        tabela_item.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#d9d9d9")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+
+        tabela_info = Table([
+            [
+                Paragraph(f"<b>MLB:</b> {mlb}", estilo_valor),
+                Paragraph(f"<b>SKU:</b> {sku}", estilo_valor),
+                Paragraph(f"<b>QTD ENVIADA:</b> {qtd}", estilo_valor),
+            ],
+            [
+                Paragraph(f"<b>7 DIAS:</b> {vendas7}", estilo_valor),
+                Paragraph(f"<b>15 DIAS:</b> {vendas15}", estilo_valor),
+                Paragraph(f"<b>30 DIAS:</b> {vendas30}", estilo_valor),
+            ],
+            [
+                Paragraph(f"<b>DATA PDF:</b> {data_pdf}", estilo_valor),
+                "",
+                "",
+            ]
+        ], colWidths=[185, 185, 185])
+
+        tabela_info.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+        tabela_comentario_titulo = Table([
+            [Paragraph("COMENTÁRIO", estilo_label)]
+        ], colWidths=[555])
+
+        tabela_comentario_titulo.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#eeeeee")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+        tabela_comentario = Table([
+            [Paragraph(comentario, estilo_comentario)]
+        ], colWidths=[555])
+
+        tabela_comentario.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.7, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ]))
+
+        elementos.append(tabela_item)
+        elementos.append(tabela_info)
+        elementos.append(tabela_comentario_titulo)
+        elementos.append(tabela_comentario)
+        elementos.append(Spacer(1, 12))
+
+    doc.build(elementos)
+    buffer.seek(0)
+    return buffer
+
+@app.route("/gerar-pdf-filete", methods=["POST"])
+def gerar_pdf_filete_route():
+    dados = request.json
+
+    pdf = gerar_pdf_filete(dados)
+
+    return send_file(
+        pdf,
+        as_attachment=True,
+        download_name="filete_envio.pdf",
+        mimetype="application/pdf"
+    )
 
 init_db()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)

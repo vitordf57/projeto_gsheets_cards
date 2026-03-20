@@ -733,6 +733,17 @@ h1{ margin-bottom:15px; }
                 </a>
     
                 <button
+                    id="btnGerarPdf"
+                    type="button"
+                    class="btn-acao-icone btn-filete-topo"
+                    onclick="gerarPDFTelaEnviando()"
+                    title="Gerar PDF"
+                    aria-label="Gerar PDF"
+                >
+                    📄
+                </button>
+
+                <button
                     id="btnGerarFilete"
                     type="button"
                     class="btn-acao-icone btn-filete-topo"
@@ -791,23 +802,27 @@ h1{ margin-bottom:15px; }
     </div>        
 
     <div id="principal" class="grid"></div>
-    <div id="enviando" class="grid hidden"></div>
-    <div id="naoEnviar" class="grid hidden"></div>
-    <div id="historico" class="grid hidden"></div>
+<div id="enviando" class="grid hidden"></div>
+<div id="homologar" class="grid hidden"></div>
+<div id="naoEnviar" class="grid hidden"></div>
+<div id="historico" class="grid hidden"></div>
 </div>
 
 <script>
 const principal = document.getElementById("principal");
 const enviando = document.getElementById("enviando");
+const homologar = document.getElementById("homologar");
 const naoEnviar = document.getElementById("naoEnviar");
 const historico = document.getElementById("historico");
 
 const contEnv = document.getElementById("contEnvSidebar");
+const contHom = document.getElementById("contHomSidebar");
 const contNao = document.getElementById("contNaoSidebar");
 const contHist = document.getElementById("contHistSidebar");
 const contPrincipalSidebar = null;
 const contadorPrincipal = document.getElementById("contadorPrincipal");
 const btnGerarFilete = document.getElementById("btnGerarFilete");
+const btnGerarPdf = document.getElementById("btnGerarPdf");
 
 const filtroConta = document.getElementById("filtroConta");
 const filtroBusca = document.getElementById("filtroBusca");
@@ -824,7 +839,7 @@ let filtroEspecial = "";
 let statusSalvos = {};
 
 const estrategiasNaoEnvio = [
-"30+7 (30 dias + 7 gordura)",
+"30+7 - no full = enviar",
 "Não temos estoque suficiente",
 "SKU divergente",
 "MLB divergente",
@@ -832,7 +847,15 @@ const estrategiasNaoEnvio = [
 "Matheus",
 "Compras (Matheus)",
 "Compras (Victor)",
-"TESTE VALIDAR DIRETORIA"
+"TESTE diretoria",
+"Otimização geral (arthur, matheus e angela)",
+"TESTE",
+"ENVIAR TRACIONAR",
+"NAO ENVIAR",
+"SOMENTE GORDURA DE 7 DIAS",
+"ESTOQUE SUFICIENTE",
+"REPOR VENDAS 30 DIAS",
+"30+15 - no full = enviar"
 ];
 
 const motivosEnvio = [
@@ -840,7 +863,17 @@ const motivosEnvio = [
 "OTIMIZAR",
 "VERIFICAR PREÇO",
 "BEM PERFORMANDO",
-"TESTE"
+"TESTE",
+"TESTE DIRETORIA",
+"NAO ENVIAR",
+"ENVIAR TRCAIONAR",
+"RUPTURADO",
+"VAI RUPTURAR",
+"ESTOQUE SUFICIENTE",
+"SUPRIR 30+7",
+"SUPRIR 30",
+"30+15",
+"30+7"
 ];
 
 let telaAtual = "principal";
@@ -923,6 +956,29 @@ function atualizarIndicadorFiltro(){
     } else {
         indicador.classList.remove("ativo");
     }
+}
+
+function atualizarUrlFiltros(){
+    const params = new URLSearchParams();
+
+    if (filtroConta.value) params.set("conta", filtroConta.value);
+    if (filtroBusca.value.trim()) params.set("busca", filtroBusca.value.trim());
+    if (filtroSelo.value) params.set("selo", filtroSelo.value);
+    if (filtroLogica.value) params.set("analise", filtroLogica.value);
+    if (filtroSaude.value) params.set("saude", filtroSaude.value);
+    if (filtroCondicao.value) params.set("condicao", filtroCondicao.value);
+    if (filtroLote.value) params.set("lote", filtroLote.value);
+
+    if (filtroUrlMagic) params.set("magic", filtroUrlMagic);
+    if (filtroUrlCobertura) params.set("cobertura", filtroUrlCobertura);
+    if (filtroUrlFull) params.set("full", filtroUrlFull);
+    if (filtroUrlSaudeFull) params.set("saudeFull", filtroUrlSaudeFull);
+    if (filtroUrlStatusFull) params.set("statusFullFiltro", filtroUrlStatusFull);
+    if (filtroEspecial) params.set("filtroEspecial", filtroEspecial);
+    if (telaAtual) params.set("tela", telaAtual);
+
+    const query = params.toString();
+    history.replaceState({}, "", "/" + (query ? "?" + query : ""));
 }
 
 function sugestaoIA(item){
@@ -1224,6 +1280,7 @@ function obterDestino(item){
     const status = registro.status || "principal";
 
     if (status === "enviando") return "enviando";
+    if (status === "homologar") return "homologar";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
     if (status === "filetado") return "historico";
 
@@ -1233,21 +1290,26 @@ function obterDestino(item){
 function atualizarContadores(){
     const totalPrincipal = dadosFiltradosBase.filter(item => obterDestino(item) === "principal").length;
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    const totalHomologar = dadosFiltradosBase.filter(item => obterDestino(item) === "homologar").length;
     const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
     const totalHistorico = dadosFiltradosBase.filter(item => obterDestino(item) === "historico").length;
 
     if (contPrincipalSidebar) contPrincipalSidebar.innerText = totalPrincipal;
     if (contEnv) contEnv.innerText = totalEnviando;
+    if (contHom) contHom.innerText = totalHomologar;
     if (contNao) contNao.innerText = totalNao;
     if (contHist) contHist.innerText = totalHistorico;
 
     let textoContador = "0 MLBs";
 
-    if (telaAtual === "principal"){
+        if (telaAtual === "principal"){
         textoContador = `${totalPrincipal} MLBs`;
         contadorPrincipal.innerText = textoContador;
     } else if (telaAtual === "enviando"){
         textoContador = `${totalEnviando} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    } else if (telaAtual === "homologar"){
+        textoContador = `${totalHomologar} MLBs`;
         contadorPrincipal.innerText = textoContador;
     } else if (telaAtual === "naoEnviar"){
         textoContador = `${totalNao} MLBs`;
@@ -1264,15 +1326,15 @@ function atualizarContadores(){
 }
 
 function atualizarVisibilidadeFilete(){
-    const btnFilete = document.getElementById("btnGerarFilete");
-    if (!btnFilete) return;
-
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    const mostrar = telaAtual === "enviando" && totalEnviando > 0;
 
-    if (telaAtual === "enviando" && totalEnviando > 0){
-        btnFilete.style.display = "flex";
-    } else {
-        btnFilete.style.display = "none";
+    if (btnGerarFilete){
+        btnGerarFilete.style.display = mostrar ? "flex" : "none";
+    }
+
+    if (btnGerarPdf){
+        btnGerarPdf.style.display = mostrar ? "flex" : "none";
     }
 }
 
@@ -1281,6 +1343,7 @@ function mostrarTela(tela){
 
     principal.classList.add("hidden");
     enviando.classList.add("hidden");
+    homologar.classList.add("hidden");
     naoEnviar.classList.add("hidden");
     historico.classList.add("hidden");
 
@@ -1489,29 +1552,25 @@ function montarHTMLCard(item){
     </div>
 
     <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
-        ${
-            statusSalvos[String(codigo)]?.estrategia
-            ? `
-            <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
-            <div class="estrategia-subtitulo">Definida manualmente</div>
-            `
-            : `
-            <div class="estrategia-titulo">Estratégia → Selecionar</div>
-            <div class="estrategia-subtitulo">Clique para escolher</div>
-            `
-        }
-    </div>
+    ${
+        statusSalvos[String(codigo)]?.estrategia
+        ? `
+        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
+        `
+        : `
+        <div class="estrategia-titulo">Estratégia</div>
+        `
+    }
+</div>
 
 <div class="estrategia-meio" onclick="abrirModalMotivo('${codigo}')">
     ${
         statusSalvos[String(codigo)]?.motivo_envio
         ? `
         <div class="estrategia-titulo">Motivo do envio → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
-        <div class="estrategia-subtitulo">Definido manualmente</div>
         `
         : `
-        <div class="estrategia-titulo">Motivo do envio → Selecionar</div>
-        <div class="estrategia-subtitulo">Clique para escolher</div>
+        <div class="estrategia-titulo">Motivo do envio</div>
         `
     }
 </div>
@@ -1522,13 +1581,12 @@ function montarHTMLCard(item){
             id="qtd-${codigo}"
             value="${obterQuantidadeSalva(codigo)}"
             oninput="atualizarSaldoCard('${codigo}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
-            ${emHistorico ? 'disabled' : ''}
         >
-        ${emHistorico ? '' : `<button onclick="moverCard('${codigo}')">Enviar</button>`}
-        
-        <button onclick="voltarPrincipal('${codigo}')" style="background:#6c757d; color:white;">
-            ↩ Voltar
-        </button>
+        <button onclick="moverCard('${codigo}')">Enviar</button>
+<button onclick="homologarCard('${codigo}')" style="background:#0d6efd;">Homologar</button>
+<button onclick="voltarPrincipal('${codigo}')" style="background:#6c757d; color:white;">
+    ↩ Voltar
+</button>
     </div>
 
 </div>
@@ -1558,6 +1616,7 @@ function montarHTMLCard(item){
                     <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0} | Seconds: ${item["DEZEMBRO SECONDS"] || 0} | Balcão/site: ${item["DEZEMBRO BALCAO/SITE"] || 0}</div>
                     <div class="metric">JANEIRO: ${item["JANEIRO"] || 0} | Seconds: ${item["JANEIRO SECONDS"] || 0} | Balcão/site: ${item["JANEIRO BALCAO/SITE"] || 0}</div>
                     <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0} | Seconds: ${item["FEVEREIRO SECONDS"] || 0} | Balcão/site: ${item["FEVEREIRO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">MARÇO: ${item["MARÇO"] || 0} | Seconds: ${item["MARÇO SECONDS"] || 0} | Balcão/site: ${item["MARÇO BALCAO/SITE"] || 0}</div>
                 </div>
             </div>
 
@@ -1639,7 +1698,8 @@ function renderCards(){
 
     principal.innerHTML = "";
     enviando.innerHTML = "";
-    naoEnviar.innerHTML = "";
+    homologar.innerHTML = "";
+    naoEnviar.innerHTML = "";  
     historico.innerHTML = "";
 
     indiceRender = 0;
@@ -1648,6 +1708,7 @@ function renderCards(){
     atualizarLinkExportacao();
     atualizarVisibilidadeFilete();
     atualizarIndicadorFiltro();
+    atualizarUrlFiltros();
 }
 
 function atualizarSaldoCard(codigo, estoqueEmpresa, sku){
@@ -1732,6 +1793,34 @@ statusSalvos[String(codigo)] = {
     });
 }
 
+function homologarCard(codigo){
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "homologar",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            status: "homologar",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        };
+
+        renderCards();
+    });
+}
+
 function voltarPrincipal(codigo){
     const input = document.getElementById("qtd-" + codigo);
     const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
@@ -1756,15 +1845,6 @@ function voltarPrincipal(codigo){
             motivo_envio: motivoAtual
         };
 
-        mostrarTela("principal");
-    });
-
-then(() => {
-        statusSalvos[String(codigo)] = {
-            status: "principal",
-            quantidade: quantidadeAtual,
-            estrategia: estrategiaAtual
-        };
         renderCards();
     });
 }
@@ -1802,7 +1882,15 @@ function salvarEstrategia(){
     const estrategia = document.getElementById("selectEstrategia").value;
 
     const statusAtual = statusSalvos[String(codigoEstrategiaAtual)]?.status || "principal";
-    const quantidadeAtual = statusSalvos[String(codigoEstrategiaAtual)]?.quantidade || 0;
+
+    const inputQtd = document.getElementById("qtd-" + codigoEstrategiaAtual);
+    const quantidadeAtual = Number(
+        inputQtd
+            ? inputQtd.value
+            : (statusSalvos[String(codigoEstrategiaAtual)]?.quantidade || 0)
+    );
+
+    const motivoAtual = statusSalvos[String(codigoEstrategiaAtual)]?.motivo_envio || "";
 
     fetch("/salvar-status", {
         method: "POST",
@@ -1811,14 +1899,16 @@ function salvarEstrategia(){
             codigo: codigoEstrategiaAtual,
             status: statusAtual,
             estrategia: estrategia,
-            quantidade: quantidadeAtual
+            quantidade: quantidadeAtual,
+            motivo_envio: motivoAtual
         })
     }).then(() => {
 
         statusSalvos[String(codigoEstrategiaAtual)] = {
             status: statusAtual,
             estrategia: estrategia,
-            quantidade: quantidadeAtual
+            quantidade: quantidadeAtual,
+            motivo_envio: motivoAtual
         };
 
         fecharModalEstrategia();
@@ -1859,7 +1949,14 @@ function salvarMotivo(){
     const motivo = document.getElementById("selectMotivoEnvio").value;
 
     const statusAtual = statusSalvos[String(codigoMotivoAtual)]?.status || "principal";
-    const quantidadeAtual = statusSalvos[String(codigoMotivoAtual)]?.quantidade || 0;
+
+    const inputQtd = document.getElementById("qtd-" + codigoMotivoAtual);
+    const quantidadeAtual = Number(
+        inputQtd
+            ? inputQtd.value
+            : (statusSalvos[String(codigoMotivoAtual)]?.quantidade || 0)
+    );
+
     const estrategiaAtual = statusSalvos[String(codigoMotivoAtual)]?.estrategia || "";
 
     fetch("/salvar-status", {
@@ -1930,6 +2027,59 @@ function salvarComentarioModal(){
     });
 }
 
+function gerarPDF(dados){
+    if (!dados || !dados.length){
+        alert("Não há itens para gerar o PDF.");
+        return;
+    }
+
+    fetch("/gerar-pdf-filete", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "filete_envio.pdf";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    });
+}
+
+function gerarPDFTelaEnviando(){
+    if (telaAtual !== "enviando") return;
+
+    const itensEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando");
+
+    if (!itensEnviando.length){
+        alert("Não há itens na tela Enviando para gerar o PDF.");
+        return;
+    }
+
+    const dadosPDF = itensEnviando.map(item => {
+        const codigo = String(item["Código do Anúncio"] || "");
+        const statusItem = statusSalvos[codigo] || {};
+
+        return {
+            mlb: codigo,
+            titulo: item["Título"] || "",
+            sku: item["SKU"] || "",
+            quantidade: statusItem.quantidade || 0,
+            vendas7: item["7 DIAS"] || 0,
+            vendas15: item["15 DIAS"] || 0,
+            vendas30: item["30 DIAS"] || 0,
+            comentario: comentariosMlb[codigo] || ""
+        };
+    });
+
+    gerarPDF(dadosPDF);
+}
+
 function abrirModalFilete(){
     if (telaAtual !== "enviando") return;
 
@@ -1942,10 +2092,6 @@ function abrirModalFilete(){
     document.getElementById("numeroLoteFilete").value = "";
     document.getElementById("tipoLoteFilete").value = "Diversos";
     document.getElementById("modalFilete").style.display = "flex";
-}
-
-function fecharModalFilete(){
-    document.getElementById("modalFilete").style.display = "none";
 }
 
 function gerarFilete(){
@@ -1964,6 +2110,11 @@ function gerarFilete(){
     window.location.href = "/gerar-filete?" + params.toString();
     fecharModalFilete();
 }
+
+function fecharModalFilete(){
+    document.getElementById("modalFilete").style.display = "none";
+}
+
 
 function aplicarRenderComDebounce(){
     clearTimeout(debounceTimer);
@@ -2000,6 +2151,18 @@ Promise.all([
     montarIndices();
     popularFiltros();
 
+    if(urlParams.get("conta")){
+        filtroConta.value = urlParams.get("conta");
+    }
+
+    if(urlParams.get("busca")){
+        filtroBusca.value = urlParams.get("busca");
+    }
+
+    if(urlParams.get("selo")){
+        filtroSelo.value = urlParams.get("selo");
+    }
+
     if(urlParams.get("saude")){
         filtroSaude.value = urlParams.get("saude");
     }
@@ -2008,14 +2171,33 @@ Promise.all([
         filtroLogica.value = urlParams.get("analise");
     }
 
-    const telaUrl = urlParams.get("tela");
-    if (telaUrl === "enviando" || telaUrl === "naoEnviar" || telaUrl === "principal" || telaUrl === "historico") {
-        telaAtual = telaUrl;
+    if(urlParams.get("condicao")){
+        filtroCondicao.value = urlParams.get("condicao");
     }
+
+    if(urlParams.get("lote")){
+        filtroLote.value = urlParams.get("lote");
+    }
+
+    if(urlParams.get("filtroEspecial")){
+        filtroEspecial = urlParams.get("filtroEspecial");
+    }
+
+    const telaUrl = urlParams.get("tela");
+if (
+    telaUrl === "enviando" ||
+    telaUrl === "homologar" ||
+    telaUrl === "naoEnviar" ||
+    telaUrl === "principal" ||
+    telaUrl === "historico"
+) {
+    telaAtual = telaUrl;
+}
 
     principal.classList.add("hidden");
     enviando.classList.add("hidden");
-    naoEnviar.classList.add("hidden");
+    homologar.classList.add("hidden");
+    naoEnviar.classList.add("hidden"); 
     historico.classList.add("hidden");
 
     document.getElementById(telaAtual).classList.remove("hidden");
