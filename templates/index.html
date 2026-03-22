@@ -2098,7 +2098,8 @@ function criarLote(){
         }
 
         fecharModalCriarLote();
-        window.location.href = "/metricas-full";
+        alert("Lote criado com sucesso.");
+        location.reload();
     })
     .catch(() => {
         alert("Erro ao criar lote.");
@@ -2110,9 +2111,8 @@ function fecharModalCriarLote(){
 }
 
 function fecharModalFilete(){
-    document.getElementById("modalFilete").style.display = "none";
+    fecharModalCriarLote();
 }
-
 
 function aplicarRenderComDebounce(){
     clearTimeout(debounceTimer);
@@ -2253,11 +2253,11 @@ if (
 
 <div id="modalFilete" class="modal-filete">
     <div class="modal-conteudo">
-        <h3>Gerar Filete</h3>
+        <h3>Criar Lote</h3>
 
         <div class="filete-info">
-            Informe o número de um lote <strong>já criado manualmente</strong> para gerar o filete com os itens da tela <strong>Enviando</strong>.
-        </div>        
+            Informe o número do lote que será usado para salvar os itens da tela <strong>Enviando</strong>.
+        </div>
 
         <div>
             <label for="numeroLoteFilete"><strong>Nº do lote</strong></label>
@@ -2273,9 +2273,10 @@ if (
         </div>
 
         <div class="modal-botoes">
-            <button onclick="gerarFilete()">Gerar</button>
-            <button onclick="fecharModalFilete()" class="btn-fechar">Cancelar</button>
+            <button type="button" onclick="criarLote()">Criar lote</button>
+            <button type="button" onclick="fecharModalCriarLote()" class="btn-fechar">Cancelar</button>
         </div>
+    </div>
 </div>
 
 {% endblock %}

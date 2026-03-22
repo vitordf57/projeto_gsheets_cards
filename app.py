@@ -1965,8 +1965,6 @@ def api_full_distribuicao():
             'Devolvidas pelo comprador',
             'Não aptas para venda',
             'Temporariamente não aptas para venda\nEnquanto voltam a estar à venda, não ocuparão espaço no Full.',
-            'Unidades que ocupan espacio en Full',
-            'Para impulsionar vendas',
             'Para colocar à venda',
             'Para evitar descarte'
         ]
@@ -2029,33 +2027,32 @@ def api_full_distribuicao_detalhe():
     if not coluna:
         return jsonify({"ok": False, "erro": "Coluna não informada."}), 400
 
-    url_base = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=0"
     url_full = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=46764324"
 
     try:
-        df_base = pd.read_csv(url_base).fillna("")
-        df_full = pd.read_csv(url_full).fillna("")
+        df = pd.read_csv(url_full).fillna("")
+        df.columns = [str(c).strip() for c in df.columns]
 
-        df_base.columns = [str(c).strip() for c in df_base.columns]
-        df_full.columns = [str(c).strip() for c in df_full.columns]
-
-        if coluna not in df_full.columns:
+        if coluna not in df.columns:
             return jsonify({"ok": False, "erro": f"Coluna '{coluna}' não encontrada."}), 400
 
-        if "#anuncio" not in df_full.columns:
-            return jsonify({"ok": False, "erro": "Coluna '#anuncio' não encontrada na aba Full."}), 400
+        def encontrar_coluna(df, candidatos):
+            colunas_reais = list(df.columns)
+            colunas_norm = {str(c).strip().lower(): c for c in colunas_reais}
 
-        if "Código do Anúncio" not in df_base.columns:
-            return jsonify({"ok": False, "erro": "Coluna 'Código do Anúncio' não encontrada na base principal."}), 400
+            for candidato in candidatos:
+                chave = str(candidato).strip().lower()
+                if chave in colunas_norm:
+                    return colunas_norm[chave]
 
-        def normalizar_codigo_mlb(valor):
-            texto = str(valor or "").strip().upper()
-            numeros = "".join(ch for ch in texto if ch.isdigit())
+            for col_real in colunas_reais:
+                col_real_norm = str(col_real).strip().lower()
+                for candidato in candidatos:
+                    cand_norm = str(candidato).strip().lower()
+                    if cand_norm in col_real_norm:
+                        return col_real
 
-            if numeros == "":
-                return ""
-
-            return f"MLB{numeros}"
+            return None
 
         def limpar_numero(valor):
             if pd.isna(valor):
@@ -2081,39 +2078,65 @@ def api_full_distribuicao_detalhe():
             except:
                 return 0
 
-        df_full["codigo_mlb"] = df_full["#anuncio"].apply(normalizar_codigo_mlb)
-        df_full["valor_coluna"] = df_full[coluna].apply(limpar_numero)
+        def normalizar_mlb(valor):
+            texto = str(valor or "").strip()
+            numeros = "".join(ch for ch in texto if ch.isdigit())
 
-        df_full = df_full[df_full["valor_coluna"] > 0].copy()
+            if not numeros:
+                return texto
 
-        df_base["codigo_mlb"] = df_base["Código do Anúncio"].apply(normalizar_codigo_mlb)
+            if texto.upper().startswith("MLB"):
+                return f"MLB{numeros}"
 
-        colunas_base = ["codigo_mlb"]
-        if "Código do Anúncio" in df_base.columns:
-            colunas_base.append("Código do Anúncio")
-        if "SKU" in df_base.columns:
-            colunas_base.append("SKU")
-        if "Nickname" in df_base.columns:
-            colunas_base.append("Nickname")
+            return numeros
 
-        df_base_merge = df_base[colunas_base].drop_duplicates(subset=["codigo_mlb"])
+        coluna_anuncio = encontrar_coluna(df, [
+            "# Anúncio /",
+            "# Anúncio",
+            "#anúncio",
+            "# anuncio",
+            "# anúncio /",
+            "# anúncio",
+            "#anuncio",
+            "anúncio",
+            "anuncio"
+        ])
 
-        df_merge = df_full.merge(
-            df_base_merge,
-            on="codigo_mlb",
-            how="left"
-        )
+        coluna_sku = encontrar_coluna(df, [
+            "SKU",
+            "sku",
+            "Sku"
+        ])
+
+        coluna_conta = encontrar_coluna(df, [
+            "CONTA",
+            "Conta",
+            "conta"
+        ])
+
+        if not coluna_anuncio:
+            return jsonify({
+                "ok": False,
+                "erro": "Coluna '# Anúncio /' não encontrada na aba do Full."
+            }), 400
+
+        df["valor_coluna"] = df[coluna].apply(limpar_numero)
+        df_filtrado = df[df["valor_coluna"] > 0].copy()
 
         dados = []
-        for _, row in df_merge.iterrows():
+        for _, row in df_filtrado.iterrows():
             unidades = row["valor_coluna"]
             if float(unidades).is_integer():
                 unidades = int(unidades)
 
+            mlb = normalizar_mlb(row.get(coluna_anuncio, "")) if coluna_anuncio else ""
+            sku = str(row.get(coluna_sku, "")).strip() if coluna_sku else ""
+            conta = str(row.get(coluna_conta, "")).strip() if coluna_conta else ""
+
             dados.append({
-                "mlb": row.get("Código do Anúncio", "") or row.get("codigo_mlb", "") or "",
-                "sku": row.get("SKU", "") or "",
-                "conta": row.get("Nickname", "") or "",
+                "mlb": mlb,
+                "sku": sku,
+                "conta": conta,
                 "status": coluna.replace("\n", " "),
                 "unidades": unidades
             })
@@ -2134,7 +2157,7 @@ def api_full_distribuicao_detalhe():
             "ok": False,
             "erro": f"Erro ao carregar detalhes da métrica Full: {str(e)}"
         }), 500
-
+    
 init_db()
 
 if __name__ == "__main__":
