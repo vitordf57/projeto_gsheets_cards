@@ -123,14 +123,40 @@ body {
 </div>
 
 <script>
-function toggleSidebar() {
-    const sidebar = document.getElementById("sidebar");
-    const content = document.getElementById("content");
-
-    sidebar.classList.toggle("collapsed");
-    content.classList.toggle("expanded");
-}
-</script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const content = document.getElementById("content");
+    
+        sidebar.classList.toggle("collapsed");
+        content.classList.toggle("expanded");
+    }
+    
+    function montarLinkComFiltros(hrefBase) {
+        const urlAtual = new URLSearchParams(window.location.search);
+        const urlDestino = new URL(hrefBase, window.location.origin);
+    
+        urlAtual.forEach((valor, chave) => {
+            if (!urlDestino.searchParams.has(chave)) {
+                urlDestino.searchParams.set(chave, valor);
+            }
+        });
+    
+        const query = urlDestino.searchParams.toString();
+        return urlDestino.pathname + (query ? "?" + query : "");
+    }
+    
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("#sidebar a").forEach(link => {
+            const hrefOriginal = link.getAttribute("href");
+    
+            if (!hrefOriginal || hrefOriginal.startsWith("#") || hrefOriginal.startsWith("javascript:")) {
+                return;
+            }
+    
+            link.setAttribute("href", montarLinkComFiltros(hrefOriginal));
+        });
+    });
+    </script>
 
 </body>
 </html>

@@ -180,6 +180,132 @@
             grid-template-columns:1fr;
         }
     }
+
+    .status-full-card-popup{
+    position:relative;
+    cursor:pointer;
+}
+
+.status-full-card-popup:hover{
+    transform:translateY(-2px);
+}
+
+.painel-flutuante-status{
+    display:none;
+    position:absolute;
+    top:calc(100% + 10px);
+    left:0;
+    min-width:420px;
+    max-width:520px;
+    background:#ffffff;
+    border:1px solid #dbe1ea;
+    border-radius:16px;
+    box-shadow:0 14px 35px rgba(0,0,0,0.16);
+    padding:14px;
+    z-index:999;
+}
+
+.painel-flutuante-status.aberto{
+    display:block;
+}
+
+.painel-secao-status{
+    margin-bottom:14px;
+}
+
+.painel-secao-status:last-child{
+    margin-bottom:0;
+}
+
+.painel-secao-titulo{
+    font-size:12px;
+    font-weight:bold;
+    color:#6b7280;
+    text-transform:uppercase;
+    margin-bottom:8px;
+}
+
+.painel-opcoes-status{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.painel-opcao-status{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    cursor:pointer;
+    transition:0.2s ease;
+}
+
+.painel-opcao-status:hover{
+    background:#eef4ff;
+    border-color:#c7d7fe;
+}
+
+.painel-opcao-label{
+    font-size:14px;
+    font-weight:600;
+    color:#111827;
+}
+
+.painel-opcao-valor{
+    font-size:18px;
+    font-weight:bold;
+    color:#111827;
+}
+
+@media (max-width: 700px){
+    .painel-flutuante-status{
+        min-width:290px;
+        max-width:92vw;
+        left:0;
+    }
+}
+
+.full-metricas-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px;
+    margin-top:18px;
+}
+
+.full-metrica-card{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-left:6px solid #1c5ed6;
+    border-radius:14px;
+    padding:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+
+.full-metrica-titulo{
+    font-size:13px;
+    font-weight:bold;
+    color:#374151;
+    line-height:1.4;
+    margin-bottom:10px;
+    text-transform:uppercase;
+}
+
+.full-metrica-valor{
+    font-size:32px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.full-metrica-vazio{
+    color:#6b7280;
+    font-style:italic;
+    padding:12px 4px;
+}
+
 </style>
 
 <h1>🏠 Dashboard Geral</h1>
@@ -187,7 +313,7 @@
 <div class="dashboard-grid">
 
     <div class="kpi-card kpi-card-wide">
-        <div class="kpi-title">Status Full</div>
+        <div class="kpi-title">Analise de envio</div>
         <div class="kpi-lista" id="kpiStatusFull"></div>
     </div>
 
@@ -211,101 +337,27 @@
             </div>
         </div>
     </div>
-    
-    <div class="kpi-card">
-        <div class="kpi-title">Ruptura</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({saudeFull: 'RUPTURA', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiRupturaRenaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({saudeFull: 'RUPTURA', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiRuptura4i">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-title">Sugestão Envio Magic</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiMagicRenaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiMagic4i">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-title">MLBs com estoque abaixo 30 dias</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({analise: 'ANALISE DE ENVIO', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiBaixo30Renaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({analise: 'ANALISE DE ENVIO', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiBaixo304i">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-title">Acompanhar</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({analise: 'ACOMPANHAR', conta: 'RENAFCAR'})">
-                <div class="kpi-side-label">RENAFCAR</div>
-                <div class="kpi-side-value" id="kpiAcompanharRenaf">0</div>
-            </div>
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({analise: 'ACOMPANHAR', conta: '4IDISTRIBUIDORA'})">
-                <div class="kpi-side-label">4I</div>
-                <div class="kpi-side-value" id="kpiAcompanhar4i">0</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="kpi-card kpi-card-wide">
-        <div class="kpi-title">Informação do Estoque</div>
-        <div class="kpi-lista" id="kpiInfoEstoque"></div>
-    </div>
 
 </div>
 
-<div class="charts-grid">
-    <div class="chart-card">
-        <h3>🏆 Mais vendidos 30 dias (quantidade)</h3>
-        <div class="chart-wrap">
-            <canvas id="chartQtd"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-card">
-        <h3>💰 Mais vendidos 30 dias (valor)</h3>
-        <div class="chart-wrap">
-            <canvas id="chartValor"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-card">
-        <h3>📦 Saúde do estoque</h3>
-        <div class="chart-wrap">
-            <canvas id="chartSaude"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-card">
-        <h3>🧠 Lógica de análise</h3>
-        <div class="chart-wrap">
-            <canvas id="chartAnalise"></canvas>
-        </div>
-    </div>
+<div class="chart-card" style="margin-top:20px;">
+    <h3>📦 Distribuição dos anúncios no Full</h3>
+    <div id="fullMetricasGrid" class="full-metricas-grid"></div>
 </div>
 
 <script>
+
+function numero(v){
+    if(v === null || v === undefined || v === "") return 0;
+    return Number(String(v).replaceAll(".","").replace(",","."));
+}
+
+function extrairDiasCobertura(texto){
+    const t = String(texto || "");
+    const match = t.match(/(\d+)\s*dias/i);
+    return match ? Number(match[1]) : null;
+}
+
 const urlParamsHome = new URLSearchParams(window.location.search);
 
 function numero(v){
@@ -317,6 +369,10 @@ function extrairDiasCobertura(texto){
     const t = String(texto || "");
     const match = t.match(/(\d+)\s*dias/i);
     return match ? Number(match[1]) : null;
+}
+
+function textoNormalizado(valor){
+    return String(valor || "").toUpperCase().trim();
 }
 
 function atualizarUrlFiltroStatusFull(){
@@ -359,10 +415,6 @@ function porConta(dados, nickname){
 }
 
 let filtroStatusFullAtivo = urlParamsHome.get("statusFullFiltro") || "";
-let chartQtdInstance = null;
-let chartValorInstance = null;
-let chartSaudeInstance = null;
-let chartAnaliseInstance = null;
 
 function aplicarFiltroStatusFull(lista){
     if (filtroStatusFullAtivo === "nao_ofereco_mais_full"){
@@ -386,26 +438,22 @@ function aplicarFiltroStatusFull(lista){
         });
     }
 
-    return lista;
+    if (filtroStatusFullAtivo === "sem_venda"){
+    return lista.filter(item => {
+        const unidadesVendidas = textoNormalizado(
+            item["Unidades Vendidas"] ||
+            item["unidades vendidas"] ||
+            item["UNIDADES VENDIDAS"] ||
+            item["Unidades vendidas"] ||
+            item["UNIDADE VENDIDA"] ||
+            ""
+        );
+
+        return unidadesVendidas === "SEM VENDA";
+    });
 }
 
-function destruirGraficos(){
-    if (chartQtdInstance) {
-        chartQtdInstance.destroy();
-        chartQtdInstance = null;
-    }
-    if (chartValorInstance) {
-        chartValorInstance.destroy();
-        chartValorInstance = null;
-    }
-    if (chartSaudeInstance) {
-        chartSaudeInstance.destroy();
-        chartSaudeInstance = null;
-    }
-    if (chartAnaliseInstance) {
-        chartAnaliseInstance.destroy();
-        chartAnaliseInstance = null;
-    }
+    return lista;
 }
 
 function renderDashboard(dados, statusSalvos){
@@ -444,16 +492,7 @@ function renderDashboard(dados, statusSalvos){
 
     const acompanhar4i = conta4i.filter(item =>
         String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
-    ).length;
-
-    document.getElementById("kpiRupturaRenaf").innerText = rupturaRenaf;
-    document.getElementById("kpiRuptura4i").innerText = ruptura4i;
-    document.getElementById("kpiMagicRenaf").innerText = magicRenaf;
-    document.getElementById("kpiMagic4i").innerText = magic4i;
-    document.getElementById("kpiBaixo30Renaf").innerText = baixo30Renaf;
-    document.getElementById("kpiBaixo304i").innerText = baixo304i;
-    document.getElementById("kpiAcompanharRenaf").innerText = acompanharRenaf;
-    document.getElementById("kpiAcompanhar4i").innerText = acompanhar4i;
+    ).length; 
 
     let totalMlbEnviando = 0;
     let totalMlbNaoEnviar = 0;
@@ -493,22 +532,6 @@ function renderDashboard(dados, statusSalvos){
     const infoOrdenada = Object.entries(infoEstoqueMap)
         .sort((a, b) => b[1] - a[1]);
 
-    const containerInfoEstoque = document.getElementById("kpiInfoEstoque");
-    containerInfoEstoque.innerHTML = "";
-
-    infoOrdenada.forEach(([status, quantidade]) => {
-        const item = document.createElement("div");
-        item.className = "kpi-item";
-        item.onclick = () => irParaPainel({ saude: status });
-
-        item.innerHTML = `
-            <div class="kpi-item-label">${status}</div>
-            <div class="kpi-item-value">${quantidade}</div>
-        `;
-
-        containerInfoEstoque.appendChild(item);
-    });
-
     const totalNaoOferecoMaisFull = dados.filter(item =>
         String(item["OBSERVAÇÃO MELI"] || "").trim() === "Você deixou de oferecer o Full."
     ).length;
@@ -524,124 +547,109 @@ function renderDashboard(dados, statusSalvos){
         return observacaoMeli !== "Você deixou de oferecer o Full." && full !== "NO FULL";
     }).length;
 
+    const totalSemVenda = dados.filter(item => {
+    const unidadesVendidas = textoNormalizado(
+        item["Unidades Vendidas"] ||
+        item["unidades vendidas"] ||
+        item["UNIDADES VENDIDAS"] ||
+        item["Unidades vendidas"] ||
+        item["UNIDADE VENDIDA"] ||
+        ""
+    );
+
+    return unidadesVendidas === "SEM VENDA";
+}).length;
+
     const containerStatusFull = document.getElementById("kpiStatusFull");
-    containerStatusFull.innerHTML = "";
+containerStatusFull.innerHTML = "";
 
-    const cardsStatusFull = [
-        { chave: "nao_ofereco_mais_full", label: "NÃO OFEREÇO MAIS NO FULL", valor: totalNaoOferecoMaisFull },
-        { chave: "esta_no_full", label: "ESTÁ NO FULL", valor: totalEstaNoFull },
-        { chave: "nunca_foi_full", label: "NUNCA FOI NO FULL", valor: totalNuncaFoiFull }
-    ];
+const cardsStatusFull = [
+    { chave: "nao_ofereco_mais_full", label: "NÃO OFEREÇO MAIS NO FULL", valor: totalNaoOferecoMaisFull },
+    { chave: "esta_no_full", label: "ESTÁ NO FULL", valor: totalEstaNoFull },
+    { chave: "nunca_foi_full", label: "NUNCA FOI NO FULL", valor: totalNuncaFoiFull },
+    { chave: "sem_venda", label: "SEM VENDA", valor: totalSemVenda }
+];
 
-    cardsStatusFull.forEach(card => {
-        const item = document.createElement("div");
-        item.className = "kpi-item" + (filtroStatusFullAtivo === card.chave ? " ativo" : "");
-        item.onclick = () => {
-            if (filtroStatusFullAtivo === card.chave){
-                filtroStatusFullAtivo = "";
-            } else {
-                filtroStatusFullAtivo = card.chave;
+cardsStatusFull.forEach((card, index) => {
+    const item = document.createElement("div");
+    item.className = "kpi-item" + (filtroStatusFullAtivo === card.chave ? " ativo" : "");
+    item.classList.add("status-full-card-popup");
+
+    const painelId = "painelStatusFull_" + index;
+
+    item.innerHTML = `
+        <div class="kpi-item-label">${card.label}</div>
+        <div class="kpi-item-value">${card.valor}</div>
+
+        <div class="painel-flutuante-status" id="${painelId}">
+            <div class="painel-secao-status">
+                <div class="painel-secao-titulo">Ruptura</div>
+                <div class="painel-opcoes-status">
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({saudeFull: 'RUPTURA', conta: 'RENAFCAR'})">
+                        <span class="painel-opcao-label">RENAFCAR</span>
+                        <span class="painel-opcao-valor">${rupturaRenaf}</span>
+                    </div>
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({saudeFull: 'RUPTURA', conta: '4IDISTRIBUIDORA'})">
+                        <span class="painel-opcao-label">4I</span>
+                        <span class="painel-opcao-valor">${ruptura4i}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="painel-secao-status">
+                <div class="painel-secao-titulo">Sugestão Envio Magic</div>
+                <div class="painel-opcoes-status">
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: 'RENAFCAR'})">
+                        <span class="painel-opcao-label">RENAFCAR</span>
+                        <span class="painel-opcao-valor">${magicRenaf}</span>
+                    </div>
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({magic: 'SUG DE ENVIO MAGIC', conta: '4IDISTRIBUIDORA'})">
+                        <span class="painel-opcao-label">4I</span>
+                        <span class="painel-opcao-valor">${magic4i}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="painel-secao-status">
+                <div class="painel-secao-titulo">MLBs com estoque abaixo 30 dias</div>
+                <div class="painel-opcoes-status">
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({analise: 'ANALISE DE ENVIO', conta: 'RENAFCAR'})">
+                        <span class="painel-opcao-label">RENAFCAR</span>
+                        <span class="painel-opcao-valor">${baixo30Renaf}</span>
+                    </div>
+                    <div class="painel-opcao-status" onclick="event.stopPropagation(); irParaPainel({analise: 'ANALISE DE ENVIO', conta: '4IDISTRIBUIDORA'})">
+                        <span class="painel-opcao-label">4I</span>
+                        <span class="painel-opcao-valor">${baixo304i}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    item.onclick = (e) => {
+        e.stopPropagation();
+
+        if (filtroStatusFullAtivo === card.chave){
+            filtroStatusFullAtivo = "";
+        } else {
+            filtroStatusFullAtivo = card.chave;
+        }
+
+        atualizarUrlFiltroStatusFull();
+        renderDashboard(dados, statusSalvos);
+
+        setTimeout(() => {
+            const painelAtual = document.getElementById(painelId);
+            if (painelAtual) {
+                fecharTodosPaineisStatusFull();
+                painelAtual.classList.add("aberto");
             }
+        }, 0);
+    };
 
-            atualizarUrlFiltroStatusFull();
-            renderDashboard(dados);
-        };
+    containerStatusFull.appendChild(item);
+});
 
-        item.innerHTML = `
-            <div class="kpi-item-label">${card.label}</div>
-            <div class="kpi-item-value">${card.valor}</div>
-        `;
-
-        containerStatusFull.appendChild(item);
-    });
-
-    const topQtd = [...dadosFiltrados]
-        .sort((a,b) => numero(b["30 DIAS"]) - numero(a["30 DIAS"]))
-        .slice(0, 10);
-
-    const topValor = [...dadosFiltrados]
-        .sort((a,b) => numero(b["Total de Vendas 30 DIAS"]) - numero(a["Total de Vendas 30 DIAS"]))
-        .slice(0, 10);
-
-    const saudeMap = {};
-    dadosFiltrados.forEach(item => {
-        const chave = String(item["SAUDE DO ESTOQUE 4i"] || "SEM DADO").trim();
-        saudeMap[chave] = (saudeMap[chave] || 0) + 1;
-    });
-
-    const analiseMap = {};
-    dadosFiltrados.forEach(item => {
-        const chave = String(item["ANALISE"] || "SEM DADO").trim();
-        analiseMap[chave] = (analiseMap[chave] || 0) + 1;
-    });
-
-    destruirGraficos();
-
-    chartQtdInstance = new Chart(document.getElementById("chartQtd"), {
-        type: "bar",
-        data: {
-            labels: topQtd.map(item => item["Código do Anúncio"]),
-            datasets: [{
-                label: "30 DIAS",
-                data: topQtd.map(item => numero(item["30 DIAS"]))
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: "y",
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
-
-    chartValorInstance = new Chart(document.getElementById("chartValor"), {
-        type: "bar",
-        data: {
-            labels: topValor.map(item => item["Código do Anúncio"]),
-            datasets: [{
-                label: "Total de Vendas 30 DIAS",
-                data: topValor.map(item => numero(item["Total de Vendas 30 DIAS"]))
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: "y",
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
-
-    chartSaudeInstance = new Chart(document.getElementById("chartSaude"), {
-        type: "doughnut",
-        data: {
-            labels: Object.keys(saudeMap),
-            datasets: [{
-                data: Object.values(saudeMap)
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    chartAnaliseInstance = new Chart(document.getElementById("chartAnalise"), {
-        type: "doughnut",
-        data: {
-            labels: Object.keys(analiseMap),
-            datasets: [{
-                data: Object.values(analiseMap)
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
 }
 
 Promise.all([
@@ -649,7 +657,64 @@ Promise.all([
     fetch("/status").then(r => r.json())
 ]).then(([dados, statusSalvos]) => {
     renderDashboard(dados, statusSalvos);
+    carregarGraficoFull();
 });
+
+function fecharTodosPaineisStatusFull(){
+    document.querySelectorAll(".painel-flutuante-status").forEach(painel => {
+        painel.classList.remove("aberto");
+    });
+}
+
+function togglePainelStatusFull(idPainel){
+    const painel = document.getElementById(idPainel);
+    if(!painel) return;
+
+    const estavaAberto = painel.classList.contains("aberto");
+
+    fecharTodosPaineisStatusFull();
+
+    if(!estavaAberto){
+        painel.classList.add("aberto");
+    }
+}
+
+document.addEventListener("click", function(){
+    fecharTodosPaineisStatusFull();
+});
+
+function carregarGraficoFull(){
+    fetch("/api/full-distribuicao")
+        .then(res => res.json())
+        .then(resp => {
+            const container = document.getElementById("fullMetricasGrid");
+            if (!container) return;
+
+            container.innerHTML = "";
+
+            if (!resp.ok || !resp.dados || !resp.dados.length) {
+                container.innerHTML = `<div class="full-metrica-vazio">Nenhuma informação encontrada.</div>`;
+                return;
+            }
+
+            resp.dados.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "full-metrica-card";
+
+                card.innerHTML = `
+                    <div class="full-metrica-titulo">${item.titulo}</div>
+                    <div class="full-metrica-valor">${item.valor}</div>
+                `;
+
+                container.appendChild(card);
+            });
+        })
+        .catch(() => {
+            const container = document.getElementById("fullMetricasGrid");
+            if (!container) return;
+            container.innerHTML = `<div class="full-metrica-vazio">Erro ao carregar informações do Full.</div>`;
+        });
+}
 
 </script>
 

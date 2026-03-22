@@ -41,10 +41,10 @@ def carregar_dados_base():
     if cache_dados is None or (agora - cache_dados_ts) > CACHE_TTL:
         df = pd.read_csv(CSV_URL)
         df = df.fillna("")
-        cache_dados = df.to_dict(orient="records")
+        cache_dados = df
         cache_dados_ts = agora
 
-    return cache_dados
+    return cache_dados.copy()
 
 
 def carregar_csv_com_cache(url, tipo="dados"):
@@ -629,18 +629,19 @@ def metricas_full():
 
 @app.route("/dados")
 def dados():
-    return jsonify(carregar_dados_base())
+    df = carregar_dados_base()
+    return jsonify(df.to_dict(orient="records"))
 
 
 @app.route("/dados-dashboard")
 def dados_dashboard():
-    return jsonify(carregar_dados_base())
+    df = carregar_dados_base()
+    return jsonify(df.to_dict(orient="records"))
 
 
 @app.route("/exportar-excel")
 def exportar_excel():
-    dados = carregar_dados_base()
-    df = pd.DataFrame(dados)
+    df = carregar_dados_base()
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
@@ -992,8 +993,7 @@ def gerar_filete():
     if not numero_lote:
         return "Informe um número de lote válido.", 400
 
-    dados = carregar_dados_base()
-    df = pd.DataFrame(dados)
+    df = carregar_dados_base()
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
@@ -1560,6 +1560,77 @@ def gerar_pdf_filete_route():
         download_name="filete_envio.pdf",
         mimetype="application/pdf"
     )
+
+@app.route("/api/full-distribuicao")
+def api_full_distribuicao():
+    url = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=46764324"
+
+    try:
+        df = pd.read_csv(url)
+        df = df.fillna("")
+        df.columns = [str(c).strip() for c in df.columns]
+
+        colunas_desejadas = [
+            'Unidades que afetam a métrica "Com tempo de estoque"',
+            'Entrada pendente',
+            'Em transferência',
+            'Devolvidas pelo comprador',
+            'Não aptas para venda',
+            'Temporariamente não aptas para venda\nEnquanto voltam a estar à venda, não ocuparão espaço no Full.',
+            'Unidades que ocupan espacio en Full',
+            'Para impulsionar vendas',
+            'Para colocar à venda',
+            'Para evitar descarte'
+        ]
+
+        def limpar_numero(valor):
+            if pd.isna(valor):
+                return 0
+
+            if isinstance(valor, (int, float)):
+                return float(valor)
+
+            texto = str(valor).strip()
+
+            if texto == "":
+                return 0
+
+            texto = texto.replace(" ", "")
+
+            if "," in texto and "." in texto:
+                texto = texto.replace(".", "").replace(",", ".")
+            elif "," in texto:
+                texto = texto.replace(",", ".")
+
+            try:
+                return float(texto)
+            except:
+                return 0
+
+        dados = []
+
+        for coluna in colunas_desejadas:
+            if coluna in df.columns:
+                valor_total = df[coluna].apply(limpar_numero).sum()
+
+                if float(valor_total).is_integer():
+                    valor_total = int(valor_total)
+
+                dados.append({
+                    "titulo": coluna.replace("\n", " "),
+                    "valor": valor_total
+                })
+
+        return jsonify({
+            "ok": True,
+            "dados": dados
+        })
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "erro": f"Erro ao carregar distribuição do Full: {str(e)}"
+        }), 500
 
 init_db()
 
