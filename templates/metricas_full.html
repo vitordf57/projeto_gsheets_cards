@@ -423,6 +423,45 @@
         min-width:100%;
     }
 }
+
+.lote-itens-box{
+    margin-top:18px;
+    border-top:1px solid #e5e7eb;
+    padding-top:16px;
+}
+
+.lote-itens-box details{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px 14px;
+}
+
+.lote-itens-box summary{
+    cursor:pointer;
+    font-weight:bold;
+    color:#111827;
+}
+
+.lote-itens-tabela{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:14px;
+    font-size:13px;
+}
+
+.lote-itens-tabela th,
+.lote-itens-tabela td{
+    border:1px solid #e5e7eb;
+    padding:8px 10px;
+    text-align:left;
+    vertical-align:top;
+}
+
+.lote-itens-tabela th{
+    background:#eef4ff;
+}
+
 </style>
 
 <div class="page-wrap">
@@ -603,6 +642,59 @@
                         <a class="btn-card btn-conferencia" href="/conferencia/{{ lote['numero_lote'] }}">
                             📋 Conferência
                         </a>
+
+                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/pdf">
+                            📄 PDF
+                        </a>
+
+                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/filete-excel">
+                            🧾 Excel Filete
+                        </a>
+
+                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/exportar-excel">
+                            ⬇️ Excel Detalhado
+                        </a>
+                    </div>
+
+                    <div class="lote-itens-box">
+                        <details>
+                            <summary>Ver itens do lote</summary>
+
+                            {% set itens_lote = lotes_itens_map.get(lote['numero_lote'], []) %}
+
+                            {% if itens_lote %}
+                                <table class="lote-itens-tabela">
+                                    <thead>
+                                        <tr>
+                                            <th>MLB</th>
+                                            <th>SKU</th>
+                                            <th>Título</th>
+                                            <th>Conta</th>
+                                            <th>Qtd enviada</th>
+                                            <th>Endereço</th>
+                                            <th>Estratégia</th>
+                                            <th>Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in itens_lote %}
+                                            <tr>
+                                                <td>{{ item['codigo'] }}</td>
+                                                <td>{{ item['sku'] }}</td>
+                                                <td>{{ item['titulo'] }}</td>
+                                                <td>{{ item['nickname'] }}</td>
+                                                <td>{{ item['quantidade'] }}</td>
+                                                <td>{{ item['endereco'] }}</td>
+                                                <td>{{ item['estrategia'] or '-' }}</td>
+                                                <td>{{ item['motivo_envio'] or '-' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <div style="margin-top:12px; color:#666;">Nenhum item salvo neste lote.</div>
+                            {% endif %}
+                        </details>
                     </div>
                 </div>
             {% endfor %}

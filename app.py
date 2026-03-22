@@ -10,6 +10,7 @@ from io import BytesIO
 from collections import Counter
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 import os
+import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from calendar import month_name
@@ -531,6 +532,26 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_envio_itens_snapshot (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            tipo_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT,
+            nickname TEXT,
+            quantidade INTEGER DEFAULT 0,
+            endereco TEXT,
+            lote_filete TEXT,
+            estrategia TEXT DEFAULT '',
+            motivo_envio TEXT DEFAULT '',
+            comentario_mlb TEXT DEFAULT '',
+            dados_json TEXT,
+            data_geracao TEXT
+        )
+    """)
+
     cursor.execute("PRAGMA table_info(status_cards)")
     colunas_status = [col[1] for col in cursor.fetchall()]
 
@@ -612,6 +633,18 @@ def metricas_full():
     """)
     lotes = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT *
+        FROM lotes_envio_itens_snapshot
+        ORDER BY numero_lote DESC, endereco, sku, codigo
+    """)
+    itens_snapshot = cursor.fetchall()
+
+    lotes_itens_map = {}
+    for item in itens_snapshot:
+        numero_lote = item["numero_lote"]
+        lotes_itens_map.setdefault(numero_lote, []).append(item)
+
     total_lotes = len(lotes)
     total_mlbs = sum(int(lote["total_mlbs"] or 0) for lote in lotes)
     total_pecas = sum(int(lote["total_pecas"] or 0) for lote in lotes)
@@ -621,6 +654,7 @@ def metricas_full():
     return render_template(
         "metricas_full.html",
         lotes=lotes,
+        lotes_itens_map=lotes_itens_map,
         total_lotes=total_lotes,
         total_mlbs=total_mlbs,
         total_pecas=total_pecas
@@ -943,9 +977,50 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         return
 
     conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        SELECT codigo, estrategia, motivo_envio
+        FROM status_cards
+    """)
+    rows_status = cursor.fetchall()
+    mapa_status = {
+        str(row["codigo"]): {
+            "estrategia": row["estrategia"] or "",
+            "motivo_envio": row["motivo_envio"] or ""
+        }
+        for row in rows_status
+    }
+
+    cursor.execute("""
+        SELECT codigo, comentario
+        FROM comentarios_mlb
+    """)
+    rows_comentarios = cursor.fetchall()
+    mapa_comentarios_mlb = {
+        str(row["codigo"]): row["comentario"] or ""
+        for row in rows_comentarios
+    }
+
+    cursor.execute("""
+        DELETE FROM lotes_envio_itens_snapshot
+        WHERE numero_lote = ?
+    """, (numero_lote,))
+
+    def valor_json(valor):
+        try:
+            if pd.isna(valor):
+                return ""
+        except:
+            pass
+
+        if isinstance(valor, (int, float, str, bool)) or valor is None:
+            return valor
+
+        return str(valor)
 
     for _, item in df_lote.iterrows():
         codigo = str(item.get("Código do Anúncio", "") or "")
@@ -956,12 +1031,20 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         lote_filete = str(item.get("Lote", "") or "")
         quantidade = int(float(item.get("Enviar", 0) or 0))
 
+        estrategia = mapa_status.get(codigo, {}).get("estrategia", "")
+        motivo_envio = mapa_status.get(codigo, {}).get("motivo_envio", "")
+        comentario_mlb = mapa_comentarios_mlb.get(codigo, "")
+
+        dados_item = {coluna: valor_json(valor) for coluna, valor in item.to_dict().items()}
+
         cursor.execute("""
-            INSERT INTO historico_filetes (
+            INSERT INTO lotes_envio_itens_snapshot (
                 numero_lote, tipo_lote, codigo, sku, titulo,
-                nickname, quantidade, endereco, lote_filete, data_geracao
+                nickname, quantidade, endereco, lote_filete,
+                estrategia, motivo_envio, comentario_mlb,
+                dados_json, data_geracao
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             numero_lote,
             tipo_lote,
@@ -972,18 +1055,76 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             quantidade,
             endereco,
             lote_filete,
+            estrategia,
+            motivo_envio,
+            comentario_mlb,
+            json.dumps(dados_item, ensure_ascii=False),
             agora
         ))
 
         cursor.execute("""
             UPDATE status_cards
-            SET status = ?, quantidade = ?
+            SET status = ?, quantidade = ?, estrategia = ?, motivo_envio = ?
             WHERE codigo = ?
-        """, ("filetado", quantidade, codigo))
+        """, ("principal", 0, "", "", codigo))
 
     conn.commit()
     conn.close()
 
+@app.route("/criar-lote-enviando", methods=["POST"])
+def criar_lote_enviando():
+    data = request.get_json() or {}
+
+    numero_lote = str(data.get("numero_lote", "")).strip()
+    tipo_lote = str(data.get("tipo_lote", "Diversos")).strip() or "Diversos"
+
+    if not numero_lote:
+        return jsonify({"ok": False, "erro": "Informe um número de lote válido."}), 400
+
+    df = carregar_dados_base()
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT codigo, status, quantidade, estrategia FROM status_cards")
+    rows = cursor.fetchall()
+    conn.close()
+
+    mapa_status = {str(codigo): status or "" for codigo, status, quantidade, estrategia in rows}
+    mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade, estrategia in rows}
+
+    df["STATUS_CARD"] = df["Código do Anúncio"].astype(str).map(mapa_status).fillna("principal")
+    df["Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+
+    df = df[(df["STATUS_CARD"] == "enviando") & (df["Enviar"].astype(float) > 0)].copy()
+
+    if df.empty:
+        return jsonify({"ok": False, "erro": "Não há itens na tela Enviando para criar o lote."}), 400
+
+    colunas_necessarias = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Título",
+        "ENDEREÇO"
+    ]
+
+    for col in colunas_necessarias:
+        if col not in df.columns:
+            df[col] = ""
+
+    df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
+
+    if "ENDEREÇO" in df.columns:
+        df = df.sort_values(by="ENDEREÇO", kind="stable")
+
+    try:
+        registrar_lote_conferencia(numero_lote, tipo_lote, df)
+        atualizar_lote_envio_existente(numero_lote, tipo_lote, df)
+        salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df)
+    except ValueError as e:
+        return jsonify({"ok": False, "erro": str(e)}), 400
+
+    return jsonify({"ok": True})
 
 @app.route("/gerar-filete")
 def gerar_filete():
@@ -1140,6 +1281,253 @@ def gerar_filete():
         download_name=nome_arquivo,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+def carregar_itens_snapshot_lote(numero_lote):
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM lotes_envio_itens_snapshot
+        WHERE numero_lote = ?
+        ORDER BY endereco, sku, codigo
+    """, (numero_lote,))
+    itens = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+    return itens
+
+
+def montar_excel_filete_lote(df, numero_lote, tipo_lote):
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        workbook = writer.book
+        worksheet = workbook.create_sheet("Filete", 0)
+
+        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
+        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
+        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
+
+        border = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        colunas = [
+            "Nickname",
+            "Código do Anúncio",
+            "SKU",
+            "Título",
+            "ENDEREÇO",
+            "Enviar",
+            "Lote"
+        ]
+
+        for col in colunas:
+            if col not in df.columns:
+                df[col] = ""
+
+        df_export = df[colunas].copy()
+        df_export.rename(columns={
+            "Código do Anúncio": "MLB",
+            "Enviar": "QUANTIDADE"
+        }, inplace=True)
+
+        total_pecas = int(pd.to_numeric(df_export["QUANTIDADE"], errors="coerce").fillna(0).sum())
+        total_mlbs = int(len(df_export))
+
+        worksheet.merge_cells("A1:G1")
+        worksheet["A1"] = "FILETE DE ENVIO"
+        worksheet["A1"].font = Font(bold=True, size=14)
+        worksheet["A1"].fill = fill_topo
+        worksheet["A1"].alignment = center
+        worksheet["A1"].border = border
+
+        worksheet["A2"] = "Nº Lote"
+        worksheet["B2"] = numero_lote
+        worksheet["C2"] = "Tipo"
+        worksheet["D2"] = tipo_lote
+        worksheet["E2"] = "MLBs"
+        worksheet["F2"] = total_mlbs
+        worksheet["G2"] = f"Peças: {total_pecas}"
+
+        for cel in ["A2", "C2", "E2"]:
+            worksheet[cel].font = Font(bold=True)
+            worksheet[cel].fill = fill_label
+            worksheet[cel].alignment = center
+            worksheet[cel].border = border
+
+        for cel in ["B2", "D2", "F2", "G2"]:
+            worksheet[cel].fill = fill_valor
+            worksheet[cel].alignment = center
+            worksheet[cel].border = border
+
+        linha_inicio = 4
+
+        for idx, coluna in enumerate(df_export.columns, start=1):
+            cell = worksheet.cell(row=linha_inicio, column=idx, value=coluna)
+            cell.font = Font(bold=True)
+            cell.fill = fill_label
+            cell.alignment = center
+            cell.border = border
+
+        for i, (_, row) in enumerate(df_export.iterrows(), start=linha_inicio + 1):
+            for j, valor in enumerate(row, start=1):
+                cell = worksheet.cell(row=i, column=j, value=valor)
+                cell.fill = fill_valor
+                cell.alignment = left if j in [3, 4, 5] else center
+                cell.border = border
+
+        larguras = {
+            "A": 18,
+            "B": 18,
+            "C": 20,
+            "D": 50,
+            "E": 18,
+            "F": 14,
+            "G": 24
+        }
+
+        for col, largura in larguras.items():
+            worksheet.column_dimensions[col].width = largura
+
+    output.seek(0)
+    return output
+
+
+@app.route("/lote-envio/<numero_lote>/pdf")
+def lote_envio_pdf(numero_lote):
+    itens = carregar_itens_snapshot_lote(numero_lote)
+
+    if not itens:
+        return "Nenhum item encontrado para este lote.", 404
+
+    dados_pdf = []
+    for item in itens:
+        try:
+            dados_item = json.loads(item["dados_json"] or "{}")
+        except:
+            dados_item = {}
+
+        dados_pdf.append({
+            "mlb": item["codigo"],
+            "titulo": item["titulo"] or "",
+            "sku": item["sku"] or "",
+            "quantidade": item["quantidade"] or 0,
+            "vendas7": dados_item.get("7 DIAS", 0) or 0,
+            "vendas15": dados_item.get("15 DIAS", 0) or 0,
+            "vendas30": dados_item.get("30 DIAS", 0) or 0,
+            "comentario": item["comentario_mlb"] or ""
+        })
+
+    pdf = gerar_pdf_filete(dados_pdf)
+
+    return send_file(
+        pdf,
+        as_attachment=True,
+        download_name=f"lote_{numero_lote}.pdf",
+        mimetype="application/pdf"
+    )
+
+@app.route("/lote-envio/<numero_lote>/filete-excel")
+def lote_envio_filete_excel(numero_lote):
+    itens = carregar_itens_snapshot_lote(numero_lote)
+
+    if not itens:
+        return "Nenhum item encontrado para este lote.", 404
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT numero_lote, tipo_lote
+        FROM lotes_envio
+        WHERE numero_lote = ?
+    """, (numero_lote,))
+    lote = cursor.fetchone()
+    conn.close()
+
+    tipo_lote = lote["tipo_lote"] if lote else "Diversos"
+
+    df = pd.DataFrame([{
+        "Nickname": item["nickname"],
+        "Código do Anúncio": item["codigo"],
+        "SKU": item["sku"],
+        "Título": item["titulo"],
+        "ENDEREÇO": item["endereco"],
+        "Enviar": item["quantidade"],
+        "Lote": item["lote_filete"]
+    } for item in itens])
+
+    output = montar_excel_filete_lote(df, numero_lote, tipo_lote)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"filete_{numero_lote}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@app.route("/lote-envio/<numero_lote>/exportar-excel")
+def lote_envio_exportar_excel(numero_lote):
+    itens = carregar_itens_snapshot_lote(numero_lote)
+
+    if not itens:
+        return "Nenhum item encontrado para este lote.", 404
+
+    registros = []
+    for item in itens:
+        dados_item = json.loads(item["dados_json"] or "{}")
+        dados_item["Quantidade para Enviar"] = item["quantidade"] or 0
+        dados_item["Estratégia"] = item["estrategia"] or ""
+        dados_item["Motivo do Envio"] = item["motivo_envio"] or ""
+        dados_item["Comentário"] = item["comentario_mlb"] or ""
+        dados_item["LETICIA"] = ""
+        registros.append(dados_item)
+
+    df = pd.DataFrame(registros)
+
+    colunas_exportar = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Título",
+        "LOTE",
+        "Quantidade para Enviar",
+        "Estratégia",
+        "Motivo do Envio",
+        "Comentário",
+        "LETICIA"
+    ]
+
+    for col in colunas_exportar:
+        if col not in df.columns:
+            df[col] = ""
+
+    df_export = df[colunas_exportar].copy()
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df_export.to_excel(writer, index=False, sheet_name="Relatorio")
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"relatorio_lote_{numero_lote}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
 
 @app.route("/dados-full")
@@ -1618,6 +2006,7 @@ def api_full_distribuicao():
 
                 dados.append({
                     "titulo": coluna.replace("\n", " "),
+                    "coluna": coluna,
                     "valor": valor_total
                 })
 
@@ -1630,6 +2019,120 @@ def api_full_distribuicao():
         return jsonify({
             "ok": False,
             "erro": f"Erro ao carregar distribuição do Full: {str(e)}"
+        }), 500
+
+
+@app.route("/api/full-distribuicao-detalhe")
+def api_full_distribuicao_detalhe():
+    coluna = str(request.args.get("coluna", "")).strip()
+
+    if not coluna:
+        return jsonify({"ok": False, "erro": "Coluna não informada."}), 400
+
+    url_base = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=0"
+    url_full = "https://docs.google.com/spreadsheets/d/1DKdRHI9IEacgOwsEd-bnAN4nU3dA_clULxU1mFa8LmY/export?format=csv&gid=46764324"
+
+    try:
+        df_base = pd.read_csv(url_base).fillna("")
+        df_full = pd.read_csv(url_full).fillna("")
+
+        df_base.columns = [str(c).strip() for c in df_base.columns]
+        df_full.columns = [str(c).strip() for c in df_full.columns]
+
+        if coluna not in df_full.columns:
+            return jsonify({"ok": False, "erro": f"Coluna '{coluna}' não encontrada."}), 400
+
+        if "#anuncio" not in df_full.columns:
+            return jsonify({"ok": False, "erro": "Coluna '#anuncio' não encontrada na aba Full."}), 400
+
+        if "Código do Anúncio" not in df_base.columns:
+            return jsonify({"ok": False, "erro": "Coluna 'Código do Anúncio' não encontrada na base principal."}), 400
+
+        def normalizar_codigo_mlb(valor):
+            texto = str(valor or "").strip().upper()
+            numeros = "".join(ch for ch in texto if ch.isdigit())
+
+            if numeros == "":
+                return ""
+
+            return f"MLB{numeros}"
+
+        def limpar_numero(valor):
+            if pd.isna(valor):
+                return 0
+
+            if isinstance(valor, (int, float)):
+                return float(valor)
+
+            texto = str(valor).strip()
+
+            if texto == "":
+                return 0
+
+            texto = texto.replace(" ", "")
+
+            if "," in texto and "." in texto:
+                texto = texto.replace(".", "").replace(",", ".")
+            elif "," in texto:
+                texto = texto.replace(",", ".")
+
+            try:
+                return float(texto)
+            except:
+                return 0
+
+        df_full["codigo_mlb"] = df_full["#anuncio"].apply(normalizar_codigo_mlb)
+        df_full["valor_coluna"] = df_full[coluna].apply(limpar_numero)
+
+        df_full = df_full[df_full["valor_coluna"] > 0].copy()
+
+        df_base["codigo_mlb"] = df_base["Código do Anúncio"].apply(normalizar_codigo_mlb)
+
+        colunas_base = ["codigo_mlb"]
+        if "Código do Anúncio" in df_base.columns:
+            colunas_base.append("Código do Anúncio")
+        if "SKU" in df_base.columns:
+            colunas_base.append("SKU")
+        if "Nickname" in df_base.columns:
+            colunas_base.append("Nickname")
+
+        df_base_merge = df_base[colunas_base].drop_duplicates(subset=["codigo_mlb"])
+
+        df_merge = df_full.merge(
+            df_base_merge,
+            on="codigo_mlb",
+            how="left"
+        )
+
+        dados = []
+        for _, row in df_merge.iterrows():
+            unidades = row["valor_coluna"]
+            if float(unidades).is_integer():
+                unidades = int(unidades)
+
+            dados.append({
+                "mlb": row.get("Código do Anúncio", "") or row.get("codigo_mlb", "") or "",
+                "sku": row.get("SKU", "") or "",
+                "conta": row.get("Nickname", "") or "",
+                "status": coluna.replace("\n", " "),
+                "unidades": unidades
+            })
+
+        dados = sorted(
+            dados,
+            key=lambda x: float(x["unidades"]) if x["unidades"] != "" else 0,
+            reverse=True
+        )
+
+        return jsonify({
+            "ok": True,
+            "dados": dados
+        })
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "erro": f"Erro ao carregar detalhes da métrica Full: {str(e)}"
         }), 500
 
 init_db()

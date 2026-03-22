@@ -733,26 +733,15 @@ h1{ margin-bottom:15px; }
                 </a>
     
                 <button
-                    id="btnGerarPdf"
-                    type="button"
-                    class="btn-acao-icone btn-filete-topo"
-                    onclick="gerarPDFTelaEnviando()"
-                    title="Gerar PDF"
-                    aria-label="Gerar PDF"
-                >
-                    📄
-                </button>
-
-                <button
-                    id="btnGerarFilete"
-                    type="button"
-                    class="btn-acao-icone btn-filete-topo"
-                    onclick="abrirModalFilete()"
-                    title="Gerar filete"
-                    aria-label="Gerar filete"
-                >
-                    🧾
-                </button>
+    id="btnCriarLote"
+    type="button"
+    class="btn-acao-icone btn-filete-topo"
+    onclick="abrirModalCriarLote()"
+    title="Criar lote"
+    aria-label="Criar lote"
+>
+    📦
+</button>
             </div>
     
         </div>
@@ -805,7 +794,6 @@ h1{ margin-bottom:15px; }
 <div id="enviando" class="grid hidden"></div>
 <div id="homologar" class="grid hidden"></div>
 <div id="naoEnviar" class="grid hidden"></div>
-<div id="historico" class="grid hidden"></div>
 </div>
 
 <script>
@@ -813,15 +801,13 @@ const principal = document.getElementById("principal");
 const enviando = document.getElementById("enviando");
 const homologar = document.getElementById("homologar");
 const naoEnviar = document.getElementById("naoEnviar");
-const historico = document.getElementById("historico");
 
 const contEnv = document.getElementById("contEnvSidebar");
 const contHom = document.getElementById("contHomSidebar");
 const contNao = document.getElementById("contNaoSidebar");
-const contHist = document.getElementById("contHistSidebar");
 const contPrincipalSidebar = null;
 const contadorPrincipal = document.getElementById("contadorPrincipal");
-const btnGerarFilete = document.getElementById("btnGerarFilete");
+const btnCriarLote = document.getElementById("btnCriarLote");
 const btnGerarPdf = document.getElementById("btnGerarPdf");
 
 const filtroConta = document.getElementById("filtroConta");
@@ -1282,7 +1268,6 @@ function obterDestino(item){
     if (status === "enviando") return "enviando";
     if (status === "homologar") return "homologar";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
-    if (status === "filetado") return "historico";
 
     return "principal";
 }
@@ -1292,13 +1277,10 @@ function atualizarContadores(){
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
     const totalHomologar = dadosFiltradosBase.filter(item => obterDestino(item) === "homologar").length;
     const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
-    const totalHistorico = dadosFiltradosBase.filter(item => obterDestino(item) === "historico").length;
-
     if (contPrincipalSidebar) contPrincipalSidebar.innerText = totalPrincipal;
     if (contEnv) contEnv.innerText = totalEnviando;
     if (contHom) contHom.innerText = totalHomologar;
     if (contNao) contNao.innerText = totalNao;
-    if (contHist) contHist.innerText = totalHistorico;
 
     let textoContador = "0 MLBs";
 
@@ -1329,12 +1311,12 @@ function atualizarVisibilidadeFilete(){
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
     const mostrar = telaAtual === "enviando" && totalEnviando > 0;
 
-    if (btnGerarFilete){
-        btnGerarFilete.style.display = mostrar ? "flex" : "none";
+    if (btnCriarLote){
+        btnCriarLote.style.display = mostrar ? "flex" : "none";
     }
 
     if (btnGerarPdf){
-        btnGerarPdf.style.display = mostrar ? "flex" : "none";
+        btnGerarPdf.style.display = "none";
     }
 }
 
@@ -1345,7 +1327,6 @@ function mostrarTela(tela){
     enviando.classList.add("hidden");
     homologar.classList.add("hidden");
     naoEnviar.classList.add("hidden");
-    historico.classList.add("hidden");
 
     document.getElementById(tela).classList.remove("hidden");
 
@@ -1495,8 +1476,6 @@ function montarHTMLCard(item){
     const analise = analisarSKU(item);
     const codigo = String(item["Código do Anúncio"] || "");
     const destinoAtual = obterDestino(item);
-    const emHistorico = destinoAtual === "historico";
-
     return `
     <div class="linha-topo">
         <div class="mlb-area">
@@ -1504,8 +1483,7 @@ function montarHTMLCard(item){
            <div class="badges">
     <span class="badge badge-green">${item["SELO"] || ""}</span>
     <span class="badge badge-blue">${item["OBSERVAÇÃO MELI"] || ""}</span>
-    ${emHistorico ? '<span class="badge badge-orange">HISTÓRICO</span>' : ''}
-</div>
+    </div>
 
 <div class="topo-direita">
     <div class="ia-box ${sugestoes.classe}">
@@ -1700,7 +1678,6 @@ function renderCards(){
     enviando.innerHTML = "";
     homologar.innerHTML = "";
     naoEnviar.innerHTML = "";  
-    historico.innerHTML = "";
 
     indiceRender = 0;
     renderProximoLote();
@@ -2080,12 +2057,12 @@ function gerarPDFTelaEnviando(){
     gerarPDF(dadosPDF);
 }
 
-function abrirModalFilete(){
+function abrirModalCriarLote(){
     if (telaAtual !== "enviando") return;
 
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
     if (totalEnviando === 0){
-        alert("Não há itens na tela Enviando para gerar o filete.");
+        alert("Não há itens na tela Enviando para criar o lote.");
         return;
     }
 
@@ -2094,7 +2071,7 @@ function abrirModalFilete(){
     document.getElementById("modalFilete").style.display = "flex";
 }
 
-function gerarFilete(){
+function criarLote(){
     const numeroLote = document.getElementById("numeroLoteFilete").value.trim();
     const tipoLote = document.getElementById("tipoLoteFilete").value;
 
@@ -2103,12 +2080,33 @@ function gerarFilete(){
         return;
     }
 
-    const params = new URLSearchParams();
-    params.set("numero_lote", numeroLote);
-    params.set("tipo_lote", tipoLote);
+    fetch("/criar-lote-enviando", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            numero_lote: numeroLote,
+            tipo_lote: tipoLote
+        })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (!resp.ok){
+            alert(resp.erro || "Erro ao criar lote.");
+            return;
+        }
 
-    window.location.href = "/gerar-filete?" + params.toString();
-    fecharModalFilete();
+        fecharModalCriarLote();
+        window.location.href = "/metricas-full";
+    })
+    .catch(() => {
+        alert("Erro ao criar lote.");
+    });
+}
+
+function fecharModalCriarLote(){
+    document.getElementById("modalFilete").style.display = "none";
 }
 
 function fecharModalFilete(){
@@ -2188,8 +2186,7 @@ if (
     telaUrl === "enviando" ||
     telaUrl === "homologar" ||
     telaUrl === "naoEnviar" ||
-    telaUrl === "principal" ||
-    telaUrl === "historico"
+    telaUrl === "principal"
 ) {
     telaAtual = telaUrl;
 }
@@ -2198,7 +2195,6 @@ if (
     enviando.classList.add("hidden");
     homologar.classList.add("hidden");
     naoEnviar.classList.add("hidden"); 
-    historico.classList.add("hidden");
 
     document.getElementById(telaAtual).classList.remove("hidden");
 
@@ -2280,8 +2276,6 @@ if (
             <button onclick="gerarFilete()">Gerar</button>
             <button onclick="fecharModalFilete()" class="btn-fechar">Cancelar</button>
         </div>
-    </div>
-</div>
 </div>
 
 {% endblock %}

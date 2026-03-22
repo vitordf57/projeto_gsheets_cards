@@ -306,6 +306,62 @@
     padding:12px 4px;
 }
 
+.full-metrica-card{
+    cursor:pointer;
+    transition:0.2s ease;
+}
+
+.full-metrica-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 18px rgba(0,0,0,0.08);
+}
+
+.full-metrica-card.ativo{
+    border:2px solid #1c5ed6;
+    background:#eef4ff;
+}
+
+.full-metricas-detalhe-box{
+    margin-top:22px;
+    border-top:1px solid #e5e7eb;
+    padding-top:18px;
+}
+
+.full-metricas-detalhe-topo{
+    margin-bottom:12px;
+    font-size:16px;
+    color:#111827;
+}
+
+.full-metricas-detalhe-tabela-wrap{
+    overflow:auto;
+}
+
+.full-metricas-detalhe-tabela{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+.full-metricas-detalhe-tabela th,
+.full-metricas-detalhe-tabela td{
+    border:1px solid #e5e7eb;
+    padding:10px 12px;
+    text-align:left;
+    vertical-align:top;
+}
+
+.full-metricas-detalhe-tabela th{
+    background:#eef4ff;
+    font-weight:bold;
+}
+
+.full-metricas-detalhe-vazio{
+    color:#666;
+    font-style:italic;
+    padding:12px 4px;
+}
+
 </style>
 
 <h1>🏠 Dashboard Geral</h1>
@@ -343,6 +399,27 @@
 <div class="chart-card" style="margin-top:20px;">
     <h3>📦 Distribuição dos anúncios no Full</h3>
     <div id="fullMetricasGrid" class="full-metricas-grid"></div>
+
+    <div id="fullMetricasDetalheBox" class="full-metricas-detalhe-box" style="display:none;">
+        <div class="full-metricas-detalhe-topo">
+            <strong id="fullMetricasDetalheTitulo">Detalhes</strong>
+        </div>
+
+        <div class="full-metricas-detalhe-tabela-wrap">
+            <table class="full-metricas-detalhe-tabela">
+                <thead>
+                    <tr>
+                        <th>MLB</th>
+                        <th>SKU</th>
+                        <th>Conta</th>
+                        <th>Status</th>
+                        <th>Unidades</th>
+                    </tr>
+                </thead>
+                <tbody id="fullMetricasDetalheBody"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -700,11 +777,19 @@ function carregarGraficoFull(){
             resp.dados.forEach(item => {
                 const card = document.createElement("div");
                 card.className = "full-metrica-card";
+                card.dataset.coluna = item.coluna || item.titulo;
+                card.dataset.titulo = item.titulo;
 
                 card.innerHTML = `
                     <div class="full-metrica-titulo">${item.titulo}</div>
                     <div class="full-metrica-valor">${item.valor}</div>
                 `;
+
+                card.onclick = () => {
+                    document.querySelectorAll(".full-metrica-card").forEach(c => c.classList.remove("ativo"));
+                    card.classList.add("ativo");
+                    carregarDetalheMetricaFull(card.dataset.coluna, card.dataset.titulo);
+                };
 
                 container.appendChild(card);
             });
@@ -713,6 +798,58 @@ function carregarGraficoFull(){
             const container = document.getElementById("fullMetricasGrid");
             if (!container) return;
             container.innerHTML = `<div class="full-metrica-vazio">Erro ao carregar informações do Full.</div>`;
+        });
+}
+
+function carregarDetalheMetricaFull(coluna, titulo){
+    fetch("/api/full-distribuicao-detalhe?coluna=" + encodeURIComponent(coluna))
+        .then(res => res.json())
+        .then(resp => {
+            const box = document.getElementById("fullMetricasDetalheBox");
+            const body = document.getElementById("fullMetricasDetalheBody");
+            const tituloEl = document.getElementById("fullMetricasDetalheTitulo");
+
+            if (!box || !body || !tituloEl) return;
+
+            box.style.display = "block";
+            tituloEl.innerText = "Detalhes - " + titulo;
+            body.innerHTML = "";
+
+            if (!resp.ok || !resp.dados || !resp.dados.length){
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="full-metricas-detalhe-vazio">Nenhum item encontrado para esta métrica.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            resp.dados.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${item.mlb || ""}</td>
+                    <td>${item.sku || ""}</td>
+                    <td>${item.conta || ""}</td>
+                    <td>${item.status || ""}</td>
+                    <td>${item.unidades || 0}</td>
+                `;
+                body.appendChild(tr);
+            });
+        })
+        .catch(() => {
+            const box = document.getElementById("fullMetricasDetalheBox");
+            const body = document.getElementById("fullMetricasDetalheBody");
+            const tituloEl = document.getElementById("fullMetricasDetalheTitulo");
+
+            if (!box || !body || !tituloEl) return;
+
+            box.style.display = "block";
+            tituloEl.innerText = "Detalhes";
+            body.innerHTML = `
+                <tr>
+                    <td colspan="5" class="full-metricas-detalhe-vazio">Erro ao carregar os detalhes.</td>
+                </tr>
+            `;
         });
 }
 
