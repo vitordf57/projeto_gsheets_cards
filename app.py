@@ -84,6 +84,323 @@ def numero_float(valor):
     except:
         return 0
 
+
+TIMELINE_ETAPAS = [
+    "MLBS EM ANÁLISE",
+    "CRIAR PEDIDO SIGNUS",
+    "GERAR LOTE MELI",
+    "AGENDAR DATA",
+    "CONFERIR QUANTIDADES",
+    "EM SEPARAÇÃO",
+    "EM CONFERÊNCIA",
+    "EMBALAGEM",
+    "CONFERIR CAIXAS MASTER",
+    "AGUARDANDO COLETA",
+    "COLETADO"
+]
+
+
+ETAPA_TO_STATUS_FIELD = {
+    "MLBS EM ANÁLISE": "status_ecommerce",
+    "CRIAR PEDIDO SIGNUS": "status_ecommerce",
+    "GERAR LOTE MELI": "status_ecommerce",
+    "AGENDAR DATA": "status_ecommerce",
+    "CONFERIR QUANTIDADES": "status_ecommerce",
+    "EM SEPARAÇÃO": "status_expedicao",
+    "EM CONFERÊNCIA": "status_expedicao",
+    "EMBALAGEM": "status_expedicao",
+    "CONFERIR CAIXAS MASTER": "status_expedicao",
+    "AGUARDANDO COLETA": "status_expedicao",
+    "COLETADO": "status_expedicao"
+}
+
+
+def agora_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def parse_data_hora(valor):
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+
+    formatos = [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%d/%m/%Y %H:%M:%S",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%Y"
+    ]
+
+    for formato in formatos:
+        try:
+            return datetime.strptime(texto, formato)
+        except:
+            pass
+
+    return None
+
+
+def formatar_data_hora_br(valor, vazio="-"):
+    dt = parse_data_hora(valor)
+    if not dt:
+        return vazio
+    return dt.strftime("%d/%m/%Y %H:%M")
+
+
+def formatar_data_br(valor, vazio="-"):
+    dt = parse_data_hora(valor)
+    if not dt:
+        return vazio
+    return dt.strftime("%d/%m/%Y")
+
+
+def timeline_vazio():
+    return {etapa: "" for etapa in TIMELINE_ETAPAS}
+
+
+def carregar_timeline_json(valor):
+    timeline = timeline_vazio()
+
+    if not valor:
+        return timeline
+
+    try:
+        dados = json.loads(valor)
+        if isinstance(dados, dict):
+            for etapa in TIMELINE_ETAPAS:
+                timeline[etapa] = str(dados.get(etapa, "") or "").strip()
+    except:
+        pass
+
+    return timeline
+
+
+def timeline_para_json(timeline):
+    dados = {etapa: str(timeline.get(etapa, "") or "").strip() for etapa in TIMELINE_ETAPAS}
+    return json.dumps(dados, ensure_ascii=False)
+
+
+def indice_etapa(etapa):
+    try:
+        return TIMELINE_ETAPAS.index(etapa)
+    except ValueError:
+        return 0
+
+
+def sincronizar_timeline_ate_etapa(timeline, etapa_atual, timestamp=None):
+    if timestamp is None:
+        timestamp = agora_str()
+
+    idx = indice_etapa(etapa_atual)
+    for i, etapa in enumerate(TIMELINE_ETAPAS):
+        if i <= idx and not str(timeline.get(etapa, "") or "").strip():
+            timeline[etapa] = timestamp
+    return timeline
+
+
+def obter_status_abertura_por_etapa(etapa_atual):
+    if indice_etapa(etapa_atual) <= indice_etapa("CONFERIR QUANTIDADES"):
+        return "ABERTO"
+    return "FECHADO"
+
+
+def calcular_lead_time_segundos(timeline):
+    momentos = []
+    for etapa in TIMELINE_ETAPAS:
+        dt = parse_data_hora(timeline.get(etapa, ""))
+        if dt:
+            momentos.append(dt)
+
+    if not momentos:
+        return 0
+
+    inicio = min(momentos)
+    fim = max(momentos)
+    return max(0, int((fim - inicio).total_seconds()))
+
+
+def formatar_duracao_humana(segundos):
+    segundos = int(segundos or 0)
+    if segundos <= 0:
+        return "-"
+
+    dias = segundos // 86400
+    horas = (segundos % 86400) // 3600
+    minutos = (segundos % 3600) // 60
+
+    partes = []
+    if dias:
+        partes.append(f"{dias}d")
+    if horas:
+        partes.append(f"{horas}h")
+    if minutos or not partes:
+        partes.append(f"{minutos}min")
+    return " ".join(partes)
+
+
+def resumir_contas_lote(itens_lote):
+    mapa = {}
+    for item in itens_lote:
+        conta = str(item["nickname"] or "SEM CONTA").strip() or "SEM CONTA"
+        if conta not in mapa:
+            mapa[conta] = {"mlbs": set(), "pecas": 0}
+        mapa[conta]["mlbs"].add(str(item["codigo"] or ""))
+        try:
+            mapa[conta]["pecas"] += int(item["quantidade"] or 0)
+        except:
+            pass
+
+    linhas = []
+    for conta, dados in sorted(mapa.items(), key=lambda x: x[0]):
+        linhas.append({
+            "conta": conta,
+            "mlbs": len(dados["mlbs"]),
+            "pecas": int(dados["pecas"])
+        })
+    return linhas
+
+
+def construir_timeline_exibicao(timeline, etapa_atual):
+    idx_atual = indice_etapa(etapa_atual)
+    etapas = []
+
+    for idx, etapa in enumerate(TIMELINE_ETAPAS):
+        timestamp = str(timeline.get(etapa, "") or "").strip()
+        if timestamp:
+            estado = "concluida"
+        elif idx == idx_atual:
+            estado = "atual"
+        else:
+            estado = "pendente"
+
+        if idx < idx_atual and not timestamp:
+            estado = "concluida"
+
+        etapas.append({
+            "nome": etapa,
+            "horario": formatar_data_hora_br(timestamp, "-"),
+            "estado": estado
+        })
+
+    return etapas
+
+
+def atualizar_statuss_por_etapa(cursor, numero_lote, etapa_atual):
+    status = obter_status_abertura_por_etapa(etapa_atual)
+    status_expedicao = "AGUARDANDO"
+    status_ecommerce = "AGUARDANDO"
+
+    campo = ETAPA_TO_STATUS_FIELD.get(etapa_atual)
+    if campo == "status_expedicao":
+        status_expedicao = etapa_atual
+    else:
+        status_ecommerce = etapa_atual
+
+    cursor.execute(
+        """
+        UPDATE lotes_envio
+        SET status = ?,
+            status_expedicao = ?,
+            status_ecommerce = ?
+        WHERE numero_lote = ?
+        """,
+        (status, status_expedicao, status_ecommerce, numero_lote)
+    )
+
+
+def garantir_timeline_lote(cursor, numero_lote, etapa_atual=None):
+    cursor.execute(
+        "SELECT timeline_json, etapa_atual FROM lotes_envio WHERE numero_lote = ?",
+        (numero_lote,)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return timeline_vazio(), etapa_atual or TIMELINE_ETAPAS[0]
+
+    timeline = carregar_timeline_json(row[0] if not isinstance(row, sqlite3.Row) else row["timeline_json"])
+    etapa_salva = (row[1] if not isinstance(row, sqlite3.Row) else row["etapa_atual"]) or TIMELINE_ETAPAS[0]
+    etapa_final = etapa_atual or etapa_salva
+    return timeline, etapa_final
+
+
+def atualizar_etapa_lote(numero_lote, etapa_atual, data_coleta_agendada=""):
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    timeline, _ = garantir_timeline_lote(cursor, numero_lote, etapa_atual)
+    timestamp = agora_str()
+    timeline = sincronizar_timeline_ate_etapa(timeline, etapa_atual, timestamp)
+
+    cursor.execute(
+        """
+        UPDATE lotes_envio
+        SET etapa_atual = ?,
+            timeline_json = ?,
+            data_coleta_agendada = COALESCE(NULLIF(?, ''), data_coleta_agendada)
+        WHERE numero_lote = ?
+        """,
+        (etapa_atual, timeline_para_json(timeline), str(data_coleta_agendada or "").strip(), numero_lote)
+    )
+    atualizar_statuss_por_etapa(cursor, numero_lote, etapa_atual)
+
+    conn.commit()
+    conn.close()
+
+
+def sincronizar_picking_itens(numero_lote, df_lote):
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    existentes = {}
+    cursor.execute("SELECT codigo, coletado, coletado_em, observacao FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+    for codigo, coletado, coletado_em, observacao in cursor.fetchall():
+        existentes[str(codigo)] = {
+            "coletado": int(coletado or 0),
+            "coletado_em": coletado_em or "",
+            "observacao": observacao or ""
+        }
+
+    for _, item in df_lote.iterrows():
+        codigo = str(item.get("Código do Anúncio", "") or item.get("codigo", "") or "")
+        sku = str(item.get("SKU", "") or item.get("sku", "") or "")
+        endereco = str(item.get("ENDEREÇO", "") or item.get("endereco", "") or "")
+        titulo = str(item.get("Título", "") or item.get("titulo", "") or "")
+        conta = str(item.get("Nickname", "") or item.get("nickname", "") or "")
+        quantidade_base = item.get("Enviar", item.get("quantidade", 0))
+        try:
+            quantidade = int(float(quantidade_base or 0))
+        except:
+            quantidade = 0
+
+        coletado = existentes.get(codigo, {}).get("coletado", 0)
+        coletado_em = existentes.get(codigo, {}).get("coletado_em", "")
+        observacao = existentes.get(codigo, {}).get("observacao", "")
+
+        cursor.execute(
+            """
+            INSERT INTO lotes_picking_itens (
+                numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(numero_lote, codigo) DO UPDATE SET
+                sku = excluded.sku,
+                endereco = excluded.endereco,
+                titulo = excluded.titulo,
+                conta = excluded.conta,
+                quantidade = excluded.quantidade,
+                observacao = ?,
+                coletado = ?,
+                coletado_em = ?
+            """,
+            (numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
+        )
+
+    conn.commit()
+    conn.close()
+
 @app.route("/api/historico-mensal")
 def api_historico_mensal():
     mlb = str(request.args.get("mlb", "")).strip().upper()
@@ -552,6 +869,26 @@ def init_db():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_picking_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            endereco TEXT,
+            titulo TEXT DEFAULT '',
+            conta TEXT DEFAULT '',
+            quantidade INTEGER DEFAULT 0,
+            observacao TEXT DEFAULT '',
+            coletado INTEGER DEFAULT 0,
+            coletado_em TEXT DEFAULT '',
+            quantidade_informada INTEGER DEFAULT 0,
+            divergencia INTEGER DEFAULT 0,
+            divergencia_em TEXT DEFAULT '',
+            UNIQUE(numero_lote, codigo)
+        )
+    """)
+
     cursor.execute("PRAGMA table_info(status_cards)")
     colunas_status = [col[1] for col in cursor.fetchall()]
 
@@ -566,6 +903,27 @@ def init_db():
 
     cursor.execute("PRAGMA table_info(lotes_envio)")
     colunas_lotes_envio = [col[1] for col in cursor.fetchall()]
+
+    cursor.execute("PRAGMA table_info(lotes_picking_itens)")
+    colunas_picking = [col[1] for col in cursor.fetchall()]
+
+    if "titulo" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN titulo TEXT DEFAULT ''")
+
+    if "conta" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN conta TEXT DEFAULT ''")
+
+    if "observacao" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN observacao TEXT DEFAULT ''")
+
+    if "quantidade_informada" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN quantidade_informada INTEGER DEFAULT 0")
+
+    if "divergencia" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia INTEGER DEFAULT 0")
+
+    if "divergencia_em" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia_em TEXT DEFAULT ''")
 
     if "tipo_lote" not in colunas_lotes_envio:
         cursor.execute("ALTER TABLE lotes_envio ADD COLUMN tipo_lote TEXT")
@@ -606,6 +964,15 @@ def init_db():
     if "data_criacao" not in colunas_lotes_envio:
         cursor.execute("ALTER TABLE lotes_envio ADD COLUMN data_criacao TEXT")
 
+    if "timeline_json" not in colunas_lotes_envio:
+        cursor.execute("ALTER TABLE lotes_envio ADD COLUMN timeline_json TEXT DEFAULT ''")
+
+    if "etapa_atual" not in colunas_lotes_envio:
+        cursor.execute("ALTER TABLE lotes_envio ADD COLUMN etapa_atual TEXT DEFAULT 'MLBS EM ANÁLISE'")
+
+    if "data_coleta_agendada" not in colunas_lotes_envio:
+        cursor.execute("ALTER TABLE lotes_envio ADD COLUMN data_coleta_agendada TEXT DEFAULT ''")
+
     conn.commit()
     conn.close()
 
@@ -620,6 +987,7 @@ def home():
     return render_template("home.html")
 
 
+
 @app.route("/metricas-full")
 def metricas_full():
     conn = sqlite3.connect("status.db")
@@ -631,7 +999,7 @@ def metricas_full():
         FROM lotes_envio
         ORDER BY data_criacao DESC, numero_lote DESC
     """)
-    lotes = cursor.fetchall()
+    lotes_rows = cursor.fetchall()
 
     cursor.execute("""
         SELECT *
@@ -645,9 +1013,69 @@ def metricas_full():
         numero_lote = item["numero_lote"]
         lotes_itens_map.setdefault(numero_lote, []).append(item)
 
-    total_lotes = len(lotes)
-    total_mlbs = sum(int(lote["total_mlbs"] or 0) for lote in lotes)
-    total_pecas = sum(int(lote["total_pecas"] or 0) for lote in lotes)
+    total_lotes = len(lotes_rows)
+    total_mlbs = sum(int(lote["total_mlbs"] or 0) for lote in lotes_rows)
+    total_pecas = sum(int(lote["total_pecas"] or 0) for lote in lotes_rows)
+
+    contas_total = {}
+    for item in itens_snapshot:
+        conta = str(item["nickname"] or "SEM CONTA").strip() or "SEM CONTA"
+        if conta not in contas_total:
+            contas_total[conta] = {"mlbs": set(), "pecas": 0}
+        contas_total[conta]["mlbs"].add(str(item["codigo"] or ""))
+        try:
+            contas_total[conta]["pecas"] += int(item["quantidade"] or 0)
+        except:
+            pass
+
+    contas_resumo = []
+    for conta, dados in sorted(contas_total.items(), key=lambda x: x[0]):
+        contas_resumo.append({
+            "conta": conta,
+            "mlbs": len(dados["mlbs"]),
+            "pecas": int(dados["pecas"])
+        })
+
+    lotes = []
+    total_abertos = 0
+    total_fechados = 0
+    soma_lead_time = 0
+    lotes_com_lead_time = 0
+
+    for lote in lotes_rows:
+        lote_dict = dict(lote)
+        numero_lote = lote_dict["numero_lote"]
+        itens_lote = lotes_itens_map.get(numero_lote, [])
+        timeline = carregar_timeline_json(lote_dict.get("timeline_json", ""))
+        etapa_atual = lote_dict.get("etapa_atual") or TIMELINE_ETAPAS[0]
+
+        if not any(str(v or "").strip() for v in timeline.values()):
+            criacao = lote_dict.get("data_criacao") or agora_str()
+            timeline[etapa_atual] = criacao
+            lote_dict["timeline_json"] = timeline_para_json(timeline)
+
+        status_abertura = obter_status_abertura_por_etapa(etapa_atual)
+        if status_abertura == "ABERTO":
+            total_abertos += 1
+        else:
+            total_fechados += 1
+
+        lead_time_segundos = calcular_lead_time_segundos(timeline)
+        if lead_time_segundos > 0:
+            soma_lead_time += lead_time_segundos
+            lotes_com_lead_time += 1
+
+        lote_dict["status"] = status_abertura
+        lote_dict["etapa_atual"] = etapa_atual
+        lote_dict["timeline_exibicao"] = construir_timeline_exibicao(timeline, etapa_atual)
+        lote_dict["lead_time_segundos"] = lead_time_segundos
+        lote_dict["lead_time_humano"] = formatar_duracao_humana(lead_time_segundos)
+        lote_dict["data_criacao_br"] = formatar_data_hora_br(lote_dict.get("data_criacao"))
+        lote_dict["data_coleta_agendada_br"] = formatar_data_br(lote_dict.get("data_coleta_agendada"))
+        lote_dict["contas_resumo"] = resumir_contas_lote(itens_lote)
+        lotes.append(lote_dict)
+
+    lead_time_medio = formatar_duracao_humana(int(soma_lead_time / lotes_com_lead_time)) if lotes_com_lead_time else "-"
 
     conn.close()
 
@@ -657,11 +1085,233 @@ def metricas_full():
         lotes_itens_map=lotes_itens_map,
         total_lotes=total_lotes,
         total_mlbs=total_mlbs,
-        total_pecas=total_pecas
+        total_pecas=total_pecas,
+        contas_resumo=contas_resumo,
+        total_abertos=total_abertos,
+        total_fechados=total_fechados,
+        lead_time_medio=lead_time_medio,
+        timeline_etapas=TIMELINE_ETAPAS,
+        formatar_data_hora_br=formatar_data_hora_br
     )
 
 
+
+
+@app.route("/picking")
+def picking_lista():
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM lotes_envio
+        ORDER BY data_criacao DESC, numero_lote DESC
+    """)
+    lotes_rows = cursor.fetchall()
+
+    lotes = []
+    for lote in lotes_rows:
+        lote_dict = dict(lote)
+        etapa_atual = lote_dict.get("etapa_atual") or TIMELINE_ETAPAS[0]
+        if obter_status_abertura_por_etapa(etapa_atual) != "ABERTO":
+            continue
+
+        numero_lote = lote_dict["numero_lote"]
+        cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+        total_itens = int(cursor.fetchone()[0] or 0)
+
+        if total_itens == 0:
+            itens_snapshot = carregar_itens_snapshot_lote(numero_lote)
+            if itens_snapshot:
+                df_boot = pd.DataFrame(itens_snapshot)
+                sincronizar_picking_itens(numero_lote, df_boot)
+                cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+                total_itens = int(cursor.fetchone()[0] or 0)
+
+        cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ? AND coletado = 1", (numero_lote,))
+        itens_coletados = int(cursor.fetchone()[0] or 0)
+
+        lote_dict["etapa_atual"] = etapa_atual
+        lote_dict["status"] = obter_status_abertura_por_etapa(etapa_atual)
+        lote_dict["total_itens"] = total_itens
+        lote_dict["itens_coletados"] = itens_coletados
+        lotes.append(lote_dict)
+
+    conn.close()
+    return render_template("picking.html", lote=None, lotes=lotes)
+
+
+@app.route("/picking/<numero_lote>")
+def picking_lote(numero_lote):
+    numero_lote = str(numero_lote or "").strip()
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote_row = cursor.fetchone()
+
+    if not lote_row:
+        conn.close()
+        return redirect("/picking")
+
+    lote = dict(lote_row)
+    etapa_atual = lote.get("etapa_atual") or TIMELINE_ETAPAS[0]
+    lote["etapa_atual"] = etapa_atual
+    lote["status"] = obter_status_abertura_por_etapa(etapa_atual)
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+    total_itens = int(cursor.fetchone()[0] or 0)
+
+    if total_itens == 0:
+        itens_snapshot = carregar_itens_snapshot_lote(numero_lote)
+        if itens_snapshot:
+            df_boot = pd.DataFrame(itens_snapshot)
+            sincronizar_picking_itens(numero_lote, df_boot)
+
+    cursor.execute("""
+        SELECT numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
+        FROM lotes_picking_itens
+        WHERE numero_lote = ?
+        ORDER BY coletado ASC, endereco ASC, sku ASC, codigo ASC
+    """, (numero_lote,))
+    itens = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+    return render_template("picking.html", lote=lote, itens=itens, lotes=[])
+
+
+@app.route("/api/picking/coletar", methods=["POST"])
+def api_picking_coletar():
+    data = request.get_json() or {}
+    numero_lote = str(data.get("numero_lote", "")).strip()
+    sku_digitado = str(data.get("sku", "") or "").strip()
+    observacao = str(data.get("observacao", "") or "").strip()
+
+    try:
+        quantidade_informada = int(float(str(data.get("quantidade", 0) or 0).replace(",", ".")))
+    except:
+        quantidade_informada = 0
+
+    if not numero_lote or not sku_digitado:
+        return jsonify({"ok": False, "erro": "Informe o lote e o SKU."}), 400
+
+    if quantidade_informada <= 0:
+        return jsonify({"ok": False, "erro": "Informe uma quantidade válida para a coleta."}), 400
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM lotes_picking_itens
+        WHERE numero_lote = ?
+          AND UPPER(TRIM(COALESCE(sku, ''))) = UPPER(TRIM(?))
+        ORDER BY coletado ASC, divergencia ASC, codigo ASC
+        """,
+        (numero_lote, sku_digitado)
+    )
+    encontrados = cursor.fetchall()
+
+    item = None
+    for row in encontrados:
+        if int(row["coletado"] or 0) != 1 and int(row["divergencia"] or 0) != 1:
+            item = row
+            break
+
+    if not item:
+        conn.close()
+        return jsonify({"ok": False, "erro": "SKU não encontrado entre os itens pendentes deste lote."}), 404
+
+    quantidade_esperada = int(item["quantidade"] or 0)
+    agora = agora_str()
+
+    if quantidade_informada > quantidade_esperada:
+        conn.close()
+        return jsonify({"ok": False, "erro": f"A quantidade informada ({quantidade_informada}) é maior que a esperada para este SKU ({quantidade_esperada})."}), 400
+
+    divergencia_registrada = False
+    mensagem = ""
+
+    if quantidade_informada < quantidade_esperada:
+        if not observacao:
+            conn.close()
+            return jsonify({
+                "ok": False,
+                "erro": f"Quantidade informada menor que a esperada. Esperado: {quantidade_esperada}. Informe na observação o motivo da divergência para registrar a ocorrência."
+            }), 400
+
+        observacao_final = f"DIVERGÊNCIA DE PICKING | Esperado: {quantidade_esperada} | Informado: {quantidade_informada} | Motivo: {observacao}"
+        cursor.execute(
+            """
+            UPDATE lotes_picking_itens
+            SET quantidade_informada = ?,
+                divergencia = 1,
+                divergencia_em = ?,
+                observacao = ?
+            WHERE numero_lote = ? AND codigo = ?
+            """,
+            (quantidade_informada, agora, observacao_final, numero_lote, item["codigo"])
+        )
+        divergencia_registrada = True
+        mensagem = "Divergência registrada com sucesso. O item ficou salvo com observação para conferência."
+    else:
+        cursor.execute(
+            """
+            UPDATE lotes_picking_itens
+            SET coletado = 1,
+                coletado_em = ?,
+                observacao = ?,
+                quantidade_informada = ?,
+                divergencia = 0,
+                divergencia_em = ''
+            WHERE numero_lote = ? AND codigo = ?
+            """,
+            (agora, observacao, quantidade_informada, numero_lote, item["codigo"])
+        )
+        mensagem = "SKU coletado com sucesso."
+
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+    total = int(cursor.fetchone()[0] or 0)
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ? AND coletado = 1", (numero_lote,))
+    coletados = int(cursor.fetchone()[0] or 0)
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_picking_itens WHERE numero_lote = ? AND divergencia = 1", (numero_lote,))
+    divergencias = int(cursor.fetchone()[0] or 0)
+
+    cursor.execute("SELECT etapa_atual FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    row_lote = cursor.fetchone()
+    etapa_atual = (row_lote["etapa_atual"] if row_lote else TIMELINE_ETAPAS[0]) or TIMELINE_ETAPAS[0]
+
+    conn.close()
+
+    finalizado = total > 0 and (coletados + divergencias) >= total
+    if finalizado:
+        atualizar_etapa_lote(numero_lote, "EM CONFERÊNCIA")
+        etapa_atual = "EM CONFERÊNCIA"
+
+    return jsonify({
+        "ok": True,
+        "total": total,
+        "coletados": coletados,
+        "divergencias": divergencias,
+        "finalizado": finalizado,
+        "etapa_atual": etapa_atual,
+        "divergencia": divergencia_registrada,
+        "mensagem": mensagem,
+        "codigo": str(item["codigo"] or "")
+    })
+
+
 @app.route("/dados")
+
 def dados():
     df = carregar_dados_base()
     return jsonify(df.to_dict(orient="records"))
@@ -919,54 +1569,77 @@ def registrar_lote_conferencia(numero_lote, tipo_lote, df_lote):
     conn.close()
 
 
+
 def atualizar_lote_envio_existente(numero_lote, tipo_lote, df_lote):
     if df_lote.empty:
         return
 
     conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("SELECT numero_lote FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("SELECT numero_lote, timeline_json, etapa_atual, data_coleta_agendada FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
     existe = cursor.fetchone()
 
     total_mlbs = int(len(df_lote))
     total_pecas = int(pd.to_numeric(df_lote["Enviar"], errors="coerce").fillna(0).sum())
-    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    agora = agora_str()
+    etapa_inicial = "GERAR LOTE MELI"
 
     if existe:
-        cursor.execute("""
+        timeline = carregar_timeline_json(existe["timeline_json"])
+        etapa_atual = existe["etapa_atual"] or etapa_inicial
+        timeline = sincronizar_timeline_ate_etapa(timeline, etapa_atual, agora)
+
+        cursor.execute(
+            """
             UPDATE lotes_envio
             SET tipo_lote = ?,
                 total_mlbs = ?,
                 total_pecas = ?,
-                origem = 'FILETE'
+                origem = 'FILETE',
+                etapa_atual = ?,
+                timeline_json = ?
             WHERE numero_lote = ?
-        """, (tipo_lote, total_mlbs, total_pecas, numero_lote))
+            """,
+            (tipo_lote, total_mlbs, total_pecas, etapa_atual, timeline_para_json(timeline), numero_lote)
+        )
+        atualizar_statuss_por_etapa(cursor, numero_lote, etapa_atual)
     else:
-        cursor.execute("""
+        timeline = timeline_vazio()
+        timeline = sincronizar_timeline_ate_etapa(timeline, etapa_inicial, agora)
+
+        cursor.execute(
+            """
             INSERT INTO lotes_envio (
                 numero_lote, tipo_lote, total_mlbs, total_pecas,
                 status, responsavel, transportadora, observacao,
                 prioridade, data_envio, status_expedicao,
-                status_ecommerce, origem, data_criacao
+                status_ecommerce, origem, data_criacao,
+                timeline_json, etapa_atual, data_coleta_agendada
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            numero_lote,
-            tipo_lote,
-            total_mlbs,
-            total_pecas,
-            "CRIADO",
-            "",
-            "",
-            "Gerado via filete",
-            "",
-            "",
-            "AGUARDANDO",
-            "AGUARDANDO",
-            "FILETE",
-            agora
-        ))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                numero_lote,
+                tipo_lote,
+                total_mlbs,
+                total_pecas,
+                obter_status_abertura_por_etapa(etapa_inicial),
+                "",
+                "",
+                "Gerado via filete",
+                "",
+                "",
+                "AGUARDANDO",
+                etapa_inicial,
+                "FILETE",
+                agora,
+                timeline_para_json(timeline),
+                etapa_inicial,
+                ""
+            )
+        )
 
     conn.commit()
     conn.close()
@@ -1070,6 +1743,7 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
 
     conn.commit()
     conn.close()
+    sincronizar_picking_itens(numero_lote, df_lote)
 
 @app.route("/criar-lote-enviando", methods=["POST"])
 def criar_lote_enviando():

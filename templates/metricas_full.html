@@ -4,13 +4,16 @@
 
 <style>
 .page-wrap{
-    padding: 20px;
+    padding:20px;
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
 }
 
 .topo-lotes{
     display:flex;
     justify-content:space-between;
-    align-items:center;
+    align-items:flex-start;
     gap:16px;
     flex-wrap:wrap;
     margin-bottom:20px;
@@ -24,7 +27,7 @@
 }
 
 .busca-lote{
-    min-width:280px;
+    min-width:320px;
 }
 
 .busca-lote input{
@@ -54,7 +57,7 @@
 
 .kpis-lotes{
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
     gap:16px;
     margin-bottom:24px;
 }
@@ -64,6 +67,7 @@
     border-radius:16px;
     padding:18px;
     box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    min-width:0;
 }
 
 .kpi-titulo{
@@ -83,70 +87,58 @@
     margin-top:10px;
     font-size:13px;
     color:#4b5563;
-    line-height:1.6;
+    line-height:1.7;
+}
+
+.kpi-card-duplo{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+}
+
+.kpi-mini{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+}
+
+.kpi-mini-valor{
+    font-size:28px;
+    font-weight:bold;
+    color:#111827;
+    margin-top:8px;
+}
+
+.lista-contas-topo{
+    margin-top:12px;
+    display:grid;
+    gap:8px;
+}
+
+.conta-topo-item{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.5;
 }
 
 .grid-lotes{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(370px, 1fr));
+    grid-template-columns: 1fr;
     gap:20px;
 }
 
 .card-lote{
     background:white;
-    border-radius:16px;
-    padding:20px;
+    border-radius:18px;
+    padding:22px;
     box-shadow:0 4px 14px rgba(0,0,0,0.08);
-}
-
-.card-lote-layout{
-    display:grid;
-    grid-template-columns: 1.45fr 1fr 1fr;
-    gap:16px;
-    align-items:start;
-}
-
-.bloco-lote-principal,
-.bloco-lote-status,
-.bloco-lote-observacao{
-    min-height:100%;
-}
-
-.status-lote-box{
-    background:#fff4db;
-    border:1px solid #f7d58b;
-    color:#8a5a00;
-    border-radius:12px;
-    padding:12px 14px;
-    font-weight:bold;
-    cursor:pointer;
-    transition:0.2s;
-    margin-bottom:10px;
-}
-
-.status-lote-box:hover{
-    transform:translateY(-1px);
-    box-shadow:0 6px 14px rgba(0,0,0,0.08);
-}
-
-.status-lote-titulo{
-    font-size:12px;
-    text-transform:uppercase;
-    color:#666;
-    margin-bottom:6px;
-    font-weight:bold;
-}
-
-.status-lote-valor{
-    font-size:18px;
-    font-weight:bold;
-    color:#111827;
-}
-
-@media (max-width: 1100px){
-    .card-lote-layout{
-        grid-template-columns: 1fr;
-    }
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
 }
 
 .card-topo{
@@ -154,7 +146,8 @@
     justify-content:space-between;
     align-items:flex-start;
     gap:12px;
-    margin-bottom:16px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
 }
 
 .titulo-lote{
@@ -166,6 +159,13 @@
 .sub-lote{
     color:#555;
     font-size:14px;
+    line-height:1.6;
+}
+
+.badges-lote{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
 }
 
 .badge-status{
@@ -178,86 +178,153 @@
     color:#1d4ed8;
 }
 
-.info-grid{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:12px;
-    margin-bottom:16px;
+.badge-aberto{
+    background:#dcfce7;
+    color:#166534;
 }
 
-.info-box{
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
-    border-radius:12px;
-    padding:12px;
-}
-
-.info-box strong{
-    display:block;
-    font-size:12px;
-    color:#666;
-    text-transform:uppercase;
-    margin-bottom:6px;
-}
-
-.info-box span{
-    font-size:22px;
-    font-weight:bold;
-    color:#111827;
+.badge-fechado{
+    background:#fee2e2;
+    color:#991b1b;
 }
 
 .campos{
     display:grid;
-    grid-template-columns: repeat(4,1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap:10px;
+    margin-top:14px;
 }
 
 .campo{
     background:#f8fafc;
-    border-radius:10px;
+    border-radius:12px;
     border:1px solid #e5e7eb;
-    padding:10px 12px;
+    padding:12px;
     font-size:14px;
 }
 
 .campo strong{
     display:block;
-    margin-bottom:4px;
+    margin-bottom:6px;
     color:#666;
     font-size:12px;
     text-transform:uppercase;
 }
 
-.checklist{
-    grid-template-columns: repeat(4,1fr);
-}
-
-.check-item{
+.linha-metro-wrap{
+    margin-top:20px;
+    padding:18px 14px 8px 14px;
+    border-radius:16px;
     background:#f8fafc;
     border:1px solid #e5e7eb;
-    border-radius:10px;
-    padding:10px 12px;
+    overflow:hidden;
+}
+
+.linha-metro{
+    display:grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    align-items:flex-start;
+    gap:0;
+    min-width:0;
+    width:100%;
+}
+
+.etapa-metro{
+    position:relative;
+    padding:0 6px 10px 6px;
+    min-width:0;
+}
+
+.etapa-metro:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    top:18px;
+    left:calc(50% + 18px);
+    width:calc(100% - 36px);
+    height:4px;
+    background:#d1d5db;
+    border-radius:999px;
+}
+
+.etapa-metro.concluida:not(:last-child)::after,
+.etapa-metro.atual:not(:last-child)::after{
+    background:#2563eb;
+}
+
+.bolinha-metro{
+    width:36px;
+    height:36px;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:16px;
     font-weight:bold;
+    margin:0 auto 10px auto;
+    position:relative;
+    z-index:2;
+    background:#fff;
+    border:3px solid #cbd5e1;
+    color:#64748b;
+}
+
+.etapa-metro.concluida .bolinha-metro{
+    background:#2563eb;
+    border-color:#2563eb;
+    color:white;
+}
+
+.etapa-metro.atual .bolinha-metro{
+    background:white;
+    border-color:#2563eb;
+    color:#2563eb;
+    box-shadow:0 0 0 6px rgba(37,99,235,0.12);
+}
+
+.etapa-metro.pendente .bolinha-metro{
+    background:white;
+    border-color:#cbd5e1;
+    color:#94a3b8;
+}
+
+.nome-etapa{
+    text-align:center;
+    font-size:11px;
+    font-weight:bold;
+    color:#334155;
+    text-transform:uppercase;
+    line-height:1.45;
+    min-height:40px;
+}
+
+.horario-etapa{
+    margin-top:8px;
+    text-align:center;
+    font-size:11px;
+    color:#64748b;
+    line-height:1.4;
+}
+
+.contas-lote{
+    margin-top:16px;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+}
+
+.conta-lote-item{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px;
     font-size:14px;
-}
-
-.check-ok{
-    color:#0f5132;
-    background:#d1e7dd;
-    border-color:#b7dfc8;
-}
-
-.check-pendente{
-    color:#664d03;
-    background:#fff3cd;
-    border-color:#f3df8b;
 }
 
 .card-acoes{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-    margin-top:14px;
+    margin-top:18px;
 }
 
 .btn-card{
@@ -280,23 +347,24 @@
     color:white;
 }
 
-.observacao-box{
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:10px;
-    padding:12px;
-    margin-top:12px;
-    font-size:14px;
-    line-height:1.45;
+.btn-picking{
+    background:#7c3aed;
+    color:white;
 }
 
-.vazio{
+.vazio,
+.sem-resultado{
     background:white;
     border-radius:16px;
     padding:30px;
     box-shadow:0 4px 14px rgba(0,0,0,0.08);
     color:#666;
     font-style:italic;
+}
+
+.sem-resultado{
+    display:none;
+    margin-top:20px;
 }
 
 .modal-lote{
@@ -346,20 +414,6 @@
     grid-column:span 2;
 }
 
-.form-checks{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:12px;
-    margin-top:14px;
-}
-
-.form-check{
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
-    border-radius:10px;
-    padding:10px 12px;
-}
-
 .modal-botoes{
     display:flex;
     justify-content:flex-end;
@@ -383,45 +437,6 @@
 .btn-salvar{
     background:#198754;
     color:white;
-}
-
-.sem-resultado{
-    display:none;
-    background:white;
-    border-radius:16px;
-    padding:30px;
-    box-shadow:0 4px 14px rgba(0,0,0,0.08);
-    color:#666;
-    font-style:italic;
-    margin-top:20px;
-}
-
-@media (max-width: 900px){
-    .kpis-lotes{
-        grid-template-columns:1fr 1fr;
-    }
-
-    .form-grid,
-    .campos,
-    .info-grid,
-    .checklist,
-    .form-checks{
-        grid-template-columns:1fr;
-    }
-
-    .form-grid textarea{
-        grid-column:span 1;
-    }
-}
-
-@media (max-width: 600px){
-    .kpis-lotes{
-        grid-template-columns:1fr;
-    }
-
-    .busca-lote{
-        min-width:100%;
-    }
 }
 
 .lote-itens-box{
@@ -462,6 +477,56 @@
     background:#eef4ff;
 }
 
+@media (max-width: 1500px){
+    .kpis-lotes{
+        grid-template-columns:1fr;
+    }
+
+    .campos{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1280px){
+    .linha-metro-wrap{
+        overflow-x:auto;
+    }
+
+    .linha-metro{
+        grid-template-columns: repeat(11, minmax(120px, 1fr));
+        min-width:1320px;
+    }
+}
+
+@media (max-width: 1100px){
+    .campos,
+    .contas-lote,
+    .form-grid{
+        grid-template-columns:1fr;
+    }
+
+    .form-grid textarea{
+        grid-column:span 1;
+    }
+}
+
+@media (max-width: 700px){
+    .busca-lote{
+        min-width:100%;
+    }
+
+    .topo-acoes{
+        width:100%;
+    }
+
+    .btn-novo-lote{
+        width:100%;
+    }
+
+    .kpi-card-duplo{
+        grid-template-columns:1fr;
+    }
+}
 </style>
 
 <div class="page-wrap">
@@ -476,7 +541,7 @@
                 <input
                     type="text"
                     id="buscaLote"
-                    placeholder="Pesquisar número do lote, tipo, responsável, observação..."
+                    placeholder="Pesquisar número do lote, tipo, conta, etapa, observação..."
                     oninput="filtrarLotes()"
                 >
             </div>
@@ -493,30 +558,39 @@
                 MLBs: <strong>{{ total_mlbs }}</strong><br>
                 Peças: <strong>{{ total_pecas }}</strong>
             </div>
-        </div>
 
-        <div class="kpi-card">
-            <div class="kpi-titulo">Tela</div>
-            <div style="font-size:15px; line-height:1.6;">
-                Gestão dos lotes<br>
-                criados manualmente<br>
-                ou via filete
+            <div class="lista-contas-topo">
+                {% if contas_resumo %}
+                    {% for conta in contas_resumo %}
+                        <div class="conta-topo-item">
+                            <strong>{{ conta.conta }}</strong><br>
+                            MLBs: <strong>{{ conta.mlbs }}</strong> | Peças: <strong>{{ conta.pecas }}</strong>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="conta-topo-item">Nenhuma conta encontrada nos lotes.</div>
+                {% endif %}
             </div>
         </div>
 
         <div class="kpi-card">
-            <div class="kpi-titulo">Ações</div>
-            <div style="font-size:15px; line-height:1.6;">
-                ➕ Criar lote<br>
-                ✏️ Editar lote<br>
-                📋 Ir para conferência
+            <div class="kpi-titulo">Lead time</div>
+            <div class="kpi-valor">{{ lead_time_medio }}</div>
+            <div class="kpi-subinfos">
+                Média calculada com base nos horários já registrados na linha de etapas dos lotes.
             </div>
         </div>
 
         <div class="kpi-card">
-            <div class="kpi-titulo">Origem</div>
-            <div style="font-size:15px; line-height:1.6;">
-                Filete e manual
+            <div class="kpi-card-duplo">
+                <div class="kpi-mini">
+                    <div class="kpi-titulo">Lotes em aberto</div>
+                    <div class="kpi-mini-valor">{{ total_abertos }}</div>
+                </div>
+                <div class="kpi-mini">
+                    <div class="kpi-titulo">Lotes fechados</div>
+                    <div class="kpi-mini-valor">{{ total_fechados }}</div>
+                </div>
             </div>
         </div>
     </div>
@@ -527,95 +601,78 @@
                 <div
                     class="card-lote"
                     data-lote-card
-                    data-busca="{{ (lote['numero_lote'] ~ ' ' ~ (lote['tipo_lote'] or '') ~ ' ' ~ (lote['responsavel'] or '') ~ ' ' ~ (lote['status'] or '') ~ ' ' ~ (lote['observacao'] or '') ~ ' ' ~ (lote['origem'] or ''))|lower|e }}"
+                    data-busca="{{ (lote['numero_lote'] ~ ' ' ~ (lote['tipo_lote'] or '') ~ ' ' ~ (lote['status'] or '') ~ ' ' ~ (lote['observacao'] or '') ~ ' ' ~ (lote['origem'] or '') ~ ' ' ~ (lote['etapa_atual'] or ''))|lower|e }} {% for conta in lote['contas_resumo'] %} {{ conta['conta']|lower|e }} {% endfor %}"
                 >
-                    <div class="card-lote-layout">
-                        <div class="bloco-lote-principal">
-                            <div class="card-topo">
-                                <div>
-                                    <div class="titulo-lote">Lote #{{ lote['numero_lote'] }}</div>
-                                    <div class="sub-lote">
-                                        Tipo: <strong>{{ lote['tipo_lote'] or '-' }}</strong> |
-                                        Origem: <strong>{{ lote['origem'] or 'MANUAL' }}</strong> |
-                                        MLBs: <strong>{{ lote['total_mlbs'] or 0 }}</strong> |
-                                        Peças: <strong>{{ lote['total_pecas'] or 0 }}</strong>
+                    <div class="card-topo">
+                        <div>
+                            <div class="titulo-lote">Lote #{{ lote['numero_lote'] }}</div>
+                            <div class="sub-lote">
+                                Tipo: <strong>{{ lote['tipo_lote'] or '-' }}</strong> |
+                                Origem: <strong>{{ lote['origem'] or 'MANUAL' }}</strong> |
+                                MLBs: <strong>{{ lote['total_mlbs'] or 0 }}</strong> |
+                                Peças: <strong>{{ lote['total_pecas'] or 0 }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="badges-lote">
+                            <div class="badge-status {% if lote['status'] == 'ABERTO' %}badge-aberto{% else %}badge-fechado{% endif %}">{{ lote['status'] }}</div>
+                            <div class="badge-status">{{ lote['etapa_atual'] }}</div>
+                        </div>
+                    </div>
+
+                    <div class="campos">
+                        <div class="campo">
+                            <strong>Data de criação</strong>
+                            {{ lote['data_criacao_br'] }}
+                        </div>
+
+                        <div class="campo">
+                            <strong>Data agendada de coleta</strong>
+                            {{ lote['data_coleta_agendada_br'] }}
+                        </div>
+
+                        <div class="campo">
+                            <strong>Lead time</strong>
+                            {{ lote['lead_time_humano'] }}
+                        </div>
+
+                        <div class="campo">
+                            <strong>Tipo</strong>
+                            {{ lote['tipo_lote'] or '-' }}
+                        </div>
+                    </div>
+
+                    <div class="linha-metro-wrap">
+                        <div class="linha-metro">
+                            {% for etapa in lote['timeline_exibicao'] %}
+                                <div class="etapa-metro {{ etapa['estado'] }}">
+                                    <div class="bolinha-metro">
+                                        {% if etapa['estado'] == 'concluida' %}
+                                            ✓
+                                        {% elif etapa['estado'] == 'atual' %}
+                                            ●
+                                        {% else %}
+                                            ○
+                                        {% endif %}
                                     </div>
+                                    <div class="nome-etapa">{{ etapa['nome'] }}</div>
+                                    <div class="horario-etapa">{{ etapa['horario'] }}</div>
                                 </div>
-
-                                <div class="badge-status">{{ lote['status'] or 'CRIADO' }}</div>
-                            </div>
-
-                            <div class="campos">
-                                <div class="campo">
-                                    <strong>Responsável</strong>
-                                    {{ lote['responsavel'] or '-' }}
-                                </div>
-
-                                <div class="campo">
-                                    <strong>Prioridade</strong>
-                                    {{ lote['prioridade'] or '-' }}
-                                </div>
-
-                                <div class="campo">
-                                    <strong>Data de criação</strong>
-                                    {{ lote['data_criacao'] or '-' }}
-                                </div>
-
-                                <div class="campo">
-                                    <strong>Tipo</strong>
-                                    {{ lote['tipo_lote'] or '-' }}
-                                </div>
-                            </div>
+                            {% endfor %}
                         </div>
+                    </div>
 
-                        <div class="bloco-lote-status">
-                            <div
-                                class="status-lote-box"
-                                data-numero-lote="{{ lote['numero_lote'] }}"
-                                data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
-                                data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
-                                data-total-pecas="{{ lote['total_pecas'] or 0 }}"
-                                data-status="{{ lote['status'] or 'CRIADO' }}"
-                                data-responsavel="{{ lote['responsavel'] or '' }}"
-                                data-transportadora="{{ lote['transportadora'] or '' }}"
-                                data-observacao="{{ lote['observacao'] or '' }}"
-                                data-prioridade="{{ lote['prioridade'] or '' }}"
-                                data-data-envio="{{ lote['data_envio'] or '' }}"
-                                data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
-                                data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
-                                onclick="abrirModalEditarPorBotao(this)"
-                            >
-                                <div class="status-lote-titulo">Expedição</div>
-                                <div class="status-lote-valor">{{ lote['status_expedicao'] or 'AGUARDANDO' }}</div>
-                            </div>
-
-                            <div
-                                class="status-lote-box"
-                                data-numero-lote="{{ lote['numero_lote'] }}"
-                                data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
-                                data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
-                                data-total-pecas="{{ lote['total_pecas'] or 0 }}"
-                                data-status="{{ lote['status'] or 'CRIADO' }}"
-                                data-responsavel="{{ lote['responsavel'] or '' }}"
-                                data-transportadora="{{ lote['transportadora'] or '' }}"
-                                data-observacao="{{ lote['observacao'] or '' }}"
-                                data-prioridade="{{ lote['prioridade'] or '' }}"
-                                data-data-envio="{{ lote['data_envio'] or '' }}"
-                                data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
-                                data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
-                                onclick="abrirModalEditarPorBotao(this)"
-                            >
-                                <div class="status-lote-titulo">E-commerce</div>
-                                <div class="status-lote-valor">{{ lote['status_ecommerce'] or 'AGUARDANDO' }}</div>
-                            </div>
-                        </div>
-
-                        <div class="bloco-lote-observacao">
-                            <div class="observacao-box" style="margin-top:0;">
-                                <strong>Observação:</strong><br>
-                                {{ lote['observacao'] or 'Sem observações.' }}
-                            </div>
-                        </div>
+                    <div class="contas-lote">
+                        {% if lote['contas_resumo'] %}
+                            {% for conta in lote['contas_resumo'] %}
+                                <div class="conta-lote-item">
+                                    <strong>{{ conta['conta'] }}</strong><br>
+                                    MLBs: <strong>{{ conta['mlbs'] }}</strong> | Peças: <strong>{{ conta['pecas'] }}</strong>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="conta-lote-item">Nenhuma conta encontrada neste lote.</div>
+                        {% endif %}
                     </div>
 
                     <div class="card-acoes">
@@ -625,19 +682,20 @@
                             data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
                             data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
                             data-total-pecas="{{ lote['total_pecas'] or 0 }}"
-                            data-status="{{ lote['status'] or 'CRIADO' }}"
-                            data-responsavel="{{ lote['responsavel'] or '' }}"
-                            data-transportadora="{{ lote['transportadora'] or '' }}"
+                            data-status="{{ lote['status'] or 'ABERTO' }}"
                             data-observacao="{{ lote['observacao'] or '' }}"
-                            data-prioridade="{{ lote['prioridade'] or '' }}"
-                            data-data-envio="{{ lote['data_envio'] or '' }}"
-                            data-status-expedicao="{{ lote['status_expedicao'] or 'AGUARDANDO' }}"
-                            data-status-ecommerce="{{ lote['status_ecommerce'] or 'AGUARDANDO' }}"
+                            data-origem="{{ lote['origem'] or 'MANUAL' }}"
+                            data-etapa-atual="{{ lote['etapa_atual'] or 'MLBS EM ANÁLISE' }}"
+                            data-data-coleta-agendada="{{ lote['data_coleta_agendada'] or '' }}"
                             onclick="abrirModalEditarPorBotao(this)"
                             type="button"
                         >
                             ✏️ Editar
                         </button>
+
+                        <a class="btn-card btn-picking" href="/picking/{{ lote['numero_lote'] }}">
+                            📲 Picking
+                        </a>
 
                         <a class="btn-card btn-conferencia" href="/conferencia/{{ lote['numero_lote'] }}">
                             📋 Conferência
@@ -738,72 +796,30 @@
                 </div>
 
                 <div>
-                    <label><strong>Status</strong></label>
-                    <select name="status" id="status">
-                        <option value="CRIADO">CRIADO</option>
-                        <option value="SEPARAÇÃO">SEPARAÇÃO</option>
-                        <option value="CONFERÊNCIA">CONFERÊNCIA</option>
-                        <option value="PRONTO">PRONTO</option>
-                        <option value="ENVIADO">ENVIADO</option>
+                    <label><strong>Etapa atual</strong></label>
+                    <select name="etapa_atual" id="etapa_atual">
+                        {% for etapa in timeline_etapas %}
+                            <option value="{{ etapa }}">{{ etapa }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
                 <div>
-                    <label><strong>Prioridade</strong></label>
-                    <select name="prioridade" id="prioridade">
-                        <option value="">Selecione</option>
-                        <option value="BAIXA">BAIXA</option>
-                        <option value="MÉDIA">MÉDIA</option>
-                        <option value="ALTA">ALTA</option>
-                        <option value="URGENTE">URGENTE</option>
+                    <label><strong>Data agendada de coleta</strong></label>
+                    <input type="date" name="data_coleta_agendada" id="data_coleta_agendada">
+                </div>
+
+                <div>
+                    <label><strong>Origem</strong></label>
+                    <select name="origem" id="origem">
+                        <option value="MANUAL">MANUAL</option>
+                        <option value="FILETE">FILETE</option>
                     </select>
-                </div>
-
-                <div>
-                    <label><strong>Responsável</strong></label>
-                    <input type="text" name="responsavel" id="responsavel">
-                </div>
-
-                <div>
-                    <label><strong>Transportadora</strong></label>
-                    <input type="text" name="transportadora" id="transportadora">
-                </div>
-
-                <div>
-                    <label><strong>Data de envio</strong></label>
-                    <input type="date" name="data_envio" id="data_envio">
                 </div>
 
                 <div></div>
 
                 <textarea name="observacao" id="observacao" placeholder="Observações gerais do lote..."></textarea>
-            </div>
-
-            <div class="form-grid" style="margin-top:14px;">
-                <div>
-                    <label><strong>Status Expedição</strong></label>
-                    <select name="status_expedicao" id="status_expedicao">
-                        <option value="AGUARDANDO">AGUARDANDO</option>
-                        <option value="EM SEPARAÇÃO">EM SEPARAÇÃO</option>
-                        <option value="EM CONFERÊNCIA">EM CONFERÊNCIA</option>
-                        <option value="EMBALANDO">EMBALANDO</option>
-                        <option value="AGUARDANDO COLETA">AGUARDANDO COLETA</option>
-                        <option value="COLETADO">COLETADO</option>
-                        <option value="APTO PRA VENDA">APTO PRA VENDA</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label><strong>Status E-commerce</strong></label>
-                    <select name="status_ecommerce" id="status_ecommerce">
-                        <option value="AGUARDANDO">AGUARDANDO</option>
-                        <option value="ANALISANDO MLBS">ANALISANDO MLBS</option>
-                        <option value="PEDIDO SIGNUS OK">PEDIDO SIGNUS OK</option>
-                        <option value="LOTE CRIADO NO MELI">LOTE CRIADO NO MELI</option>
-                        <option value="DADOS FISCAIS CONFERIDOS">DADOS FISCAIS CONFERIDOS</option>
-                        <option value="TRELLO ABASTECIDO">TRELLO ABASTECIDO</option>
-                    </select>
-                </div>
             </div>
 
             <div class="modal-botoes">
@@ -823,14 +839,10 @@ function abrirModalNovoLote(){
     document.getElementById("tipo_lote").value = "Diversos";
     document.getElementById("total_mlbs").value = 0;
     document.getElementById("total_pecas").value = 0;
-    document.getElementById("status").value = "CRIADO";
-    document.getElementById("responsavel").value = "";
-    document.getElementById("transportadora").value = "";
+    document.getElementById("etapa_atual").value = "MLBS EM ANÁLISE";
+    document.getElementById("data_coleta_agendada").value = "";
     document.getElementById("observacao").value = "";
-    document.getElementById("prioridade").value = "";
-    document.getElementById("data_envio").value = "";
-    document.getElementById("status_expedicao").value = "AGUARDANDO";
-    document.getElementById("status_ecommerce").value = "AGUARDANDO";
+    document.getElementById("origem").value = "MANUAL";
 
     document.getElementById("modalLote").style.display = "flex";
 }
@@ -843,14 +855,10 @@ function preencherModalLote(dados){
     document.getElementById("tipo_lote").value = dados.tipo_lote || "Diversos";
     document.getElementById("total_mlbs").value = dados.total_mlbs || 0;
     document.getElementById("total_pecas").value = dados.total_pecas || 0;
-    document.getElementById("status").value = dados.status || "CRIADO";
-    document.getElementById("responsavel").value = dados.responsavel || "";
-    document.getElementById("transportadora").value = dados.transportadora || "";
+    document.getElementById("etapa_atual").value = dados.etapa_atual || "MLBS EM ANÁLISE";
+    document.getElementById("data_coleta_agendada").value = dados.data_coleta_agendada || "";
     document.getElementById("observacao").value = dados.observacao || "";
-    document.getElementById("prioridade").value = dados.prioridade || "";
-    document.getElementById("data_envio").value = dados.data_envio || "";
-    document.getElementById("status_expedicao").value = dados.status_expedicao || "AGUARDANDO";
-    document.getElementById("status_ecommerce").value = dados.status_ecommerce || "AGUARDANDO";
+    document.getElementById("origem").value = dados.origem || "MANUAL";
 
     document.getElementById("modalLote").style.display = "flex";
 }
@@ -861,14 +869,10 @@ function abrirModalEditarPorBotao(elemento){
         tipo_lote: elemento.dataset.tipoLote,
         total_mlbs: elemento.dataset.totalMlbs,
         total_pecas: elemento.dataset.totalPecas,
-        status: elemento.dataset.status,
-        responsavel: elemento.dataset.responsavel,
-        transportadora: elemento.dataset.transportadora,
         observacao: elemento.dataset.observacao,
-        prioridade: elemento.dataset.prioridade,
-        data_envio: elemento.dataset.dataEnvio,
-        status_expedicao: elemento.dataset.statusExpedicao,
-        status_ecommerce: elemento.dataset.statusEcommerce
+        origem: elemento.dataset.origem,
+        etapa_atual: elemento.dataset.etapaAtual,
+        data_coleta_agendada: elemento.dataset.dataColetaAgendada
     });
 }
 

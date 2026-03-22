@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.picking-wrap{
+    padding:16px;
+    max-width:760px;
+    margin:0 auto;
+}
+
+.picking-topo{
+    margin-bottom:18px;
+}
+
+.picking-topo h1{
+    margin:0 0 6px 0;
+    font-size:28px;
+}
+
+.picking-topo p{
+    margin:0;
+    color:#64748b;
+}
+
+.picking-grid-lotes{
+    display:grid;
+    gap:14px;
+}
+
+.card-lote-picking,
+.card-item-picking,
+.resumo-picking,
+.form-picking-manual,
+.item-ref-picking{
+    background:white;
+    border-radius:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    padding:16px;
+}
+
+.card-lote-picking a{
+    text-decoration:none;
+}
+
+.lote-linha-titulo{
+    font-size:22px;
+    font-weight:bold;
+    color:#111827;
+    margin-bottom:8px;
+}
+
+.lote-linha-sub{
+    color:#475569;
+    line-height:1.6;
+    font-size:14px;
+}
+
+.badge-etapa{
+    display:inline-block;
+    margin-top:10px;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#ede9fe;
+    color:#6d28d9;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.resumo-picking,
+.form-picking-manual{
+    margin-bottom:16px;
+}
+
+.resumo-grid,
+.grid-manual,
+.grid-item-ref{
+    display:grid;
+    gap:10px;
+}
+
+.resumo-grid{
+    grid-template-columns:repeat(4, 1fr);
+}
+
+.grid-manual{
+    grid-template-columns:1fr 180px;
+}
+
+.grid-item-ref{
+    grid-template-columns:1fr 1fr;
+}
+
+.resumo-mini,
+.campo-manual,
+.item-caixa-ref{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px;
+}
+
+.resumo-mini strong,
+.label-manual,
+.item-label{
+    display:block;
+    font-size:12px;
+    text-transform:uppercase;
+    color:#64748b;
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+.resumo-mini span{
+    font-size:24px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.input-manual,
+.textarea-manual{
+    width:100%;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    padding:12px;
+    font-size:16px;
+    box-sizing:border-box;
+    outline:none;
+}
+
+.textarea-manual{
+    min-height:100px;
+    resize:vertical;
+}
+
+.item-valor-principal{
+    font-size:20px;
+    font-weight:bold;
+    color:#111827;
+    margin:2px 0 0 0;
+    word-break:break-word;
+}
+
+.item-valor-ref{
+    font-size:18px;
+    font-weight:bold;
+    color:#111827;
+    word-break:break-word;
+}
+
+.item-ref-picking.pendente-divergencia{
+    border:1px solid #f59e0b;
+    background:#fffaf0;
+}
+
+.item-ref-picking.coletado-ok{
+    border:1px solid #86efac;
+    background:#f0fdf4;
+}
+
+.badge-ref{
+    display:inline-block;
+    margin-top:10px;
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.badge-ok{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge-divergencia{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.lista-referencia{
+    display:grid;
+    gap:12px;
+}
+
+.btn-coletar{
+    width:100%;
+    margin-top:14px;
+    border:none;
+    border-radius:14px;
+    padding:14px 16px;
+    background:#2563eb;
+    color:white;
+    font-weight:bold;
+    font-size:18px;
+    cursor:pointer;
+}
+
+.btn-coletar:disabled{
+    background:#94a3b8;
+    cursor:not-allowed;
+}
+
+.alerta-finalizado,
+.alerta-acao,
+.alerta-erro,
+.alerta-aviso{
+    display:none;
+    margin-bottom:16px;
+    padding:14px 16px;
+    border-radius:14px;
+    font-weight:bold;
+}
+
+.alerta-finalizado{
+    background:#dcfce7;
+    border:1px solid #86efac;
+    color:#166534;
+}
+
+.alerta-acao{
+    background:#dbeafe;
+    border:1px solid #93c5fd;
+    color:#1d4ed8;
+}
+
+.alerta-erro{
+    background:#fee2e2;
+    border:1px solid #fca5a5;
+    color:#b91c1c;
+}
+
+.alerta-aviso{
+    display:block;
+    background:#fff7ed;
+    border:1px solid #fdba74;
+    color:#9a3412;
+}
+
+.link-voltar{
+    display:inline-block;
+    margin-bottom:16px;
+    text-decoration:none;
+    color:#2563eb;
+    font-weight:bold;
+}
+
+@media (max-width: 640px){
+    .picking-wrap{
+        padding:10px;
+        max-width:100%;
+    }
+
+    .resumo-grid,
+    .grid-manual,
+    .grid-item-ref{
+        grid-template-columns:1fr;
+    }
+
+    .picking-topo h1{
+        font-size:24px;
+    }
+}
+</style>
+
+<div class="picking-wrap">
+    {% if lote %}
+        <a href="/picking" class="link-voltar">← Voltar para lotes de picking</a>
+
+        <div class="picking-topo">
+            <h1>Picking do lote #{{ lote['numero_lote'] }}</h1>
+            <p>Digite manualmente o SKU e a quantidade coletada. Se a quantidade for menor que a esperada, o sistema vai exigir observação e registrar a divergência.</p>
+            <p style="margin-top:8px; font-size:14px;">Para usar no celular fora da sua rede, o aparelho precisa abrir o mesmo servidor do sistema por um endereço acessível externamente. Se quiser, depois eu te passo a forma certa de publicar isso.</p>
+        </div>
+
+        {% set total_itens = itens|length %}
+        {% set itens_coletados = itens|selectattr('coletado', 'equalto', 1)|list|length %}
+        {% set itens_divergencia = itens|selectattr('divergencia', 'equalto', 1)|list|length %}
+        {% set itens_pendentes = total_itens - itens_coletados - itens_divergencia %}
+
+        <div class="alerta-finalizado" id="alertaFinalizado">
+            Picking finalizado. O lote foi movido automaticamente para EM CONFERÊNCIA.
+        </div>
+
+        <div class="alerta-acao" id="alertaAcao"></div>
+        <div class="alerta-erro" id="alertaErro"></div>
+
+        <div class="resumo-picking">
+            <div class="lote-linha-titulo">{{ lote['tipo_lote'] or 'Diversos' }}</div>
+            <div class="lote-linha-sub">Status atual: <strong>{{ lote['status'] or '-' }}</strong> | Etapa: <strong id="etapaAtualLote">{{ lote['etapa_atual'] or '-' }}</strong></div>
+
+            <div class="resumo-grid" style="margin-top:14px;">
+                <div class="resumo-mini">
+                    <strong>Total de itens</strong>
+                    <span id="totalItens">{{ total_itens }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>Coletados</strong>
+                    <span id="itensColetados">{{ itens_coletados }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>Divergências</strong>
+                    <span id="itensDivergencia">{{ itens_divergencia }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>Pendentes</strong>
+                    <span id="itensPendentes">{{ itens_pendentes }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-picking-manual">
+            <div class="lote-linha-titulo" style="font-size:24px;">Lançamento manual do picking</div>
+            <div class="alerta-aviso" style="margin-top:12px;">
+                Se a quantidade digitada for menor do que a esperada, a coleta normal será barrada e você terá que explicar o motivo na observação.
+            </div>
+
+            <div class="grid-manual" style="margin-top:14px;">
+                <div class="campo-manual">
+                    <label class="label-manual" for="skuManual">SKU</label>
+                    <input type="text" id="skuManual" class="input-manual" placeholder="Digite ou bipar o SKU">
+                </div>
+                <div class="campo-manual">
+                    <label class="label-manual" for="quantidadeManual">Quantidade coletada</label>
+                    <input type="number" id="quantidadeManual" class="input-manual" min="1" step="1" placeholder="0">
+                </div>
+            </div>
+
+            <div class="card-item-picking" style="margin-top:12px; background:#f8fafc; border:1px solid #e5e7eb; box-shadow:none;">
+                <div class="item-label">Título do anúncio</div>
+                <div class="item-valor-principal" id="previewTitulo">-</div>
+
+                <div class="grid-item-ref" style="margin-top:12px;">
+                    <div class="item-caixa-ref">
+                        <div class="item-label">Endereço</div>
+                        <div class="item-valor-ref" id="previewEndereco">-</div>
+                    </div>
+                    <div class="item-caixa-ref">
+                        <div class="item-label">Quantidade esperada</div>
+                        <div class="item-valor-ref" id="previewQuantidade">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="campo-manual" style="margin-top:12px;">
+                <label class="label-manual" for="observacaoManual">Observação</label>
+                <textarea id="observacaoManual" class="textarea-manual" placeholder="Descreva aqui qualquer problema encontrado. Se a quantidade informada for menor que a esperada, este campo é obrigatório."></textarea>
+            </div>
+
+            <button class="btn-coletar" id="botaoColetarManual" onclick="coletarManual('{{ lote['numero_lote'] }}')">Confirmar coleta</button>
+        </div>
+
+        <div class="lote-linha-titulo" style="font-size:22px; margin:14px 0 10px 0;">Itens do lote</div>
+        <div class="lista-referencia" id="listaItensPicking">
+            {% for item in itens %}
+                <div class="item-ref-picking {% if item['divergencia'] %}pendente-divergencia{% elif item['coletado'] %}coletado-ok{% endif %}" id="item-{{ item['codigo'] }}">
+                    <div class="item-label">Título do anúncio</div>
+                    <div class="item-valor-principal" style="font-size:18px;">{{ item['titulo'] or '-' }}</div>
+
+                    <div class="grid-item-ref" style="margin-top:12px;">
+                        <div class="item-caixa-ref">
+                            <div class="item-label">SKU</div>
+                            <div class="item-valor-ref">{{ item['sku'] or '-' }}</div>
+                        </div>
+                        <div class="item-caixa-ref">
+                            <div class="item-label">Quantidade esperada</div>
+                            <div class="item-valor-ref">{{ item['quantidade'] or 0 }}</div>
+                        </div>
+                        <div class="item-caixa-ref">
+                            <div class="item-label">Endereço</div>
+                            <div class="item-valor-ref">{{ item['endereco'] or '-' }}</div>
+                        </div>
+                        <div class="item-caixa-ref">
+                            <div class="item-label">Conta</div>
+                            <div class="item-valor-ref">{{ item['conta'] or '-' }}</div>
+                        </div>
+                    </div>
+
+                    {% if item['coletado'] %}
+                        <div class="badge-ref badge-ok">Coletado em {{ item['coletado_em'] or '-' }}</div>
+                    {% elif item['divergencia'] %}
+                        <div class="badge-ref badge-divergencia">Divergência registrada</div>
+                        <div style="margin-top:10px; color:#92400e; font-weight:bold;">{{ item['observacao'] or '-' }}</div>
+                    {% else %}
+                        <div class="badge-etapa">Pendente</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if itens_pendentes <= 0 %}
+            <div class="card-item-picking" id="semItensPendentes" style="margin-top:12px;">Todos os itens deste lote já foram tratados no picking.</div>
+        {% else %}
+            <div class="card-item-picking" id="semItensPendentes" style="display:none; margin-top:12px;">Todos os itens deste lote já foram tratados no picking.</div>
+        {% endif %}
+    {% else %}
+        <div class="picking-topo">
+            <h1>Picking</h1>
+            <p>Escolha o lote para iniciar a separação no celular.</p>
+        </div>
+
+        <div class="picking-grid-lotes">
+            {% for lote in lotes %}
+                <div class="card-lote-picking">
+                    <div class="lote-linha-titulo">Lote #{{ lote['numero_lote'] }}</div>
+                    <div class="lote-linha-sub">
+                        Tipo: <strong>{{ lote['tipo_lote'] or '-' }}</strong><br>
+                        Status: <strong>{{ lote['status'] or '-' }}</strong><br>
+                        Itens coletados: <strong>{{ lote['itens_coletados'] or 0 }}</strong> / <strong>{{ lote['total_itens'] or 0 }}</strong>
+                    </div>
+                    <div class="badge-etapa">{{ lote['etapa_atual'] or '-' }}</div>
+                    <div style="margin-top:14px;">
+                        <a href="/picking/{{ lote['numero_lote'] }}" class="btn-coletar" style="display:inline-block; text-align:center; box-sizing:border-box; text-decoration:none;">Abrir picking</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+{% if lote %}
+<script>
+const itensPendentes = {{ itens|tojson }};
+
+function limparAlertas(){
+    document.getElementById('alertaAcao').style.display = 'none';
+    document.getElementById('alertaErro').style.display = 'none';
+}
+
+function mostrarAcao(msg){
+    const el = document.getElementById('alertaAcao');
+    el.innerText = msg;
+    el.style.display = 'block';
+}
+
+function mostrarErro(msg){
+    const el = document.getElementById('alertaErro');
+    el.innerText = msg;
+    el.style.display = 'block';
+}
+
+function buscarItemPorSku(sku){
+    const skuNorm = String(sku || '').trim().toUpperCase();
+    if (!skuNorm) return null;
+
+    for (const item of itensPendentes){
+        const itemSku = String(item.sku || '').trim().toUpperCase();
+        if (itemSku === skuNorm && Number(item.coletado || 0) !== 1 && Number(item.divergencia || 0) !== 1){
+            return item;
+        }
+    }
+    return null;
+}
+
+function atualizarPreviewItem(){
+    const sku = document.getElementById('skuManual').value.trim();
+    const item = buscarItemPorSku(sku);
+
+    document.getElementById('previewTitulo').innerText = item ? (item.titulo || '-') : '-';
+    document.getElementById('previewEndereco').innerText = item ? (item.endereco || '-') : '-';
+    document.getElementById('previewQuantidade').innerText = item ? (item.quantidade || 0) : '0';
+}
+
+function atualizarResumo(resp){
+    document.getElementById('itensColetados').innerText = resp.coletados;
+    document.getElementById('totalItens').innerText = resp.total;
+    document.getElementById('itensDivergencia').innerText = resp.divergencias;
+    document.getElementById('itensPendentes').innerText = Math.max(resp.total - resp.coletados - resp.divergencias, 0);
+    document.getElementById('etapaAtualLote').innerText = resp.etapa_atual;
+
+    if ((resp.total - resp.coletados - resp.divergencias) <= 0){
+        document.getElementById('semItensPendentes').style.display = 'block';
+    }
+
+    if (resp.finalizado){
+        document.getElementById('alertaFinalizado').style.display = 'block';
+    }
+}
+
+function coletarManual(numeroLote){
+    limparAlertas();
+
+    const sku = document.getElementById('skuManual').value.trim();
+    const quantidade = document.getElementById('quantidadeManual').value.trim();
+    const observacao = document.getElementById('observacaoManual').value.trim();
+    const botao = document.getElementById('botaoColetarManual');
+
+    if (!sku){
+        mostrarErro('Digite o SKU para continuar.');
+        return;
+    }
+
+    if (!quantidade || Number(quantidade) <= 0){
+        mostrarErro('Digite a quantidade coletada.');
+        return;
+    }
+
+    botao.disabled = true;
+    botao.innerText = 'Processando...';
+
+    fetch('/api/picking/coletar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            numero_lote: numeroLote,
+            sku: sku,
+            quantidade: quantidade,
+            observacao: observacao
+        })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (!resp.ok){
+            mostrarErro(resp.erro || 'Erro ao processar a coleta.');
+            botao.disabled = false;
+            botao.innerText = 'Confirmar coleta';
+            return;
+        }
+
+        mostrarAcao(resp.mensagem || 'Coleta registrada com sucesso.');
+        atualizarResumo(resp);
+
+        if (resp.codigo){
+            const card = document.getElementById(`item-${resp.codigo}`);
+            if (card){
+                card.remove();
+            }
+        }
+
+        document.getElementById('skuManual').value = '';
+        document.getElementById('quantidadeManual').value = '';
+        document.getElementById('observacaoManual').value = '';
+        atualizarPreviewItem();
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 700);
+    })
+    .catch(() => {
+        mostrarErro('Erro ao processar a coleta.');
+        botao.disabled = false;
+        botao.innerText = 'Confirmar coleta';
+    });
+}
+
+document.getElementById('skuManual').addEventListener('input', atualizarPreviewItem);
+</script>
+{% endif %}
+{% endblock %}

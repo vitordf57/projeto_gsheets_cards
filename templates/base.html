@@ -6,15 +6,26 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
     font-family: Arial;
     display: flex;
+    background: #f3f4f6;
 }
 
 /* SIDEBAR */
 .sidebar {
-    width: 200px;
+    width: 220px;
     background: #111827;
     color: white;
     height: 100vh;
@@ -25,7 +36,7 @@ body {
 }
 
 .sidebar.collapsed {
-    width: 70px;
+    width: 74px;
 }
 
 .sidebar h2 {
@@ -68,12 +79,17 @@ body {
 .content {
     margin-left: 220px;
     padding: 30px;
-    width: 100%;
-    transition: margin-left 0.3s ease;
+    width: calc(100vw - 220px);
+    max-width: calc(100vw - 220px);
+    min-width: 0;
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    overflow-x: hidden;
 }
 
 .content.expanded {
-    margin-left: 90px;
+    margin-left: 74px;
+    width: calc(100vw - 74px);
+    max-width: calc(100vw - 74px);
 }
 </style>
 </head>
@@ -112,6 +128,10 @@ body {
 
     <a href="/conferencia">
         📋 <span>Conferência</span>
+    </a>
+
+    <a href="/picking">
+        📲 <span>Picking</span>
     </a>
 </div>
 
