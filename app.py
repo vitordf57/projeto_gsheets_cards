@@ -1311,10 +1311,13 @@ def api_picking_coletar():
 
 
 @app.route("/dados")
-
 def dados():
-    df = carregar_dados_base()
-    return jsonify(df.to_dict(orient="records"))
+    try:
+        df = carregar_dados_base()
+        df = df.fillna("")
+        return jsonify(df.to_dict(orient="records"))
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Erro ao carregar dados: {str(e)}", "dados": []}), 500
 
 
 @app.route("/dados-dashboard")
@@ -2162,52 +2165,61 @@ def salvar_status():
 
 @app.route("/status")
 def get_status():
-    conn = sqlite3.connect("status.db")
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect("status.db")
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio FROM status_cards")
-    rows = cursor.fetchall()
+        cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio FROM status_cards")
+        rows = cursor.fetchall()
 
-    conn.close()
+        conn.close()
 
-    status_dict = {}
-    for codigo, status, quantidade, estrategia, motivo_envio in rows:
-        status_dict[str(codigo)] = {
-            "status": status,
-            "quantidade": quantidade or 0,
-            "estrategia": estrategia or "",
-            "motivo_envio": motivo_envio or ""
-        }
+        status_dict = {}
+        for codigo, status, quantidade, estrategia, motivo_envio in rows:
+            status_dict[str(codigo)] = {
+                "status": status,
+                "quantidade": quantidade or 0,
+                "estrategia": estrategia or "",
+                "motivo_envio": motivo_envio or ""
+            }
 
-    return jsonify(status_dict)
+        return jsonify(status_dict)
+    except Exception:
+        return jsonify({})
 
 
 @app.route("/comentarios")
 def get_comentarios():
-    conn = sqlite3.connect("status.db")
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect("status.db")
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT sku, comentario FROM comentarios")
-    rows = cursor.fetchall()
+        cursor.execute("SELECT sku, comentario FROM comentarios")
+        rows = cursor.fetchall()
 
-    conn.close()
+        conn.close()
 
-    comentarios = {str(sku): comentario for sku, comentario in rows}
-    return jsonify(comentarios)
+        comentarios = {str(sku): comentario for sku, comentario in rows}
+        return jsonify(comentarios)
+    except Exception:
+        return jsonify({})
 
 
 @app.route("/comentarios-mlb")
 def get_comentarios_mlb():
-    conn = sqlite3.connect("status.db")
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect("status.db")
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
-    rows = cursor.fetchall()
+        cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
+        rows = cursor.fetchall()
 
-    conn.close()
+        conn.close()
 
-    comentarios = {str(codigo): comentario for codigo, comentario in rows}
-    return jsonify(comentarios)
+        comentarios = {str(codigo): comentario for codigo, comentario in rows}
+        return jsonify(comentarios)
+    except Exception:
+        return jsonify({})
 
 
 @app.route("/salvar-comentario", methods=["POST"])

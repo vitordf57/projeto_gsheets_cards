@@ -165,19 +165,22 @@ body {
     }
 
     function montarLinkComFiltros(hrefBase) {
+        const CHAVES_PERMITIDAS = ["conta", "busca", "selo", "analise", "saude", "condicao", "lote", "filtroEspecial", "tela"];
         const urlAtual = new URLSearchParams(window.location.search);
         const filtrosSessao = obterFiltrosSalvosSessao();
         const urlDestino = new URL(hrefBase, window.location.origin);
 
-        Object.entries(filtrosSessao).forEach(([chave, valor]) => {
-            if (valor !== null && valor !== undefined && String(valor).trim() !== "" && !urlDestino.searchParams.has(chave)) {
-                urlDestino.searchParams.set(chave, valor);
+        CHAVES_PERMITIDAS.forEach(chave => {
+            const valorSessao = filtrosSessao[chave];
+            if (valorSessao !== null && valorSessao !== undefined && String(valorSessao).trim() !== "" && !urlDestino.searchParams.has(chave)) {
+                urlDestino.searchParams.set(chave, valorSessao);
             }
         });
 
-        urlAtual.forEach((valor, chave) => {
-            if (valor !== null && valor !== undefined && String(valor).trim() !== "" && !urlDestino.searchParams.has(chave)) {
-                urlDestino.searchParams.set(chave, valor);
+        CHAVES_PERMITIDAS.forEach(chave => {
+            const valorAtual = urlAtual.get(chave);
+            if (valorAtual !== null && valorAtual !== undefined && String(valorAtual).trim() !== "" && !urlDestino.searchParams.has(chave)) {
+                urlDestino.searchParams.set(chave, valorAtual);
             }
         });
 

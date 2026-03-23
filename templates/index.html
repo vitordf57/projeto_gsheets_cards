@@ -1588,7 +1588,7 @@ function atualizarContadores(){
         textoContador = `${totalNao} MLBs`;
         contadorPrincipal.innerText = textoContador;
     } else {
-        textoContador = `${totalHistorico} MLBs`;
+        textoContador = `${dadosTelaAtual.length} MLBs`;
         contadorPrincipal.innerText = textoContador;
     }
 
@@ -1623,7 +1623,7 @@ function mostrarTela(tela){
 
     salvarFiltrosNaSessao();
     renderCards();
-    window.scrollTo({ top: 0, behavior: "instant" });
+    window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function setFiltro(tipo){
@@ -1919,10 +1919,15 @@ function renderProximoLote(){
 
     for (let i = indiceRender; i < fim; i++){
         const item = dadosTelaAtual[i];
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = montarHTMLCard(item);
-        fragment.appendChild(card);
+
+        try {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = montarHTMLCard(item);
+            fragment.appendChild(card);
+        } catch (erroCard) {
+            console.error("Erro ao montar card:", item, erroCard);
+        }
     }
 
     container.appendChild(fragment);
@@ -2435,14 +2440,29 @@ window.addEventListener("scroll", () => {
     }
 });
 
+function fetchJsonSeguro(url, fallback){
+    return fetch(url)
+        .then(async (response) => {
+            if (!response.ok) {
+                const textoErro = await response.text().catch(() => "");
+                throw new Error(`${url} -> ${response.status} ${textoErro}`);
+            }
+            return response.json();
+        })
+        .catch((erro) => {
+            console.error(`Falha ao carregar ${url}:`, erro);
+            return fallback;
+        });
+}
+
 Promise.all([
-    fetch("/dados").then(r => r.json()),
-    fetch("/status").then(r => r.json()),
-    fetch("/comentarios").then(r => r.json()),
-    fetch("/comentarios-mlb").then(r => r.json())
+    fetchJsonSeguro("/dados", []),
+    fetchJsonSeguro("/status", {}),
+    fetchJsonSeguro("/comentarios", {}),
+    fetchJsonSeguro("/comentarios-mlb", {})
 
 ]).then(([dados, status, comentarios, comentariosmlb]) => {
-    dadosOriginais = dados;
+    dadosOriginais = Array.isArray(dados) ? dados : [];
     statusSalvos = status;
     comentariosSalvos = comentarios;
     comentariosMlb = comentariosmlb;
@@ -2503,6 +2523,11 @@ if (
     renderCards();
 }).catch((erro) => {
     console.error("Erro ao carregar dados:", erro);
+    dadosOriginais = [];
+    statusSalvos = {};
+    comentariosSalvos = {};
+    comentariosMlb = {};
+    renderCards();
 });
 </script>
 
