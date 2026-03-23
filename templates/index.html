@@ -558,6 +558,70 @@ h1{ margin-bottom:15px; }
     color:#fca5a5;
 }
 
+.saldo-final{
+    position:relative;
+    font-weight:bold;
+}
+
+.saldo-final-tooltip{
+    display:none;
+    position:absolute;
+    top:115%;
+    left:0;
+    width:400px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:9999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.saldo-final:hover .saldo-final-tooltip{
+    display:block;
+}
+
+.saldo-final-tooltip strong{
+    color:#86efac;
+}
+
+.titulo-carro-relacionado{
+    position:relative;
+    cursor:help;
+    display:inline-block;
+}
+
+.titulo-carro-tooltip{
+    display:none;
+    position:absolute;
+    top:115%;
+    left:0;
+    width:380px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:9999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.titulo-carro-relacionado:hover .titulo-carro-tooltip{
+    display:block;
+}
+
+.titulo-carro-tooltip strong{
+    color:#93c5fd;
+}
+
+
 .sku-relacionado{
     background:#fff3cd;
     color:#7a5a00;
@@ -685,6 +749,25 @@ h1{ margin-bottom:15px; }
     line-height:1.4;
 }
 
+.btn-filtros.ativo{
+    background:#0d6efd;
+    color:white;
+    border-color:#0d6efd;
+}
+
+.filtros-grid button.ativo{
+    background:#0d6efd;
+    color:white;
+    border-color:#0d6efd;
+    font-weight:bold;
+}
+
+.menu select.ativo,
+.menu input.ativo{
+    border:2px solid #0d6efd !important;
+    background:#eef4ff;
+}
+
 @keyframes fadeIn{
     from{ transform:scale(0.95); opacity:0; }
     to{ transform:scale(1); opacity:1; }
@@ -714,7 +797,7 @@ h1{ margin-bottom:15px; }
                     >
                 </div>
     
-                <button type="button" class="btn-filtros" onclick="togglePainelFiltros()">
+                <button type="button" id="btnFiltrosTopo" class="btn-filtros" onclick="togglePainelFiltros()">
                     ⚙️ <span>Filtros</span>
                 </button>
             </div>
@@ -779,9 +862,9 @@ h1{ margin-bottom:15px; }
                     <option value="">Todos os lotes</option>
                 </select>
     
-                <button type="button" onclick="setFiltro('valor500')">Valor &gt; 500</button>
-                <button type="button" onclick="setFiltro('unidades10')">Unid &gt; 10</button>
-                <button type="button" onclick="setFiltro('critico')">-10 vendas + 500</button>
+                <button type="button" id="btnFiltroValor500" onclick="setFiltro('valor500')">Valor &gt; 500</button>
+                <button type="button" id="btnFiltroUnidades10" onclick="setFiltro('unidades10')">Unid &gt; 10</button>
+                <button type="button" id="btnFiltroCritico" onclick="setFiltro('critico')">-10 vendas + 500</button>
                 <button type="button" onclick="limparFiltros()">Limpar</button>
     
             </div>
@@ -808,7 +891,7 @@ const contNao = document.getElementById("contNaoSidebar");
 const contPrincipalSidebar = null;
 const contadorPrincipal = document.getElementById("contadorPrincipal");
 const btnCriarLote = document.getElementById("btnCriarLote");
-const btnGerarPdf = document.getElementById("btnGerarPdf");
+const btnGerarPdf = document.getElementById("btnGerarPdf") || null;
 
 const filtroConta = document.getElementById("filtroConta");
 const filtroBusca = document.getElementById("filtroBusca");
@@ -817,6 +900,10 @@ const filtroLogica = document.getElementById("filtroLogica");
 const filtroSaude = document.getElementById("filtroSaude");
 const filtroCondicao = document.getElementById("filtroCondicao");
 const filtroLote = document.getElementById("filtroLote");
+const btnFiltrosTopo = document.getElementById("btnFiltrosTopo");
+const btnFiltroValor500 = document.getElementById("btnFiltroValor500");
+const btnFiltroUnidades10 = document.getElementById("btnFiltroUnidades10");
+const btnFiltroCritico = document.getElementById("btnFiltroCritico");
 
 let dadosOriginais = [];
 let comentariosSalvos = {};
@@ -844,23 +931,7 @@ const estrategiasNaoEnvio = [
 "30+15 - no full = enviar"
 ];
 
-const motivosEnvio = [
-"FALTA DE ESTOQUE",
-"OTIMIZAR",
-"VERIFICAR PREÇO",
-"BEM PERFORMANDO",
-"TESTE",
-"TESTE DIRETORIA",
-"NAO ENVIAR",
-"ENVIAR TRCAIONAR",
-"RUPTURADO",
-"VAI RUPTURAR",
-"ESTOQUE SUFICIENTE",
-"SUPRIR 30+7",
-"SUPRIR 30",
-"30+15",
-"30+7"
-];
+const motivosEnvio = [...estrategiasNaoEnvio];
 
 let telaAtual = "principal";
 
@@ -874,12 +945,16 @@ let filtroUrlStatusFull = urlParams.get("statusFullFiltro") || "";
 
 let skuCounts = {};
 let tituloCounts = {};
+let itensPorSku = {};
+let duplicadosPorTitulo = {};
+let gruposPorCarro = {};
+let codigoParaItem = {};
 
 let dadosFiltradosBase = [];
 let dadosTelaAtual = [];
 
 let indiceRender = 0;
-const LOTE_RENDER = 80;
+const LOTE_RENDER = 50;
 let renderizando = false;
 let debounceTimer = null;
 let skuAtualComentario = null;
@@ -904,13 +979,114 @@ function obterQuantidadeSalva(codigo){
     return registro.quantidade || 0;
 }
 
+function obterQuantidadeAtualCard(codigo){
+    const inputAtual = document.getElementById("qtd-" + codigo);
+    if (inputAtual){
+        return Number(inputAtual.value || 0);
+    }
+    return Number(obterQuantidadeSalva(codigo) || 0);
+}
+
 function calcularSaldoProjetado(estoqueEmpresa, quantidadeEnviar){
     return numeroInteiro(estoqueEmpresa) - numeroInteiro(quantidadeEnviar);
+}
+
+function obterEstadoAtualFiltros(){
+    return {
+        conta: filtroConta.value || "",
+        busca: filtroBusca.value.trim() || "",
+        selo: filtroSelo.value || "",
+        analise: filtroLogica.value || "",
+        saude: filtroSaude.value || "",
+        condicao: filtroCondicao.value || "",
+        lote: filtroLote.value || "",
+        magic: filtroUrlMagic || "",
+        cobertura: filtroUrlCobertura || "",
+        full: filtroUrlFull || "",
+        saudeFull: filtroUrlSaudeFull || "",
+        statusFullFiltro: filtroUrlStatusFull || "",
+        filtroEspecial: filtroEspecial || "",
+        tela: telaAtual || "principal"
+    };
+}
+
+function salvarFiltrosNaSessao(){
+    sessionStorage.setItem(
+        "painelFiltrosCompartilhados",
+        JSON.stringify(obterEstadoAtualFiltros())
+    );
+}
+
+function restaurarFiltrosDaSessaoSeNecessario(){
+    let estado = {};
+    try {
+        estado = JSON.parse(sessionStorage.getItem("painelFiltrosCompartilhados") || "{}");
+    } catch (e) {
+        estado = {};
+    }
+
+    if (!urlParams.get("conta") && estado.conta) filtroConta.value = estado.conta;
+    if (!urlParams.get("busca") && estado.busca) filtroBusca.value = estado.busca;
+    if (!urlParams.get("selo") && estado.selo) filtroSelo.value = estado.selo;
+    if (!urlParams.get("analise") && estado.analise) filtroLogica.value = estado.analise;
+    if (!urlParams.get("saude") && estado.saude) filtroSaude.value = estado.saude;
+    if (!urlParams.get("condicao") && estado.condicao) filtroCondicao.value = estado.condicao;
+    if (!urlParams.get("lote") && estado.lote) filtroLote.value = estado.lote;
+
+    if (!urlParams.get("filtroEspecial") && estado.filtroEspecial) {
+        filtroEspecial = estado.filtroEspecial;
+    }
+
+    if (!urlParams.get("magic") && estado.magic) filtroUrlMagic = estado.magic;
+    if (!urlParams.get("cobertura") && estado.cobertura) filtroUrlCobertura = estado.cobertura;
+    if (!urlParams.get("full") && estado.full) filtroUrlFull = estado.full;
+    if (!urlParams.get("saudeFull") && estado.saudeFull) filtroUrlSaudeFull = estado.saudeFull;
+    if (!urlParams.get("statusFullFiltro") && estado.statusFullFiltro) filtroUrlStatusFull = estado.statusFullFiltro;
+
+    const telaSessao = estado.tela || "principal";
+    if (!urlParams.get("tela") && ["principal", "enviando", "homologar", "naoEnviar"].includes(telaSessao)) {
+        telaAtual = telaSessao;
+    }
+}
+
+function atualizarBotoesAtivos(){
+    const campos = [
+        filtroConta,
+        filtroBusca,
+        filtroSelo,
+        filtroLogica,
+        filtroSaude,
+        filtroCondicao,
+        filtroLote
+    ];
+
+    campos.forEach(campo => {
+        if (!campo) return;
+        const valor = String(campo.value || "").trim();
+        campo.classList.toggle("ativo", valor !== "");
+    });
+
+    if (btnFiltrosTopo){
+        btnFiltrosTopo.classList.toggle("ativo", existeFiltroAtivo());
+    }
+
+    if (btnFiltroValor500){
+        btnFiltroValor500.classList.toggle("ativo", filtroEspecial === "valor500");
+    }
+
+    if (btnFiltroUnidades10){
+        btnFiltroUnidades10.classList.toggle("ativo", filtroEspecial === "unidades10");
+    }
+
+    if (btnFiltroCritico){
+        btnFiltroCritico.classList.toggle("ativo", filtroEspecial === "critico");
+    }
 }
 
 function togglePainelFiltros(){
     const painel = document.getElementById("painelFiltros");
     painel.classList.toggle("aberto");
+    atualizarBotoesAtivos();
 }
 
 function existeFiltroAtivo(){
@@ -946,25 +1122,17 @@ function atualizarIndicadorFiltro(){
 
 function atualizarUrlFiltros(){
     const params = new URLSearchParams();
+    const estado = obterEstadoAtualFiltros();
 
-    if (filtroConta.value) params.set("conta", filtroConta.value);
-    if (filtroBusca.value.trim()) params.set("busca", filtroBusca.value.trim());
-    if (filtroSelo.value) params.set("selo", filtroSelo.value);
-    if (filtroLogica.value) params.set("analise", filtroLogica.value);
-    if (filtroSaude.value) params.set("saude", filtroSaude.value);
-    if (filtroCondicao.value) params.set("condicao", filtroCondicao.value);
-    if (filtroLote.value) params.set("lote", filtroLote.value);
-
-    if (filtroUrlMagic) params.set("magic", filtroUrlMagic);
-    if (filtroUrlCobertura) params.set("cobertura", filtroUrlCobertura);
-    if (filtroUrlFull) params.set("full", filtroUrlFull);
-    if (filtroUrlSaudeFull) params.set("saudeFull", filtroUrlSaudeFull);
-    if (filtroUrlStatusFull) params.set("statusFullFiltro", filtroUrlStatusFull);
-    if (filtroEspecial) params.set("filtroEspecial", filtroEspecial);
-    if (telaAtual) params.set("tela", telaAtual);
+    Object.entries(estado).forEach(([chave, valor]) => {
+        if (valor !== null && valor !== undefined && String(valor).trim() !== "") {
+            params.set(chave, valor);
+        }
+    });
 
     const query = params.toString();
     history.replaceState({}, "", "/" + (query ? "?" + query : ""));
+    salvarFiltrosNaSessao();
 }
 
 function sugestaoIA(item){
@@ -1145,20 +1313,76 @@ function sugestaoIA(item){
     };
 }
 
+function extrairChaveCarro(titulo){
+    const texto = String(titulo || "").trim();
+    if (!texto) return "";
+
+    let base = texto.split(" - ")[0].trim();
+
+    const marcas = [
+        "ABARTH","ACURA","ALFA ROMEO","AUDI","BMW","BYD","CAOA CHERY","CHERY","CHEVROLET",
+        "CITROEN","DODGE","FIAT","FORD","GAC","GREAT WALL","GWM","HONDA","HYUNDAI","JAC",
+        "JEEP","KIA","LAND ROVER","LEXUS","LIFAN","MERCEDES","MINI","MITSUBISHI","NISSAN",
+        "PEUGEOT","PORSCHE","RAM","RENAULT","SUBARU","SUZUKI","TOYOTA","VOLKSWAGEN","VW",
+        "VOLVO"
+    ];
+
+    const baseUpper = base.toUpperCase();
+    let idxMarca = -1;
+
+    for (const marca of marcas){
+        const idx = baseUpper.indexOf(marca);
+        if (idx !== -1 && (idxMarca === -1 || idx < idxMarca)){
+            idxMarca = idx;
+        }
+    }
+
+    if (idxMarca !== -1){
+        base = base.substring(idxMarca).trim();
+    } else {
+        const partes = base.split(/\s+/).filter(Boolean);
+        if (partes.length > 4){
+            base = partes.slice(-4).join(" ");
+        }
+    }
+
+    return base.toUpperCase().trim();
+}
+
 function montarIndices(){
     skuCounts = {};
     tituloCounts = {};
+    itensPorSku = {};
+    duplicadosPorTitulo = {};
+    gruposPorCarro = {};
+    codigoParaItem = {};
 
     for (const item of dadosOriginais){
+        const codigo = String(item["Código do Anúncio"] || "").trim();
         const sku = String(item["SKU"] || "").trim();
         const titulo = String(item["Título"] || "").trim();
+        const tituloKey = titulo.toUpperCase();
+        const chaveCarro = extrairChaveCarro(titulo);
+
+        if (codigo){
+            codigoParaItem[codigo] = item;
+        }
 
         if (sku){
             skuCounts[sku] = (skuCounts[sku] || 0) + 1;
+            if (!itensPorSku[sku]) itensPorSku[sku] = [];
+            itensPorSku[sku].push(item);
         }
 
         if (titulo){
             tituloCounts[titulo] = (tituloCounts[titulo] || 0) + 1;
+            if (!duplicadosPorTitulo[tituloKey]) duplicadosPorTitulo[tituloKey] = [];
+            duplicadosPorTitulo[tituloKey].push(item);
+        }
+
+        if (chaveCarro){
+            if (!gruposPorCarro[chaveCarro]) gruposPorCarro[chaveCarro] = [];
+            gruposPorCarro[chaveCarro].push(item);
         }
     }
 }
@@ -1182,14 +1406,14 @@ function montarTooltipSkuRelacionado(item){
     const skuAtual = String(item["SKU"] || "").trim();
     if (!skuAtual) return "";
 
-    const relacionados = dadosOriginais.filter(x =>
-        String(x["SKU"] || "").trim() === skuAtual &&
+    const relacionados = (itensPorSku[skuAtual] || []).filter(x =>
         String(x["Código do Anúncio"] || "").trim() !== String(item["Código do Anúncio"] || "").trim()
     );
 
     if (relacionados.length === 0) return "";
 
     const linhas = relacionados
+        .slice()
         .sort((a, b) => numeroInteiro(b["30 DIAS"] || 0) - numeroInteiro(a["30 DIAS"] || 0))
         .map(x => {
             const codigo = x["Código do Anúncio"] || "";
@@ -1223,13 +1447,11 @@ function montarTooltipTituloDuplicado(item){
     const tituloAtual = String(item["Título"] || "").trim();
     if (!tituloAtual) return "";
 
-    const duplicados = dadosOriginais.filter(x =>
-        String(x["Título"] || "").trim() === tituloAtual
-    );
-
+    const duplicados = duplicadosPorTitulo[tituloAtual.toUpperCase()] || [];
     if (duplicados.length <= 1) return "";
 
     const linhas = duplicados
+        .slice()
         .sort((a, b) => numeroInteiro(b["30 DIAS"] || 0) - numeroInteiro(a["30 DIAS"] || 0))
         .map(x => {
             const codigo = x["Código do Anúncio"] || "";
@@ -1255,6 +1477,75 @@ function montarTooltipTituloDuplicado(item){
     return `
         <div class="titulo-duplicado-tooltip">
             <div style="margin-bottom:8px;"><strong>Títulos iguais encontrados:</strong> ${duplicados.length}</div>
+            ${linhas}
+        </div>
+    `;
+}
+
+function montarTooltipTitulosMesmoCarro(item){
+    const chaveCarro = extrairChaveCarro(item["Título"] || "");
+    if (!chaveCarro) return "";
+
+    const relacionados = (gruposPorCarro[chaveCarro] || []).filter(x =>
+        String(x["Código do Anúncio"] || "").trim() !== String(item["Código do Anúncio"] || "").trim()
+    );
+
+    if (!relacionados.length) return "";
+
+    const linhas = relacionados
+        .slice()
+        .sort((a, b) => numeroInteiro(b["30 DIAS"] || 0) - numeroInteiro(a["30 DIAS"] || 0))
+        .map(x => `
+            <div style="margin-bottom:10px;">
+                <strong>${x["Código do Anúncio"] || ""}</strong><br>
+                Conta: ${x["Nickname"] || ""} | SKU: ${x["SKU"] || ""}<br>
+                Título: ${x["Título"] || ""}
+            </div>
+        `)
+        .join("");
+
+    return `
+        <div class="titulo-carro-tooltip">
+            <div style="margin-bottom:8px;"><strong>Títulos com o mesmo carro:</strong> ${relacionados.length}</div>
+            ${linhas}
+        </div>
+    `;
+}
+
+function montarTooltipSaldoSku(item){
+    const skuAtual = String(item["SKU"] || "").trim();
+    if (!skuAtual) return "";
+
+    const relacionados = (itensPorSku[skuAtual] || []).filter(x => {
+        const codigo = String(x["Código do Anúncio"] || "").trim();
+        return obterQuantidadeAtualCard(codigo) > 0;
+    });
+
+    if (!relacionados.length) return "";
+
+    const linhas = relacionados
+        .slice()
+        .sort((a, b) => obterQuantidadeAtualCard(String(b["Código do Anúncio"] || "")) - obterQuantidadeAtualCard(String(a["Código do Anúncio"] || "")))
+        .map(x => {
+            const codigo = String(x["Código do Anúncio"] || "").trim();
+            const qtd = obterQuantidadeAtualCard(codigo);
+            const conta = x["Nickname"] || "";
+            const titulo = x["Título"] || "";
+
+            return `
+                <div style="margin-bottom:10px;">
+                    <strong>${codigo}</strong><br>
+                    Conta: ${conta}<br>
+                    Enviando: ${qtd}<br>
+                    Título: ${titulo}
+                </div>
+            `;
+        })
+        .join("");
+
+    return `
+        <div class="saldo-final-tooltip">
+            <div style="margin-bottom:8px;"><strong>MLBs que estão subtraindo este estoque:</strong> ${relacionados.length}</div>
             ${linhas}
         </div>
     `;
@@ -1330,12 +1621,14 @@ function mostrarTela(tela){
 
     document.getElementById(tela).classList.remove("hidden");
 
+    salvarFiltrosNaSessao();
     renderCards();
     window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 function setFiltro(tipo){
-    filtroEspecial = tipo;
+    filtroEspecial = (filtroEspecial === tipo) ? "" : tipo;
+    salvarFiltrosNaSessao();
     renderCards();
 }
 
@@ -1348,7 +1641,10 @@ function limparFiltros(){
     filtroUrlSaudeFull = "";
     filtroUrlConta = "";
     filtroUrlStatusFull = "";
-    history.replaceState({}, "", "/");
+
+    sessionStorage.removeItem("painelFiltrosCompartilhados");
+
+    history.replaceState({}, "", "/?tela=" + telaAtual);
 
     const indicador = document.getElementById("indicadorFiltro");
     const painel = document.getElementById("painelFiltros");
@@ -1361,6 +1657,7 @@ function limparFiltros(){
         painel.classList.remove("aberto");
     }
 
+    atualizarBotoesAtivos();
     renderCards();
 }
 
@@ -1505,7 +1802,7 @@ function montarHTMLCard(item){
     <div>
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
             <strong>Título:</strong>
-            <span>${item["Título"] || ""}</span>
+            <span class="titulo-carro-relacionado">${item["Título"] || ""}${montarTooltipTitulosMesmoCarro(item)}</span>
             ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
         </div>
 
@@ -1527,28 +1824,17 @@ function montarHTMLCard(item){
 
     <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
         Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo))}
+        ${montarTooltipSaldoSku(item)}
     </div>
 
     <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
     ${
-        statusSalvos[String(codigo)]?.estrategia
+        (statusSalvos[String(codigo)]?.estrategia || statusSalvos[String(codigo)]?.motivo_envio)
         ? `
-        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
+        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia || statusSalvos[String(codigo)]?.motivo_envio}</div>
         `
         : `
         <div class="estrategia-titulo">Estratégia</div>
-        `
-    }
-</div>
-
-<div class="estrategia-meio" onclick="abrirModalMotivo('${codigo}')">
-    ${
-        statusSalvos[String(codigo)]?.motivo_envio
-        ? `
-        <div class="estrategia-titulo">Motivo do envio → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
-        `
-        : `
-        <div class="estrategia-titulo">Motivo do envio</div>
         `
     }
 </div>
@@ -1587,23 +1873,23 @@ function montarHTMLCard(item){
 
                 <div class="bloco">
                     <h3>📅 HISTÓRICO MENSAL</h3>
-                    <div class="metric">AGOSTO: ${item["AGOSTO"] || 0} | Seconds: ${item["AGOSTO SECONDS"] || 0} | Balcão/site: ${item["AGOSTO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0} | Seconds: ${item["SETEMBRO SECONDS"] || 0} | Balcão/site: ${item["SETEMBRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0} | Seconds: ${item["OUTUBRO SECONDS"] || 0} | Balcão/site: ${item["OUTUBRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0} | Seconds: ${item["NOVEMBRO SECONDS"] || 0} | Balcão/site: ${item["NOVEMBRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0} | Seconds: ${item["DEZEMBRO SECONDS"] || 0} | Balcão/site: ${item["DEZEMBRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">JANEIRO: ${item["JANEIRO"] || 0} | Seconds: ${item["JANEIRO SECONDS"] || 0} | Balcão/site: ${item["JANEIRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0} | Seconds: ${item["FEVEREIRO SECONDS"] || 0} | Balcão/site: ${item["FEVEREIRO BALCAO/SITE"] || 0}</div>
-                    <div class="metric">MARÇO: ${item["MARÇO"] || 0} | Seconds: ${item["MARÇO SECONDS"] || 0} | Balcão/site: ${item["MARÇO BALCAO/SITE"] || 0}</div>
+                    <div class="metric">AGOSTO: ${item["AGOSTO"] || 0}</div>
+                    <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0}</div>
+                    <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0}</div>
+                    <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0}</div>
+                    <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0}</div>
+                    <div class="metric">JANEIRO: ${item["JANEIRO"] || 0}</div>
+                    <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0}</div>
+                    <div class="metric">MARÇO: ${item["MARÇO"] || 0}</div>
                 </div>
             </div>
 
             <div class="duplo-bloco">
                 <div class="bloco">
                     <h3>📊 VENDAS</h3>
-                    <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 07 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 7 DIAS"] || 0}</div>
-                    <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 15 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 15 DIAS"] || 0}</div>
-                    <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"} | Métricas Meli: ${item["METRICAS 30 DIAS DO MELI"] || 0} | Visitas: ${item["VISITAS 30 DIAS"] || 0}</div>
+                    <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
+                    <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
+                    <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
                     <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
                 </div>
 
@@ -1677,7 +1963,7 @@ function renderCards(){
     principal.innerHTML = "";
     enviando.innerHTML = "";
     homologar.innerHTML = "";
-    naoEnviar.innerHTML = "";  
+    naoEnviar.innerHTML = "";
 
     indiceRender = 0;
     renderProximoLote();
@@ -1685,39 +1971,26 @@ function renderCards(){
     atualizarLinkExportacao();
     atualizarVisibilidadeFilete();
     atualizarIndicadorFiltro();
+    atualizarBotoesAtivos();
     atualizarUrlFiltros();
 }
 
 function atualizarSaldoCard(codigo, estoqueEmpresa, sku){
     let somaSku = 0;
+    const itensSku = itensPorSku[String(sku) || ""] || [];
 
-    dadosOriginais.forEach(item => {
-        if (String(item["SKU"] || "") === String(sku)) {
-            const codigoItem = String(item["Código do Anúncio"] || "");
-            let quantidade = 0;
-
-            if (codigoItem === String(codigo)) {
-                const inputAtual = document.getElementById("qtd-" + codigo);
-                quantidade = Number(inputAtual ? inputAtual.value : 0);
-            } else {
-                quantidade = Number(obterQuantidadeSalva(codigoItem) || 0);
-                const inputVisivel = document.getElementById("qtd-" + codigoItem);
-                if (inputVisivel) {
-                    quantidade = Number(inputVisivel.value || 0);
-                }
-            }
-
-            somaSku += quantidade;
-        }
-    });
+    for (const item of itensSku){
+        const codigoItem = String(item["Código do Anúncio"] || "");
+        somaSku += obterQuantidadeAtualCard(codigoItem);
+    }
 
     const saldo = numeroInteiro(estoqueEmpresa) - numeroInteiro(somaSku);
 
     document.querySelectorAll(`[data-sku='${sku}']`).forEach(campoSaldo => {
-        campoSaldo.textContent = saldo < 0
-            ? `Saldo 4i após envio: ${saldo} | Estoque insuficiente`
-            : `Saldo 4i após envio: ${saldo}`;
-
+        campoSaldo.innerHTML = `
+            Saldo 4i após envio: ${saldo}${saldo < 0 ? " | Estoque insuficiente" : ""}
+            ${montarTooltipSaldoSku({ "SKU": sku })}
+        `;
         campoSaldo.style.color = saldo < 0 ? "#c62828" : "#1b5e20";
     });
 }
@@ -1867,7 +2140,7 @@ function salvarEstrategia(){
             : (statusSalvos[String(codigoEstrategiaAtual)]?.quantidade || 0)
     );
 
-    const motivoAtual = statusSalvos[String(codigoEstrategiaAtual)]?.motivo_envio || "";
+    const motivoAtual = estrategia;
 
     fetch("/salvar-status", {
         method: "POST",
@@ -2118,16 +2391,43 @@ function aplicarRenderComDebounce(){
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         renderCards();
-    }, 250);
+    }, 180);
 }
 
-filtroConta.addEventListener("change", renderCards);
-filtroSelo.addEventListener("change", renderCards);
-filtroLogica.addEventListener("change", renderCards);
-filtroSaude.addEventListener("change", renderCards);
-filtroCondicao.addEventListener("change", renderCards);
-filtroLote.addEventListener("change", renderCards);
-filtroBusca.addEventListener("input", aplicarRenderComDebounce);
+filtroConta.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroSelo.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroLogica.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroSaude.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroCondicao.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroLote.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroBusca.addEventListener("input", () => {
+    salvarFiltrosNaSessao();
+    aplicarRenderComDebounce();
+});
 
 window.addEventListener("scroll", () => {
     if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 500)){
@@ -2140,6 +2440,7 @@ Promise.all([
     fetch("/status").then(r => r.json()),
     fetch("/comentarios").then(r => r.json()),
     fetch("/comentarios-mlb").then(r => r.json())
+
 ]).then(([dados, status, comentarios, comentariosmlb]) => {
     dadosOriginais = dados;
     statusSalvos = status;
@@ -2148,6 +2449,7 @@ Promise.all([
 
     montarIndices();
     popularFiltros();
+    restaurarFiltrosDaSessaoSeNecessario();
 
     if(urlParams.get("conta")){
         filtroConta.value = urlParams.get("conta");
@@ -2231,21 +2533,6 @@ if (
         <div class="modal-botoes">
             <button onclick="salvarEstrategia()">Salvar</button>
             <button onclick="fecharModalEstrategia()" class="btn-fechar">Cancelar</button>
-        </div>
-
-    </div>
-</div>
-
-<div id="modalMotivoEnvio" class="modal-filete">
-    <div class="modal-conteudo">
-
-        <h3>Definir Motivo do Envio</h3>
-
-        <select id="selectMotivoEnvio"></select>
-
-        <div class="modal-botoes">
-            <button onclick="salvarMotivo()">Salvar</button>
-            <button onclick="fecharModalMotivo()" class="btn-fechar">Cancelar</button>
         </div>
 
     </div>

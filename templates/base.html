@@ -91,6 +91,14 @@ body {
     width: calc(100vw - 74px);
     max-width: calc(100vw - 74px);
 }
+
+.sidebar a.ativo{
+    background: rgba(255,255,255,0.12);
+    border-left: 4px solid #60a5fa;
+    padding-left: 16px;
+    font-weight: bold;
+}
+
 </style>
 </head>
 
@@ -147,33 +155,91 @@ body {
         sidebar.classList.toggle("collapsed");
         content.classList.toggle("expanded");
     }
-    
+
+    function obterFiltrosSalvosSessao() {
+        try {
+            return JSON.parse(sessionStorage.getItem("painelFiltrosCompartilhados") || "{}");
+        } catch (e) {
+            return {};
+        }
+    }
+
     function montarLinkComFiltros(hrefBase) {
         const urlAtual = new URLSearchParams(window.location.search);
+        const filtrosSessao = obterFiltrosSalvosSessao();
         const urlDestino = new URL(hrefBase, window.location.origin);
-    
-        urlAtual.forEach((valor, chave) => {
-            if (!urlDestino.searchParams.has(chave)) {
+
+        Object.entries(filtrosSessao).forEach(([chave, valor]) => {
+            if (valor !== null && valor !== undefined && String(valor).trim() !== "" && !urlDestino.searchParams.has(chave)) {
                 urlDestino.searchParams.set(chave, valor);
             }
         });
-    
+
+        urlAtual.forEach((valor, chave) => {
+            if (valor !== null && valor !== undefined && String(valor).trim() !== "" && !urlDestino.searchParams.has(chave)) {
+                urlDestino.searchParams.set(chave, valor);
+            }
+        });
+
         const query = urlDestino.searchParams.toString();
         return urlDestino.pathname + (query ? "?" + query : "");
     }
-    
-    document.addEventListener("DOMContentLoaded", function () {
+
+    function atualizarLinksSidebarComFiltros() {
         document.querySelectorAll("#sidebar a").forEach(link => {
-            const hrefOriginal = link.getAttribute("href");
-    
+            const hrefOriginal = link.getAttribute("data-href-original") || link.getAttribute("href");
+
             if (!hrefOriginal || hrefOriginal.startsWith("#") || hrefOriginal.startsWith("javascript:")) {
                 return;
             }
-    
+
+            if (!link.getAttribute("data-href-original")) {
+                link.setAttribute("data-href-original", hrefOriginal);
+            }
+
             link.setAttribute("href", montarLinkComFiltros(hrefOriginal));
         });
+    }
+
+    function marcarLinkAtivoSidebar() {
+        const pathAtual = window.location.pathname;
+        const paramsAtual = new URLSearchParams(window.location.search);
+        const telaAtual = paramsAtual.get("tela") || "principal";
+
+        document.querySelectorAll("#sidebar a").forEach(link => {
+            link.classList.remove("ativo");
+
+            const hrefOriginal = link.getAttribute("data-href-original") || link.getAttribute("href");
+            if (!hrefOriginal) return;
+
+            const urlLink = new URL(hrefOriginal, window.location.origin);
+            const pathLink = urlLink.pathname;
+            const telaLink = urlLink.searchParams.get("tela") || "";
+
+            if (pathAtual === "/" && pathLink === "/") {
+                if (
+                    (telaAtual === "principal" && !telaLink) ||
+                    telaAtual === telaLink
+                ) {
+                    link.classList.add("ativo");
+                }
+            } else if (pathAtual === pathLink) {
+                link.classList.add("ativo");
+            }
+        });
+    }
+    
+    document.addEventListener("DOMContentLoaded", function () {
+        atualizarLinksSidebarComFiltros();
+        marcarLinkAtivoSidebar();
+
+        document.querySelectorAll("#sidebar a").forEach(link => {
+            link.addEventListener("click", function () {
+                atualizarLinksSidebarComFiltros();
+            });
+        });
     });
-    </script>
+</script>
 
 </body>
 </html>

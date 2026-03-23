@@ -2,7 +2,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Flask, render_template, jsonify, request, send_file, redirect
 import pandas as pd
 import sqlite3
 import time
@@ -1366,6 +1366,7 @@ def exportar_excel():
     df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
     df["Estratégia"] = df["Código do Anúncio"].astype(str).map(mapa_estrategia).fillna("")
     df["Motivo do Envio"] = df["Código do Anúncio"].astype(str).map(mapa_motivo_envio).fillna("")
+    df["Motivo do Envio"] = df["Motivo do Envio"].where(df["Motivo do Envio"].astype(str).str.strip() != "", df["Estratégia"])
     df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
     df["LETICIA"] = ""
 
@@ -1705,7 +1706,7 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         quantidade = int(float(item.get("Enviar", 0) or 0))
 
         estrategia = mapa_status.get(codigo, {}).get("estrategia", "")
-        motivo_envio = mapa_status.get(codigo, {}).get("motivo_envio", "")
+        motivo_envio = mapa_status.get(codigo, {}).get("motivo_envio", "") or estrategia
         comentario_mlb = mapa_comentarios_mlb.get(codigo, "")
 
         dados_item = {coluna: valor_json(valor) for coluna, valor in item.to_dict().items()}
@@ -1800,6 +1801,96 @@ def criar_lote_enviando():
 
     return jsonify({"ok": True})
 
+def montar_excel_filete_antigo(df, numero_lote, tipo_lote):
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        workbook = writer.book
+        worksheet = workbook.create_sheet("Filete", 0)
+
+        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
+        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
+        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
+
+        border = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+        colunas = ["Nickname", "Código do Anúncio", "SKU", "Enviar", "ENDEREÇO", "Título"]
+
+        for col in colunas:
+            if col not in df.columns:
+                df[col] = ""
+
+        df_export = df[colunas].copy()
+        df_export.rename(columns={
+            "Nickname": "CONTA",
+            "Código do Anúncio": "CÓDIGO",
+            "Enviar": "ENVIAR",
+            "Título": "TÍTULO"
+        }, inplace=True)
+
+        conta_principal = ""
+        contas = [str(c).strip() for c in df_export["CONTA"].tolist() if str(c).strip()]
+        if contas:
+            conta_principal = contas[0]
+
+        worksheet["A1"] = f"CONTA: {conta_principal}" if conta_principal else "CONTA:"
+        worksheet["A1"].font = Font(bold=True, size=12)
+        worksheet["A1"].fill = fill_topo
+        worksheet["A1"].alignment = left
+        worksheet["A1"].border = border
+        worksheet.merge_cells("A1:D1")
+
+        worksheet["E1"] = f"Lote {tipo_lote} - #{numero_lote}"
+        worksheet["E1"].font = Font(bold=True, size=12)
+        worksheet["E1"].fill = fill_topo
+        worksheet["E1"].alignment = center
+        worksheet["E1"].border = border
+
+        cabecalhos = ["CÓDIGO", "SKU", "ENVIAR", "ENDEREÇO", "TÍTULO"]
+        for idx, coluna in enumerate(cabecalhos, start=1):
+            cell = worksheet.cell(row=2, column=idx, value=coluna)
+            cell.font = Font(bold=True)
+            cell.fill = fill_label
+            cell.alignment = center
+            cell.border = border
+
+        linha = 3
+        for _, row in df_export.iterrows():
+            valores = [
+                row["CÓDIGO"],
+                row["SKU"],
+                int(float(row["ENVIAR"] or 0)),
+                row["ENDEREÇO"],
+                row["TÍTULO"]
+            ]
+            for col_idx, valor in enumerate(valores, start=1):
+                cell = worksheet.cell(row=linha, column=col_idx, value=valor)
+                cell.fill = fill_valor
+                cell.alignment = center if col_idx in [1, 2, 3] else left
+                cell.border = border
+                if col_idx in [1, 2, 3]:
+                    cell.font = Font(bold=True, size=12)
+            linha += 1
+
+        worksheet.row_dimensions[1].height = 24
+        worksheet.row_dimensions[2].height = 22
+
+        larguras = {"A": 24, "B": 17, "C": 12, "D": 24, "E": 68}
+        for col, largura in larguras.items():
+            worksheet.column_dimensions[col].width = largura
+
+    output.seek(0)
+    return output
+
+
 @app.route("/gerar-filete")
 def gerar_filete():
     numero_lote = request.args.get("numero_lote", "").strip()
@@ -1839,7 +1930,7 @@ def gerar_filete():
     df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
 
     if "ENDEREÇO" in df.columns:
-        df = df.sort_values(by="ENDEREÇO", kind="stable")
+        df = df.sort_values(by=["Nickname", "ENDEREÇO", "Código do Anúncio"], kind="stable")
 
     try:
         registrar_lote_conferencia(numero_lote, tipo_lote, df)
@@ -1848,102 +1939,7 @@ def gerar_filete():
     except ValueError as e:
         return str(e), 400
 
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        workbook = writer.book
-        worksheet = workbook.create_sheet("Filete", 0)
-
-        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
-        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
-        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
-
-        border = Border(
-            left=Side(style="thin", color="000000"),
-            right=Side(style="thin", color="000000"),
-            top=Side(style="thin", color="000000"),
-            bottom=Side(style="thin", color="000000")
-        )
-
-        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
-
-        colunas = [
-            "Nickname",
-            "Código do Anúncio",
-            "SKU",
-            "Título",
-            "ENDEREÇO",
-            "Enviar",
-            "Lote"
-        ]
-
-        df_export = df[colunas].copy()
-        df_export.rename(columns={
-            "Código do Anúncio": "MLB",
-            "ENDEREÇO": "ENDEREÇO",
-            "Enviar": "QUANTIDADE"
-        }, inplace=True)
-
-        total_pecas = int(pd.to_numeric(df_export["QUANTIDADE"], errors="coerce").fillna(0).sum())
-        total_mlbs = int(len(df_export))
-
-        worksheet.merge_cells("A1:G1")
-        worksheet["A1"] = "FILETE DE ENVIO"
-        worksheet["A1"].font = Font(bold=True, size=14)
-        worksheet["A1"].fill = fill_topo
-        worksheet["A1"].alignment = center
-        worksheet["A1"].border = border
-
-        worksheet["A2"] = "Nº Lote"
-        worksheet["B2"] = numero_lote
-        worksheet["C2"] = "Tipo"
-        worksheet["D2"] = tipo_lote
-        worksheet["E2"] = "MLBs"
-        worksheet["F2"] = total_mlbs
-        worksheet["G2"] = f"Peças: {total_pecas}"
-
-        for cel in ["A2", "C2", "E2"]:
-            worksheet[cel].font = Font(bold=True)
-            worksheet[cel].fill = fill_label
-            worksheet[cel].alignment = center
-            worksheet[cel].border = border
-
-        for cel in ["B2", "D2", "F2", "G2"]:
-            worksheet[cel].fill = fill_valor
-            worksheet[cel].alignment = center
-            worksheet[cel].border = border
-
-        linha_inicio = 4
-
-        for idx, coluna in enumerate(df_export.columns, start=1):
-            cell = worksheet.cell(row=linha_inicio, column=idx, value=coluna)
-            cell.font = Font(bold=True)
-            cell.fill = fill_label
-            cell.alignment = center
-            cell.border = border
-
-        for i, (_, row) in enumerate(df_export.iterrows(), start=linha_inicio + 1):
-            for j, valor in enumerate(row, start=1):
-                cell = worksheet.cell(row=i, column=j, value=valor)
-                cell.fill = fill_valor
-                cell.alignment = left if j in [3, 4, 5] else center
-                cell.border = border
-
-        larguras = {
-            "A": 18,
-            "B": 18,
-            "C": 20,
-            "D": 50,
-            "E": 18,
-            "F": 14,
-            "G": 24
-        }
-
-        for col, largura in larguras.items():
-            worksheet.column_dimensions[col].width = largura
-
-    output.seek(0)
+    output = montar_excel_filete_antigo(df, numero_lote, tipo_lote)
 
     nome_arquivo = "filete.xlsx"
     if numero_lote:
@@ -1975,106 +1971,7 @@ def carregar_itens_snapshot_lote(numero_lote):
 
 
 def montar_excel_filete_lote(df, numero_lote, tipo_lote):
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        workbook = writer.book
-        worksheet = workbook.create_sheet("Filete", 0)
-
-        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
-        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
-        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
-
-        border = Border(
-            left=Side(style="thin", color="000000"),
-            right=Side(style="thin", color="000000"),
-            top=Side(style="thin", color="000000"),
-            bottom=Side(style="thin", color="000000")
-        )
-
-        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
-
-        colunas = [
-            "Nickname",
-            "Código do Anúncio",
-            "SKU",
-            "Título",
-            "ENDEREÇO",
-            "Enviar",
-            "Lote"
-        ]
-
-        for col in colunas:
-            if col not in df.columns:
-                df[col] = ""
-
-        df_export = df[colunas].copy()
-        df_export.rename(columns={
-            "Código do Anúncio": "MLB",
-            "Enviar": "QUANTIDADE"
-        }, inplace=True)
-
-        total_pecas = int(pd.to_numeric(df_export["QUANTIDADE"], errors="coerce").fillna(0).sum())
-        total_mlbs = int(len(df_export))
-
-        worksheet.merge_cells("A1:G1")
-        worksheet["A1"] = "FILETE DE ENVIO"
-        worksheet["A1"].font = Font(bold=True, size=14)
-        worksheet["A1"].fill = fill_topo
-        worksheet["A1"].alignment = center
-        worksheet["A1"].border = border
-
-        worksheet["A2"] = "Nº Lote"
-        worksheet["B2"] = numero_lote
-        worksheet["C2"] = "Tipo"
-        worksheet["D2"] = tipo_lote
-        worksheet["E2"] = "MLBs"
-        worksheet["F2"] = total_mlbs
-        worksheet["G2"] = f"Peças: {total_pecas}"
-
-        for cel in ["A2", "C2", "E2"]:
-            worksheet[cel].font = Font(bold=True)
-            worksheet[cel].fill = fill_label
-            worksheet[cel].alignment = center
-            worksheet[cel].border = border
-
-        for cel in ["B2", "D2", "F2", "G2"]:
-            worksheet[cel].fill = fill_valor
-            worksheet[cel].alignment = center
-            worksheet[cel].border = border
-
-        linha_inicio = 4
-
-        for idx, coluna in enumerate(df_export.columns, start=1):
-            cell = worksheet.cell(row=linha_inicio, column=idx, value=coluna)
-            cell.font = Font(bold=True)
-            cell.fill = fill_label
-            cell.alignment = center
-            cell.border = border
-
-        for i, (_, row) in enumerate(df_export.iterrows(), start=linha_inicio + 1):
-            for j, valor in enumerate(row, start=1):
-                cell = worksheet.cell(row=i, column=j, value=valor)
-                cell.fill = fill_valor
-                cell.alignment = left if j in [3, 4, 5] else center
-                cell.border = border
-
-        larguras = {
-            "A": 18,
-            "B": 18,
-            "C": 20,
-            "D": 50,
-            "E": 18,
-            "F": 14,
-            "G": 24
-        }
-
-        for col, largura in larguras.items():
-            worksheet.column_dimensions[col].width = largura
-
-    output.seek(0)
-    return output
+    return montar_excel_filete_antigo(df, numero_lote, tipo_lote)
 
 
 @app.route("/lote-envio/<numero_lote>/pdf")
@@ -2239,6 +2136,8 @@ def salvar_status():
     quantidade = data.get("quantidade", quantidade_atual)
     estrategia = data.get("estrategia", estrategia_atual)
     motivo_envio = data.get("motivo_envio", motivo_atual)
+    if (not str(motivo_envio).strip()) and str(estrategia).strip():
+        motivo_envio = estrategia
 
     try:
         quantidade = int(quantidade)
