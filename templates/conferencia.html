@@ -210,7 +210,7 @@
             <div class="lista-lotes">
                 {% if lotes %}
                     {% for item in lotes %}
-                        <a href="/conferencia/{{ item['numero_lote'] }}"
+                        <a href="{{ url_for('conferencia', numero_lote=item['numero_lote']) }}"
                            class="lote-item {% if lote and lote['numero_lote'] == item['numero_lote'] %}ativo{% endif %}">
                             <strong>Lote #{{ item['numero_lote'] }}</strong>
                             <div>Tipo: {{ item['tipo_lote'] or '-' }}</div>
@@ -235,7 +235,7 @@
                 </div>
 
         <a class="btn-card btn-editar"
-   href="/excluir-lote/{{ lote['numero_lote'] }}"
+   href="{{ url_for('excluir_lote', numero_lote=lote['numero_lote']) }}"
    onclick="return confirm('Tem certeza que deseja excluir este lote?')">
     🗑 Excluir Lote
 </a>

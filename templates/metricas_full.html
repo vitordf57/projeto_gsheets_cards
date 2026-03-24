@@ -693,24 +693,28 @@
                             ✏️ Editar
                         </button>
 
-                        <a class="btn-card btn-picking" href="/picking/{{ lote['numero_lote'] }}">
+                        <a class="btn-card btn-picking" href="{{ url_for('picking_lote', numero_lote=lote['numero_lote']) }}">
                             📲 Picking
                         </a>
 
-                        <a class="btn-card btn-conferencia" href="/conferencia/{{ lote['numero_lote'] }}">
+                        <a class="btn-card btn-conferencia" href="{{ url_for('conferencia', numero_lote=lote['numero_lote']) }}">
                             📋 Conferência
                         </a>
 
-                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/pdf">
+                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_pdf', numero_lote=lote['numero_lote']) }}">
                             📄 PDF
                         </a>
 
-                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/filete-excel">
+                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_filete_excel', numero_lote=lote['numero_lote']) }}">
                             🧾 Excel Filete
                         </a>
 
-                        <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/exportar-excel">
+                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_exportar_excel', numero_lote=lote['numero_lote']) }}">
                             ⬇️ Excel Detalhado
+                        </a>
+
+                        <a class="btn-card btn-editar" href="{{ url_for('excluir_lote', numero_lote=lote['numero_lote']) }}" onclick="return confirm('Tem certeza que deseja excluir este lote?')">
+                            🗑 Excluir Lote
                         </a>
                     </div>
 

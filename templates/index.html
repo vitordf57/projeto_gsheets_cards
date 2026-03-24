@@ -2335,27 +2335,112 @@ function gerarPDFTelaEnviando(){
     gerarPDF(dadosPDF);
 }
 
+function classificarTipoParaLote(item, tipoPadrao){
+    const selo = String(item["SELO"] || "").trim().toUpperCase();
+    if (selo.includes("CAIXA")) return "Caixa";
+    if (selo.includes("DIVERS")) return "Diversos";
+    return tipoPadrao || "Diversos";
+}
+
+function obterGruposCriacaoLote(){
+    const tipoPadrao = document.getElementById("tipoLoteFilete").value || "Diversos";
+    const itensEnviando = dadosFiltradosBase.filter(item => {
+        const codigo = String(item["Código do Anúncio"] || "");
+        const statusItem = statusSalvos[codigo] || {};
+        const quantidade = Number(statusItem.quantidade || 0);
+        return obterDestino(item) === "enviando" && quantidade > 0;
+    });
+
+    const mapa = new Map();
+
+    itensEnviando.forEach(item => {
+        const conta = String(item["Nickname"] || "").trim() || "SEM CONTA";
+        const tipo = classificarTipoParaLote(item, tipoPadrao);
+        const chave = `${conta}|||${tipo}`;
+
+        if (!mapa.has(chave)) {
+            mapa.set(chave, { conta, tipo, total: 0 });
+        }
+
+        mapa.get(chave).total += 1;
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => {
+        const contaA = String(a.conta || "");
+        const contaB = String(b.conta || "");
+        if (contaA !== contaB) return contaA.localeCompare(contaB);
+        return String(a.tipo || "").localeCompare(String(b.tipo || ""));
+    });
+}
+
+function renderizarCamposLotesCriacao(){
+    const container = document.getElementById("camposLotesCriacao");
+    if (!container) return;
+
+    const grupos = obterGruposCriacaoLote();
+
+    if (!grupos.length){
+        container.innerHTML = '<div class="filete-info">Não há itens válidos na tela Enviando para criar lotes.</div>';
+        return;
+    }
+
+    container.innerHTML = grupos.map((grupo, idx) => `
+        <div style="margin-top:12px; padding:12px; border:1px solid #e5e7eb; border-radius:10px; background:#f8fafc;">
+            <div style="font-size:13px; font-weight:bold; margin-bottom:8px;">${grupo.conta} / ${grupo.tipo} (${grupo.total} MLBs)</div>
+            <label for="numeroLoteGrupo_${idx}"><strong>Nº do lote</strong></label>
+            <input
+                type="text"
+                id="numeroLoteGrupo_${idx}"
+                class="input-lote-grupo"
+                data-conta="${String(grupo.conta).replace(/"/g, '&quot;')}"
+                data-tipo="${String(grupo.tipo).replace(/"/g, '&quot;')}"
+                placeholder="Ex: 59618562"
+            >
+        </div>
+    `).join('');
+}
+
 function abrirModalCriarLote(){
     if (telaAtual !== "enviando") return;
 
-    const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
-    if (totalEnviando === 0){
+    const grupos = obterGruposCriacaoLote();
+    if (grupos.length === 0){
         alert("Não há itens na tela Enviando para criar o lote.");
         return;
     }
 
-    document.getElementById("numeroLoteFilete").value = "";
     document.getElementById("tipoLoteFilete").value = "Diversos";
+    renderizarCamposLotesCriacao();
     document.getElementById("modalFilete").style.display = "flex";
 }
 
 function criarLote(){
-    const numeroLote = document.getElementById("numeroLoteFilete").value.trim();
     const tipoLote = document.getElementById("tipoLoteFilete").value;
+    const inputs = Array.from(document.querySelectorAll("#camposLotesCriacao .input-lote-grupo"));
 
-    if (!numeroLote){
-        alert("Informe o número do lote.");
+    if (!inputs.length){
+        alert("Não há grupos disponíveis para criar os lotes.");
         return;
+    }
+
+    const lotes = [];
+
+    for (const input of inputs){
+        const numeroLote = input.value.trim();
+        const conta = input.dataset.conta || "SEM CONTA";
+        const tipo = input.dataset.tipo || tipoLote;
+
+        if (!numeroLote){
+            alert(`Informe o número do lote para ${conta} / ${tipo}.`);
+            input.focus();
+            return;
+        }
+
+        lotes.push({
+            conta: conta,
+            tipo: tipo,
+            numero_lote: numeroLote
+        });
     }
 
     fetch("/criar-lote-enviando", {
@@ -2364,8 +2449,8 @@ function criarLote(){
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            numero_lote: numeroLote,
-            tipo_lote: tipoLote
+            tipo_lote: tipoLote,
+            lotes: lotes
         })
     })
     .then(res => res.json())
@@ -2376,7 +2461,7 @@ function criarLote(){
         }
 
         fecharModalCriarLote();
-        alert("Lote criado com sucesso.");
+        alert("Lotes criados com sucesso.");
         location.reload();
     })
     .catch(() => {
@@ -2568,21 +2653,18 @@ if (
         <h3>Criar Lote</h3>
 
         <div class="filete-info">
-            Informe o número do lote que será usado para salvar os itens da tela <strong>Enviando</strong>.
-        </div>
-
-        <div>
-            <label for="numeroLoteFilete"><strong>Nº do lote</strong></label>
-            <input type="text" id="numeroLoteFilete" placeholder="Ex: 59618562">
+            Informe o número do lote para cada conta e tipo que será salvo a partir da tela <strong>Enviando</strong>.
         </div>
 
         <div>
             <label for="tipoLoteFilete"><strong>Tipo do lote</strong></label>
-            <select id="tipoLoteFilete">
+            <select id="tipoLoteFilete" onchange="renderizarCamposLotesCriacao()">
                 <option value="Diversos">Diversos</option>
                 <option value="Caixa">Caixa</option>
             </select>
         </div>
+
+        <div id="camposLotesCriacao"></div>
 
         <div class="modal-botoes">
             <button type="button" onclick="criarLote()">Criar lote</button>

@@ -408,7 +408,7 @@
                     </div>
                     <div class="badge-etapa">{{ lote['etapa_atual'] or '-' }}</div>
                     <div style="margin-top:14px;">
-                        <a href="/picking/{{ lote['numero_lote'] }}" class="btn-coletar" style="display:inline-block; text-align:center; box-sizing:border-box; text-decoration:none;">Abrir picking</a>
+                        <a href="{{ url_for('picking_lote', numero_lote=lote['numero_lote']) }}" class="btn-coletar" style="display:inline-block; text-align:center; box-sizing:border-box; text-decoration:none;">Abrir picking</a>
                     </div>
                 </div>
             {% endfor %}

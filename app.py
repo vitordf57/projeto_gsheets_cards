@@ -48,6 +48,96 @@ def carregar_dados_base():
     return cache_dados.copy()
 
 
+def montar_mapa_base_por_codigo_sku(df_base):
+    mapa_codigo = {}
+    mapa_sku = {}
+
+    if df_base is None or df_base.empty:
+        return mapa_codigo, mapa_sku
+
+    df_base = df_base.fillna("").copy()
+
+    for _, row in df_base.iterrows():
+        dados = {str(col): row[col] for col in df_base.columns}
+
+        codigo = str(row.get("Código do Anúncio", "") or "").strip()
+        sku = str(row.get("SKU", "") or "").strip()
+
+        if codigo and codigo not in mapa_codigo:
+            mapa_codigo[codigo] = dados
+
+        if sku and sku not in mapa_sku:
+            mapa_sku[sku] = dados
+
+    return mapa_codigo, mapa_sku
+
+
+def enriquecer_itens_lote_com_base(itens):
+    if not itens:
+        return itens
+
+    try:
+        df_base = carregar_dados_base()
+    except:
+        return itens
+
+    mapa_codigo, mapa_sku = montar_mapa_base_por_codigo_sku(df_base)
+
+    itens_enriquecidos = []
+    for item in itens:
+        item_dict = dict(item)
+
+        codigo = str(item_dict.get("codigo", "") or "").strip()
+        sku = str(item_dict.get("sku", "") or "").strip()
+
+        base_item = mapa_codigo.get(codigo) or mapa_sku.get(sku) or {}
+
+        dados_json_atual = {}
+        try:
+            dados_json_atual = json.loads(item_dict.get("dados_json") or "{}")
+            if not isinstance(dados_json_atual, dict):
+                dados_json_atual = {}
+        except:
+            dados_json_atual = {}
+
+        dados_mesclados = {}
+        if base_item:
+            for k, v in base_item.items():
+                dados_mesclados[str(k)] = v
+        for k, v in dados_json_atual.items():
+            if v not in [None, "", []]:
+                dados_mesclados[str(k)] = v
+
+        if codigo:
+            dados_mesclados["Código do Anúncio"] = codigo
+        if sku:
+            dados_mesclados["SKU"] = sku
+        if item_dict.get("titulo"):
+            dados_mesclados["Título"] = item_dict.get("titulo")
+        elif dados_mesclados.get("Título"):
+            item_dict["titulo"] = dados_mesclados.get("Título")
+
+        if item_dict.get("nickname"):
+            dados_mesclados["Nickname"] = item_dict.get("nickname")
+        elif dados_mesclados.get("Nickname"):
+            item_dict["nickname"] = dados_mesclados.get("Nickname")
+
+        if item_dict.get("endereco"):
+            dados_mesclados["ENDEREÇO"] = item_dict.get("endereco")
+        elif dados_mesclados.get("ENDEREÇO"):
+            item_dict["endereco"] = dados_mesclados.get("ENDEREÇO")
+
+        if item_dict.get("lote_filete"):
+            dados_mesclados["LOTE"] = item_dict.get("lote_filete")
+        elif dados_mesclados.get("LOTE"):
+            item_dict["lote_filete"] = dados_mesclados.get("LOTE")
+
+        item_dict["dados_json"] = json.dumps(dados_mesclados, ensure_ascii=False)
+        itens_enriquecidos.append(item_dict)
+
+    return itens_enriquecidos
+
+
 def carregar_csv_com_cache(url, tipo="dados"):
     global cache_dados, cache_dados_ts, cache_full, cache_full_ts
 
@@ -1061,6 +1151,8 @@ def metricas_full():
         """)
         itens_snapshot = cursor.fetchall()
 
+    itens_snapshot = enriquecer_itens_lote_com_base([dict(item) for item in itens_snapshot])
+
     lotes_itens_map = {}
     for item in itens_snapshot:
         numero_lote = item["numero_lote"]
@@ -1803,11 +1895,8 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
 def criar_lote_enviando():
     data = request.get_json() or {}
 
-    numero_lote = str(data.get("numero_lote", "")).strip()
-    tipo_lote = str(data.get("tipo_lote", "Diversos")).strip() or "Diversos"
-
-    if not numero_lote:
-        return jsonify({"ok": False, "erro": "Informe um número de lote válido."}), 400
+    tipo_lote_padrao = str(data.get("tipo_lote", "Diversos")).strip() or "Diversos"
+    lotes_config = data.get("lotes", []) or []
 
     df = carregar_dados_base()
 
@@ -1833,26 +1922,76 @@ def criar_lote_enviando():
         "Código do Anúncio",
         "SKU",
         "Título",
-        "ENDEREÇO"
+        "ENDEREÇO",
+        "SELO"
     ]
 
     for col in colunas_necessarias:
         if col not in df.columns:
             df[col] = ""
 
-    df["Lote"] = f"Lote {tipo_lote} - #{numero_lote}" if numero_lote else f"Lote {tipo_lote}"
+    def classificar_tipo_item(row):
+        selo = str(row.get("SELO", "") or "").strip().upper()
+        if "CAIXA" in selo:
+            return "Caixa"
+        if "DIVERS" in selo:
+            return "Diversos"
+        return tipo_lote_padrao
 
-    if "ENDEREÇO" in df.columns:
-        df = df.sort_values(by="ENDEREÇO", kind="stable")
+    df["CONTA_LOTE"] = df["Nickname"].astype(str).str.strip()
+    df["CONTA_LOTE"] = df["CONTA_LOTE"].replace("", "SEM CONTA")
+    df["TIPO_LOTE_GRUPO"] = df.apply(classificar_tipo_item, axis=1)
 
-    try:
-        registrar_lote_conferencia(numero_lote, tipo_lote, df)
-        atualizar_lote_envio_existente(numero_lote, tipo_lote, df)
-        salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df)
-    except ValueError as e:
-        return jsonify({"ok": False, "erro": str(e)}), 400
+    if not isinstance(lotes_config, list) or not lotes_config:
+        return jsonify({"ok": False, "erro": "Informe os números dos lotes para cada conta e tipo."}), 400
 
-    return jsonify({"ok": True})
+    mapa_lotes = {}
+    numeros_utilizados = set()
+
+    for item in lotes_config:
+        conta = str((item or {}).get("conta", "") or "").strip() or "SEM CONTA"
+        tipo = str((item or {}).get("tipo", "") or "").strip() or tipo_lote_padrao
+        numero_lote = str((item or {}).get("numero_lote", "") or "").strip()
+
+        if not numero_lote:
+            return jsonify({"ok": False, "erro": f"Informe o número do lote para {conta} / {tipo}."}), 400
+
+        numero_normalizado = numero_lote.upper()
+        if numero_normalizado in numeros_utilizados:
+            return jsonify({"ok": False, "erro": f"O número de lote {numero_lote} foi informado mais de uma vez."}), 400
+
+        numeros_utilizados.add(numero_normalizado)
+        mapa_lotes[(conta.upper(), tipo.upper())] = numero_lote
+
+    grupos = []
+    for (conta, tipo), df_grupo in df.groupby(["CONTA_LOTE", "TIPO_LOTE_GRUPO"], sort=True):
+        chave = (str(conta).upper(), str(tipo).upper())
+        numero_lote = mapa_lotes.get(chave)
+
+        if not numero_lote:
+            return jsonify({"ok": False, "erro": f"Faltou informar o número do lote para {conta} / {tipo}."}), 400
+
+        df_lote = df_grupo.copy()
+        df_lote["Lote"] = f"Lote {tipo} - #{numero_lote}"
+
+        if "ENDEREÇO" in df_lote.columns:
+            df_lote = df_lote.sort_values(by="ENDEREÇO", kind="stable")
+
+        try:
+            registrar_lote_conferencia(numero_lote, tipo, df_lote)
+            atualizar_lote_envio_existente(numero_lote, tipo, df_lote)
+            salvar_historico_e_finalizar_envio(numero_lote, tipo, df_lote)
+        except ValueError as e:
+            return jsonify({"ok": False, "erro": str(e)}), 400
+
+        grupos.append({
+            "numero_lote": numero_lote,
+            "conta": conta,
+            "tipo": tipo,
+            "itens": int(len(df_lote))
+        })
+
+    return jsonify({"ok": True, "lotes_criados": grupos})
 
 def montar_excel_filete_antigo(df, numero_lote, tipo_lote):
     output = BytesIO()
@@ -2046,10 +2185,12 @@ def carregar_itens_snapshot_lote(numero_lote):
         """, (numero_lote,))
         itens = [dict(row) for row in cursor.fetchall()]
 
-        for item in itens:
-            item["dados_json"] = item.get("dados_json") or "{}"
-
     conn.close()
+
+    for item in itens:
+        item["dados_json"] = item.get("dados_json") or "{}"
+
+    itens = enriquecer_itens_lote_com_base(itens)
     return itens
 
 def montar_excel_filete_lote(df, numero_lote, tipo_lote):
@@ -2345,96 +2486,99 @@ def salvar_comentario_mlb():
 
 @app.route("/salvar-lote-envio", methods=["POST"])
 def salvar_lote_envio():
-    data = request.json or {}
+    data = request.json if request.is_json else request.form
 
-    numero_lote = str(data.get("numero_lote", "")).strip()
-    tipo_lote = str(data.get("tipo_lote", "")).strip() or "Diversos"
-    total_mlbs = int(data.get("total_mlbs", 0) or 0)
-    total_pecas = int(data.get("total_pecas", 0) or 0)
-    status = str(data.get("status", "CRIADO")).strip() or "CRIADO"
-    responsavel = str(data.get("responsavel", "")).strip()
-    transportadora = str(data.get("transportadora", "")).strip()
-    observacao = str(data.get("observacao", "")).strip()
-    prioridade = str(data.get("prioridade", "")).strip()
-    data_envio = str(data.get("data_envio", "")).strip()
-    status_expedicao = str(data.get("status_expedicao", "AGUARDANDO")).strip() or "AGUARDANDO"
-    status_ecommerce = str(data.get("status_ecommerce", "AGUARDANDO")).strip() or "AGUARDANDO"
-    origem = str(data.get("origem", "MANUAL")).strip() or "MANUAL"
+    numero_lote = str(data.get("numero_lote", "") or "").strip()
+    tipo_lote = str(data.get("tipo_lote", "") or "").strip() or "Diversos"
+    total_mlbs = int(float(data.get("total_mlbs", 0) or 0))
+    total_pecas = int(float(data.get("total_pecas", 0) or 0))
+    observacao = str(data.get("observacao", "") or "").strip()
+    origem = str(data.get("origem", "MANUAL") or "MANUAL").strip() or "MANUAL"
+    etapa_atual = str(data.get("etapa_atual", "MLBS EM ANÁLISE") or "MLBS EM ANÁLISE").strip()
+    data_coleta_agendada = str(data.get("data_coleta_agendada", "") or "").strip()
 
     if not numero_lote:
         return jsonify({"ok": False, "erro": "Número do lote é obrigatório."}), 400
 
     conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("SELECT numero_lote FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
     existe = cursor.fetchone()
 
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if existe:
+        timeline = carregar_timeline_json(existe["timeline_json"])
+        etapa_salva = (existe["etapa_atual"] or TIMELINE_ETAPAS[0]).strip() or TIMELINE_ETAPAS[0]
+        if not any(str(v or "").strip() for v in timeline.values()):
+            timeline[etapa_salva] = existe["data_criacao"] or agora
+        timeline = sincronizar_timeline_ate_etapa(timeline, etapa_atual, agora)
+
         cursor.execute("""
             UPDATE lotes_envio
             SET tipo_lote = ?,
                 total_mlbs = ?,
                 total_pecas = ?,
-                status = ?,
-                responsavel = ?,
-                transportadora = ?,
                 observacao = ?,
-                prioridade = ?,
-                data_envio = ?,
-                status_expedicao = ?,
-                status_ecommerce = ?,
-                origem = ?
+                origem = ?,
+                etapa_atual = ?,
+                timeline_json = ?,
+                data_coleta_agendada = ?
             WHERE numero_lote = ?
         """, (
             tipo_lote,
             total_mlbs,
             total_pecas,
-            status,
-            responsavel,
-            transportadora,
             observacao,
-            prioridade,
-            data_envio,
-            status_expedicao,
-            status_ecommerce,
             origem,
+            etapa_atual,
+            timeline_para_json(timeline),
+            data_coleta_agendada,
             numero_lote
         ))
     else:
+        timeline = timeline_vazio()
+        timeline[etapa_atual] = agora
+
         cursor.execute("""
             INSERT INTO lotes_envio (
-                numero_lote, tipo_lote, total_mlbs, total_pecas, status,
-                responsavel, transportadora, observacao, prioridade,
-                data_envio, status_expedicao, status_ecommerce, origem, data_criacao
+                numero_lote, tipo_lote, total_mlbs, total_pecas,
+                status, responsavel, transportadora, observacao,
+                prioridade, data_envio, status_expedicao, status_ecommerce,
+                origem, data_criacao, timeline_json, etapa_atual, data_coleta_agendada
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             numero_lote,
             tipo_lote,
             total_mlbs,
             total_pecas,
-            status,
-            responsavel,
-            transportadora,
+            "CRIADO",
+            "",
+            "",
             observacao,
-            prioridade,
-            data_envio,
-            status_expedicao,
-            status_ecommerce,
+            "",
+            "",
+            "AGUARDANDO",
+            "AGUARDANDO",
             origem,
-            agora
+            agora,
+            timeline_para_json(timeline),
+            etapa_atual,
+            data_coleta_agendada
         ))
+
+    atualizar_statuss_por_etapa(cursor, numero_lote, etapa_atual)
 
     conn.commit()
     conn.close()
 
-    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
         return jsonify({"ok": True})
 
-    return render_template("redirect.html", target_url="/metricas-full")
+    return redirect("/metricas-full")
 
 
 @app.route("/debug-comentarios")
