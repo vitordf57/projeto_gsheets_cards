@@ -986,10 +986,37 @@ def index():
 def home():
     return render_template("home.html")
 
+def garantir_tabela_lotes_envio_snapshot():
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_envio_itens_snapshot (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            tipo_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT,
+            nickname TEXT,
+            quantidade INTEGER DEFAULT 0,
+            endereco TEXT,
+            lote_filete TEXT,
+            estrategia TEXT DEFAULT '',
+            motivo_envio TEXT DEFAULT '',
+            comentario_mlb TEXT DEFAULT '',
+            dados_json TEXT,
+            data_geracao TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
 
 @app.route("/metricas-full")
 def metricas_full():
+    garantir_tabela_lotes_envio_snapshot()
+
     conn = sqlite3.connect("status.db")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
