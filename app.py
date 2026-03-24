@@ -1035,6 +1035,32 @@ def metricas_full():
     """)
     itens_snapshot = cursor.fetchall()
 
+    if not itens_snapshot:
+        cursor.execute("""
+            SELECT
+                li.numero_lote,
+                COALESCE(le.tipo_lote, lc.tipo_lote, '') AS tipo_lote,
+                li.codigo,
+                li.sku,
+                li.titulo,
+                '' AS nickname,
+                li.quantidade_esperada AS quantidade,
+                li.endereco,
+                li.lote_filete,
+                '' AS estrategia,
+                '' AS motivo_envio,
+                '' AS comentario_mlb,
+                '' AS dados_json,
+                COALESCE(le.data_criacao, lc.data_criacao, '') AS data_geracao
+            FROM lotes_itens li
+            LEFT JOIN lotes_envio le
+                ON le.numero_lote = li.numero_lote
+            LEFT JOIN lotes_conferencia lc
+                ON lc.numero_lote = li.numero_lote
+            ORDER BY li.numero_lote DESC, li.endereco, li.sku, li.codigo
+        """)
+        itens_snapshot = cursor.fetchall()
+
     lotes_itens_map = {}
     for item in itens_snapshot:
         numero_lote = item["numero_lote"]
@@ -1120,9 +1146,6 @@ def metricas_full():
         timeline_etapas=TIMELINE_ETAPAS,
         formatar_data_hora_br=formatar_data_hora_br
     )
-
-
-
 
 @app.route("/picking")
 def picking_lista():
@@ -1996,9 +2019,38 @@ def carregar_itens_snapshot_lote(numero_lote):
     """, (numero_lote,))
     itens = [dict(row) for row in cursor.fetchall()]
 
+    if not itens:
+        cursor.execute("""
+            SELECT
+                li.numero_lote,
+                COALESCE(le.tipo_lote, lc.tipo_lote, '') AS tipo_lote,
+                li.codigo,
+                li.sku,
+                li.titulo,
+                '' AS nickname,
+                li.quantidade_esperada AS quantidade,
+                li.endereco,
+                li.lote_filete,
+                '' AS estrategia,
+                '' AS motivo_envio,
+                '' AS comentario_mlb,
+                '' AS dados_json,
+                COALESCE(le.data_criacao, lc.data_criacao, '') AS data_geracao
+            FROM lotes_itens li
+            LEFT JOIN lotes_envio le
+                ON le.numero_lote = li.numero_lote
+            LEFT JOIN lotes_conferencia lc
+                ON lc.numero_lote = li.numero_lote
+            WHERE li.numero_lote = ?
+            ORDER BY li.endereco, li.sku, li.codigo
+        """, (numero_lote,))
+        itens = [dict(row) for row in cursor.fetchall()]
+
+        for item in itens:
+            item["dados_json"] = item.get("dados_json") or "{}"
+
     conn.close()
     return itens
-
 
 def montar_excel_filete_lote(df, numero_lote, tipo_lote):
     return montar_excel_filete_antigo(df, numero_lote, tipo_lote)
@@ -2631,6 +2683,26 @@ def api_full_distribuicao():
             "erro": f"Erro ao carregar distribuição do Full: {str(e)}"
         }), 500
 
+@app.route("/excluir-lote/<numero_lote>", methods=["GET", "POST"])
+def excluir_lote(numero_lote):
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("DELETE FROM lotes_conferencia WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("DELETE FROM lotes_itens WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("DELETE FROM conferencia_itens WHERE numero_lote = ?", (numero_lote,))
+    cursor.execute("DELETE FROM lotes_envio_itens_snapshot WHERE numero_lote = ?", (numero_lote,))
+
+    try:
+        cursor.execute("DELETE FROM lotes_picking_itens WHERE numero_lote = ?", (numero_lote,))
+    except:
+        pass
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/metricas-full")
 
 @app.route("/api/full-distribuicao-detalhe")
 def api_full_distribuicao_detalhe():

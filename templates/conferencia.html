@@ -234,6 +234,12 @@
                     <strong>Criado em:</strong> {{ lote['data_criacao'] or '-' }}
                 </div>
 
+        <a class="btn-card btn-editar"
+   href="/excluir-lote/{{ lote['numero_lote'] }}"
+   onclick="return confirm('Tem certeza que deseja excluir este lote?')">
+    🗑 Excluir Lote
+</a>
+
                 <div class="resumo-grid">
                     <div class="kpi">
                         <div class="kpi-titulo">Total de itens</div>
