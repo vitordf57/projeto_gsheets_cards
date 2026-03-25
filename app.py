@@ -459,6 +459,7 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         endereco = str(item.get("ENDEREÇO", "") or item.get("endereco", "") or "")
         titulo = str(item.get("Título", "") or item.get("titulo", "") or "")
         conta = str(item.get("Nickname", "") or item.get("nickname", "") or "")
+        selo = str(item.get("SELO", "") or item.get("selo", "") or "")
         quantidade_base = item.get("Enviar", item.get("quantidade", 0))
         try:
             quantidade = int(float(quantidade_base or 0))
@@ -472,20 +473,21 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         cursor.execute(
             """
             INSERT INTO lotes_picking_itens (
-                numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em
+                numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(numero_lote, codigo) DO UPDATE SET
                 sku = excluded.sku,
                 endereco = excluded.endereco,
                 titulo = excluded.titulo,
                 conta = excluded.conta,
+                selo = excluded.selo,
                 quantidade = excluded.quantidade,
                 observacao = ?,
                 coletado = ?,
                 coletado_em = ?
             """,
-            (numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
+            (numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
         )
 
     conn.commit()
@@ -968,6 +970,7 @@ def init_db():
             endereco TEXT,
             titulo TEXT DEFAULT '',
             conta TEXT DEFAULT '',
+            selo TEXT DEFAULT '',
             quantidade INTEGER DEFAULT 0,
             observacao TEXT DEFAULT '',
             coletado INTEGER DEFAULT 0,
@@ -1002,6 +1005,9 @@ def init_db():
 
     if "conta" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN conta TEXT DEFAULT ''")
+
+    if "selo" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN selo TEXT DEFAULT ''")
 
     if "observacao" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN observacao TEXT DEFAULT ''")
@@ -1314,7 +1320,7 @@ def picking_lote(numero_lote):
             sincronizar_picking_itens(numero_lote, df_boot)
 
     cursor.execute("""
-        SELECT numero_lote, codigo, sku, endereco, titulo, conta, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
+        SELECT numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
         FROM lotes_picking_itens
         WHERE numero_lote = ?
         ORDER BY coletado ASC, endereco ASC, sku ASC, codigo ASC

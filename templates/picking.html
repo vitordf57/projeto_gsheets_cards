@@ -3,8 +3,8 @@
 {% block content %}
 <style>
 .picking-wrap{
-    padding:16px;
-    max-width:760px;
+    padding:24px;
+    max-width:1280px;
     margin:0 auto;
 }
 
@@ -13,18 +13,20 @@
 }
 
 .picking-topo h1{
-    margin:0 0 6px 0;
-    font-size:28px;
+    margin:0 0 8px 0;
+    font-size:40px;
 }
 
 .picking-topo p{
     margin:0;
     color:#64748b;
+    font-size:18px;
 }
 
 .picking-grid-lotes{
     display:grid;
-    gap:14px;
+    gap:18px;
+    grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));
 }
 
 .card-lote-picking,
@@ -35,7 +37,7 @@
     background:white;
     border-radius:18px;
     box-shadow:0 4px 14px rgba(0,0,0,0.08);
-    padding:16px;
+    padding:24px;
 }
 
 .card-lote-picking a{
@@ -43,7 +45,7 @@
 }
 
 .lote-linha-titulo{
-    font-size:22px;
+    font-size:30px;
     font-weight:bold;
     color:#111827;
     margin-bottom:8px;
@@ -51,18 +53,18 @@
 
 .lote-linha-sub{
     color:#475569;
-    line-height:1.6;
-    font-size:14px;
+    line-height:1.7;
+    font-size:18px;
 }
 
 .badge-etapa{
     display:inline-block;
-    margin-top:10px;
-    padding:8px 12px;
+    margin-top:12px;
+    padding:10px 16px;
     border-radius:999px;
     background:#ede9fe;
     color:#6d28d9;
-    font-size:12px;
+    font-size:15px;
     font-weight:bold;
 }
 
@@ -79,11 +81,11 @@
 }
 
 .resumo-grid{
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns:repeat(4, minmax(180px, 1fr));
 }
 
 .grid-manual{
-    grid-template-columns:1fr 180px;
+    grid-template-columns:2fr 1fr;
 }
 
 .grid-item-ref{
@@ -95,15 +97,15 @@
 .item-caixa-ref{
     background:#f8fafc;
     border:1px solid #e5e7eb;
-    border-radius:14px;
-    padding:12px;
+    border-radius:18px;
+    padding:18px;
 }
 
 .resumo-mini strong,
 .label-manual,
 .item-label{
     display:block;
-    font-size:12px;
+    font-size:15px;
     text-transform:uppercase;
     color:#64748b;
     font-weight:bold;
@@ -111,29 +113,29 @@
 }
 
 .resumo-mini span{
-    font-size:24px;
+    font-size:34px;
     font-weight:bold;
     color:#111827;
 }
 
-.input-manual,
+ .input-manual,
 .textarea-manual{
     width:100%;
     border:1px solid #cbd5e1;
-    border-radius:12px;
-    padding:12px;
-    font-size:16px;
+    border-radius:16px;
+    padding:18px;
+    font-size:24px;
     box-sizing:border-box;
     outline:none;
 }
 
 .textarea-manual{
-    min-height:100px;
+    min-height:170px;
     resize:vertical;
 }
 
 .item-valor-principal{
-    font-size:20px;
+    font-size:30px;
     font-weight:bold;
     color:#111827;
     margin:2px 0 0 0;
@@ -141,7 +143,7 @@
 }
 
 .item-valor-ref{
-    font-size:18px;
+    font-size:28px;
     font-weight:bold;
     color:#111827;
     word-break:break-word;
@@ -159,8 +161,8 @@
 
 .badge-ref{
     display:inline-block;
-    margin-top:10px;
-    padding:8px 12px;
+    margin-top:12px;
+    padding:10px 16px;
     border-radius:999px;
     font-size:12px;
     font-weight:bold;
@@ -183,14 +185,14 @@
 
 .btn-coletar{
     width:100%;
-    margin-top:14px;
+    margin-top:18px;
     border:none;
-    border-radius:14px;
-    padding:14px 16px;
+    border-radius:20px;
+    padding:22px 24px;
     background:#2563eb;
     color:white;
     font-weight:bold;
-    font-size:18px;
+    font-size:36px;
     cursor:pointer;
 }
 
@@ -204,10 +206,11 @@
 .alerta-erro,
 .alerta-aviso{
     display:none;
-    margin-bottom:16px;
-    padding:14px 16px;
-    border-radius:14px;
+    margin-bottom:18px;
+    padding:18px 20px;
+    border-radius:18px;
     font-weight:bold;
+    font-size:20px;
 }
 
 .alerta-finalizado{
@@ -237,10 +240,11 @@
 
 .link-voltar{
     display:inline-block;
-    margin-bottom:16px;
+    margin-bottom:18px;
     text-decoration:none;
     color:#2563eb;
     font-weight:bold;
+    font-size:18px;
 }
 
 @media (max-width: 640px){
@@ -315,8 +319,13 @@
 
             <div class="grid-manual" style="margin-top:14px;">
                 <div class="campo-manual">
-                    <label class="label-manual" for="skuManual">SKU</label>
-                    <input type="text" id="skuManual" class="input-manual" placeholder="Digite ou bipar o SKU">
+                    <label class="label-manual" for="skuManual">SKU do lote</label>
+                    <select id="skuManual" class="input-manual">
+                        <option value="">Selecione por onde começar</option>
+                        {% for item in itens if not item['coletado'] and not item['divergencia'] %}
+                            <option value="{{ item['sku'] or '' }}">{{ item['sku'] or '-' }} | QTD {{ item['quantidade'] or 0 }} | {{ item['selo'] or '-' }} | {{ item['endereco'] or '-' }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="campo-manual">
                     <label class="label-manual" for="quantidadeManual">Quantidade coletada</label>
@@ -332,6 +341,10 @@
                     <div class="item-caixa-ref">
                         <div class="item-label">Endereço</div>
                         <div class="item-valor-ref" id="previewEndereco">-</div>
+                    </div>
+                    <div class="item-caixa-ref">
+                        <div class="item-label">Selo</div>
+                        <div class="item-valor-ref" id="previewSelo">-</div>
                     </div>
                     <div class="item-caixa-ref">
                         <div class="item-label">Quantidade esperada</div>
@@ -367,6 +380,10 @@
                         <div class="item-caixa-ref">
                             <div class="item-label">Endereço</div>
                             <div class="item-valor-ref">{{ item['endereco'] or '-' }}</div>
+                        </div>
+                        <div class="item-caixa-ref">
+                            <div class="item-label">Selo</div>
+                            <div class="item-valor-ref">{{ item['selo'] or '-' }}</div>
                         </div>
                         <div class="item-caixa-ref">
                             <div class="item-label">Conta</div>
@@ -456,6 +473,7 @@ function atualizarPreviewItem(){
 
     document.getElementById('previewTitulo').innerText = item ? (item.titulo || '-') : '-';
     document.getElementById('previewEndereco').innerText = item ? (item.endereco || '-') : '-';
+    document.getElementById('previewSelo').innerText = item ? (item.selo || '-') : '-';
     document.getElementById('previewQuantidade').innerText = item ? (item.quantidade || 0) : '0';
 }
 
@@ -543,6 +561,7 @@ function coletarManual(numeroLote){
     });
 }
 
+document.getElementById('skuManual').addEventListener('change', atualizarPreviewItem);
 document.getElementById('skuManual').addEventListener('input', atualizarPreviewItem);
 </script>
 {% endif %}
