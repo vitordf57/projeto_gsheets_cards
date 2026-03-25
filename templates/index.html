@@ -1043,10 +1043,6 @@ function restaurarFiltrosDaSessaoSeNecessario(){
     if (!urlParams.get("saudeFull") && estado.saudeFull) filtroUrlSaudeFull = estado.saudeFull;
     if (!urlParams.get("statusFullFiltro") && estado.statusFullFiltro) filtroUrlStatusFull = estado.statusFullFiltro;
 
-    const telaSessao = estado.tela || "principal";
-    if (!urlParams.get("tela") && ["principal", "enviando", "homologar", "naoEnviar"].includes(telaSessao)) {
-        telaAtual = telaSessao;
-    }
 }
 
 function atualizarBotoesAtivos(){

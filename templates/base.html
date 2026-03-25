@@ -165,7 +165,7 @@ body {
     }
 
     function montarLinkComFiltros(hrefBase) {
-        const CHAVES_PERMITIDAS = ["conta", "busca", "selo", "analise", "saude", "condicao", "lote", "filtroEspecial", "tela"];
+        const CHAVES_PERMITIDAS = ["conta", "busca", "selo", "analise", "saude", "condicao", "lote", "filtroEspecial", "magic", "cobertura", "full", "saudeFull", "statusFullFiltro"] ;
         const urlAtual = new URLSearchParams(window.location.search);
         const filtrosSessao = obterFiltrosSalvosSessao();
         const urlDestino = new URL(hrefBase, window.location.origin);
