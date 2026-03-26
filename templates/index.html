@@ -663,6 +663,111 @@ h1{ margin-bottom:15px; }
     margin-top:18px;
 }
 
+
+.sku-info-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.sku-chip-click{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:#eef4ff;
+    color:#244179;
+    border:1px solid #cfe0ff;
+    border-radius:999px;
+    padding:4px 10px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.sku-chip-click:hover{
+    background:#ddeaff;
+}
+
+.sku-info-mini{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#244179;
+    color:#fff;
+    font-size:12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    position:relative;
+}
+
+.sku-info-mini.tem-info{
+    background:#198754;
+}
+
+.whats-chat-box{
+    background:#e5ddd5;
+    border-radius:18px;
+    padding:14px;
+    min-height:260px;
+    max-height:360px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    border:1px solid #d7ccc8;
+}
+
+.whats-msg{
+    align-self:flex-end;
+    max-width:85%;
+    background:#dcf8c6;
+    border-radius:14px 14px 4px 14px;
+    padding:10px 12px 8px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.12);
+    word-break:break-word;
+}
+
+.whats-msg-texto{
+    font-size:14px;
+    color:#111827;
+    white-space:pre-wrap;
+}
+
+.whats-msg-hora{
+    margin-top:6px;
+    text-align:right;
+    font-size:11px;
+    color:#6b7280;
+}
+
+.whats-vazio{
+    color:#6b7280;
+    font-size:14px;
+    text-align:center;
+    margin:auto;
+}
+
+.whats-envio{
+    display:flex;
+    gap:10px;
+    align-items:flex-end;
+    margin-top:12px;
+}
+
+.whats-envio textarea{
+    flex:1;
+    min-height:80px;
+    max-height:120px;
+    resize:vertical;
+    margin-bottom:0;
+}
+
+.modal-comentario .modal-conteudo{
+    width:min(760px, 92vw);
+}
+
 .comentario-topo{
     width:45px;
     height:45px;
@@ -736,6 +841,35 @@ h1{ margin-bottom:15px; }
     border:none;
     border-radius:6px;
     cursor:pointer;
+}
+
+.btn-salvar-sku{
+    background:#ececec;
+    color:#111;
+    font-weight:600;
+}
+
+.btn-enviar-chat{
+    min-width:110px;
+    height:46px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,#25d366,#128c7e);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    box-shadow:0 8px 18px rgba(18,140,126,0.28);
+    transition:transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.btn-enviar-chat:hover{
+    transform:translateY(-1px);
+    box-shadow:0 10px 22px rgba(18,140,126,0.35);
+}
+
+.btn-enviar-chat:active{
+    transform:translateY(0);
+    box-shadow:0 5px 12px rgba(18,140,126,0.22);
 }
 
 .btn-fechar{
@@ -908,6 +1042,7 @@ const btnFiltroCritico = document.getElementById("btnFiltroCritico");
 let dadosOriginais = [];
 let comentariosSalvos = {};
 let comentariosMlb = {};
+let comentariosMlbChat = {};
 let filtroEspecial = "";
 let statusSalvos = {};
 
@@ -1764,6 +1899,64 @@ function aplicarFiltrosBase(){
     });
 }
 
+
+function escapeHtml(texto){
+    return String(texto || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function montarBubbleResumoComentario(codigo){
+    const historico = comentariosMlbChat[codigo] || [];
+    if (historico.length > 0) {
+        return `<span style="font-size:11px; background:#198754; color:#fff; border-radius:999px; padding:2px 7px; font-weight:bold;">${historico.length}</span>`;
+    }
+    if (comentariosMlb[codigo]) {
+        return `<span style="font-size:11px; background:#6c757d; color:#fff; border-radius:999px; padding:2px 7px; font-weight:bold;">1</span>`;
+    }
+    return "";
+}
+
+function montarMensagensComentario(codigo){
+    const mensagens = comentariosMlbChat[codigo] || [];
+    if (!mensagens.length) {
+        return '<div class="whats-vazio">Nenhum comentário ainda para este MLB.</div>';
+    }
+
+    return mensagens.map(msg => `
+        <div class="whats-msg">
+            <div class="whats-msg-texto">${escapeHtml(msg.mensagem || "")}</div>
+            <div class="whats-msg-hora">${escapeHtml(msg.data_hora_br || msg.data_hora || "")}</div>
+        </div>
+    `).join("");
+}
+
+function renderizarChatComentario(codigo){
+    const box = document.getElementById("listaMensagensMlb");
+    if (!box) return;
+    box.innerHTML = montarMensagensComentario(codigo);
+    box.scrollTop = box.scrollHeight;
+}
+
+function carregarChatComentario(codigo){
+    return fetch(`/comentarios-mlb-chat?codigo=${encodeURIComponent(codigo)}`)
+        .then(res => res.json())
+        .then(lista => {
+            comentariosMlbChat[codigo] = Array.isArray(lista) ? lista : [];
+            comentariosMlb[codigo] = comentariosMlbChat[codigo].length
+                ? (comentariosMlbChat[codigo][comentariosMlbChat[codigo].length - 1].mensagem || "")
+                : (comentariosMlb[codigo] || "");
+            renderizarChatComentario(codigo);
+        })
+        .catch(() => {
+            comentariosMlbChat[codigo] = comentariosMlbChat[codigo] || [];
+            renderizarChatComentario(codigo);
+        });
+}
+
 function montarHTMLCard(item){
     const sugestoes = sugestaoIA(item);
     const analise = analisarSKU(item);
@@ -1788,8 +1981,8 @@ function montarHTMLCard(item){
     </div>
 
     <div class="comentario-topo"
-        onclick="abrirComentario('${item["Código do Anúncio"]}', '${item["SKU"]}')">
-        💬
+        onclick="abrirComentarioMlb('${item["Código do Anúncio"]}', '${item["SKU"]}')">
+        💬 ${montarBubbleResumoComentario(codigo)}
     </div>
 </div>
         </div>
@@ -1802,7 +1995,7 @@ function montarHTMLCard(item){
             ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
         </div>
 
-        <div><strong>SKU:</strong> ${item["SKU"] || ""}</div>
+        <div><strong>SKU:</strong> <span class="sku-info-wrap"><span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span><span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span></span></div>
         <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
         <div><strong>Full:</strong> ${item["Full"] || ""}</div>
         <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
@@ -2238,22 +2431,34 @@ function salvarMotivo(){
     });
 }
 
-function abrirComentario(codigo, sku){
+function abrirComentarioSku(codigo, sku){
     skuAtualComentario = sku;
     codigoAtualComentario = codigo;
 
     document.getElementById("textoComentario").value = comentariosSalvos[sku] || "";
-    document.getElementById("textoComentarioMlb").value = comentariosMlb[codigo] || "";
-    document.getElementById("modalComentario").style.display = "flex";
+    document.getElementById("modalSkuInfo").style.display = "flex";
 }
 
-function fecharComentario(){
-    document.getElementById("modalComentario").style.display = "none";
+function fecharComentarioSku(){
+    document.getElementById("modalSkuInfo").style.display = "none";
+}
+
+function abrirComentarioMlb(codigo, sku){
+    skuAtualComentario = sku;
+    codigoAtualComentario = codigo;
+
+    document.getElementById("novaMensagemComentario").value = "";
+    renderizarChatComentario(codigo);
+    document.getElementById("modalComentarioMlb").style.display = "flex";
+    carregarChatComentario(codigo);
+}
+
+function fecharComentarioMlb(){
+    document.getElementById("modalComentarioMlb").style.display = "none";
 }
 
 function salvarComentarioModal(){
     const textoSku = document.getElementById("textoComentario").value;
-    const textoMlb = document.getElementById("textoComentarioMlb").value;
 
     fetch("/salvar-comentario", {
         method: "POST",
@@ -2262,19 +2467,39 @@ function salvarComentarioModal(){
             sku: skuAtualComentario,
             comentario: textoSku
         })
+    }).then(() => {
+        comentariosSalvos[skuAtualComentario] = textoSku;
+        renderCards();
+        alert("Informação do SKU salva com sucesso.");
     });
+}
+
+function enviarMensagemComentario(){
+    const campo = document.getElementById("novaMensagemComentario");
+    const texto = String(campo.value || "").trim();
+    if (!texto) return;
 
     fetch("/salvar-comentario-mlb", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
             codigo: codigoAtualComentario,
-            comentario: textoMlb
+            comentario: texto,
+            modo: "chat"
         })
-    }).then(() => {
-        comentariosSalvos[skuAtualComentario] = textoSku;
-        comentariosMlb[codigoAtualComentario] = textoMlb;
-        fecharComentario();
+    })
+    .then(res => res.json())
+    .then(retorno => {
+        if (!comentariosMlbChat[codigoAtualComentario]) comentariosMlbChat[codigoAtualComentario] = [];
+        comentariosMlbChat[codigoAtualComentario].push({
+            mensagem: texto,
+            data_hora: retorno.data_hora || "",
+            data_hora_br: retorno.data_hora_br || ""
+        });
+        comentariosMlb[codigoAtualComentario] = texto;
+        campo.value = "";
+        renderizarChatComentario(codigoAtualComentario);
+        renderCards();
     });
 }
 
@@ -2608,23 +2833,37 @@ if (
     statusSalvos = {};
     comentariosSalvos = {};
     comentariosMlb = {};
+    comentariosMlbChat = {};
     renderCards();
 });
 </script>
 
-<div id="modalComentario" class="modal-comentario">
+<div id="modalSkuInfo" class="modal-comentario">
     <div class="modal-conteudo">
         <h3>Informações do SKU</h3>
 
         <textarea id="textoComentario" placeholder="Digite as informações gerais do SKU aqui..."></textarea>
 
+        <div class="modal-botoes" style="justify-content:space-between; margin-top:10px;">
+            <button onclick="salvarComentarioModal()" class="btn-salvar-sku">Salvar info do SKU</button>
+            <button onclick="fecharComentarioSku()" class="btn-fechar">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalComentarioMlb" class="modal-comentario">
+    <div class="modal-conteudo">
         <h3>Comentário do MLB</h3>
 
-        <textarea id="textoComentarioMlb" placeholder="Digite o comentário específico deste anúncio aqui..."></textarea>
+        <div id="listaMensagensMlb" class="whats-chat-box"></div>
+
+        <div class="whats-envio">
+            <textarea id="novaMensagemComentario" placeholder="Digite a mensagem do comentário deste anúncio..."></textarea>
+            <button onclick="enviarMensagemComentario()" class="btn-enviar-chat">Enviar</button>
+        </div>
 
         <div class="modal-botoes">
-            <button onclick="salvarComentarioModal()">Salvar</button>
-            <button onclick="fecharComentario()" class="btn-fechar">Cancelar</button>
+            <button onclick="fecharComentarioMlb()" class="btn-fechar">Fechar</button>
         </div>
     </div>
 </div>

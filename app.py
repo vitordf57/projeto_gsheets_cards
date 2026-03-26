@@ -209,6 +209,10 @@ def agora_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def agora_iso():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def parse_data_hora(valor):
     texto = str(valor or "").strip()
     if not texto:
@@ -868,6 +872,25 @@ def init_db():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comentarios_mlb_chat (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT,
+            mensagem TEXT,
+            data_hora TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lote_comentarios_chat (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            mensagem TEXT,
+            data_hora TEXT
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS lotes_conferencia (
             numero_lote TEXT PRIMARY KEY,
             tipo_lote TEXT,
@@ -1017,6 +1040,25 @@ def init_db():
 
     if "divergencia" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia INTEGER DEFAULT 0")
+
+
+    cursor.execute("PRAGMA table_info(lotes_envio_itens_snapshot)")
+    colunas_snapshot = [col[1] for col in cursor.fetchall()]
+
+    if "sku_info" not in colunas_snapshot:
+        cursor.execute("ALTER TABLE lotes_envio_itens_snapshot ADD COLUMN sku_info TEXT DEFAULT ''")
+
+    cursor.execute("PRAGMA table_info(historico_filetes)")
+    colunas_historico = [col[1] for col in cursor.fetchall()]
+
+    if "sku_info" not in colunas_historico:
+        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN sku_info TEXT DEFAULT ''")
+
+    if "comentario_mlb" not in colunas_historico:
+        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN comentario_mlb TEXT DEFAULT ''")
+
+    if "estrategia" not in colunas_historico:
+        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN estrategia TEXT DEFAULT ''")
 
     if "divergencia_em" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia_em TEXT DEFAULT ''")
@@ -1831,6 +1873,34 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
     }
 
     cursor.execute("""
+        SELECT sku, comentario
+        FROM comentarios
+    """)
+    rows_comentarios_sku = cursor.fetchall()
+    mapa_comentarios_sku = {
+        str(row["sku"]): row["comentario"] or ""
+        for row in rows_comentarios_sku
+    }
+
+    cursor.execute("""
+        SELECT codigo, mensagem, data_hora
+        FROM comentarios_mlb_chat
+        ORDER BY id ASC
+    """)
+    rows_chat = cursor.fetchall()
+    mapa_chat_codigo = {}
+    for row in rows_chat:
+        mapa_chat_codigo.setdefault(str(row["codigo"]), []).append({
+            "mensagem": row["mensagem"] or "",
+            "data_hora": row["data_hora"] or ""
+        })
+
+    cursor.execute("""
+        DELETE FROM lote_comentarios_chat
+        WHERE numero_lote = ?
+    """, (numero_lote,))
+
+    cursor.execute("""
         DELETE FROM lotes_envio_itens_snapshot
         WHERE numero_lote = ?
     """, (numero_lote,))
@@ -1859,6 +1929,13 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         estrategia = mapa_status.get(codigo, {}).get("estrategia", "")
         motivo_envio = mapa_status.get(codigo, {}).get("motivo_envio", "") or estrategia
         comentario_mlb = mapa_comentarios_mlb.get(codigo, "")
+        sku_info = mapa_comentarios_sku.get(sku, "")
+
+        for msg in mapa_chat_codigo.get(codigo, []):
+            cursor.execute("""
+                INSERT INTO lote_comentarios_chat (numero_lote, codigo, mensagem, data_hora)
+                VALUES (?, ?, ?, ?)
+            """, (numero_lote, codigo, msg.get("mensagem", ""), msg.get("data_hora", "")))
 
         dados_item = {coluna: valor_json(valor) for coluna, valor in item.to_dict().items()}
 
@@ -1866,10 +1943,10 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             INSERT INTO lotes_envio_itens_snapshot (
                 numero_lote, tipo_lote, codigo, sku, titulo,
                 nickname, quantidade, endereco, lote_filete,
-                estrategia, motivo_envio, comentario_mlb,
+                estrategia, motivo_envio, comentario_mlb, sku_info,
                 dados_json, data_geracao
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             numero_lote,
             tipo_lote,
@@ -1883,6 +1960,7 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             estrategia,
             motivo_envio,
             comentario_mlb,
+            sku_info,
             json.dumps(dados_item, ensure_ascii=False),
             agora
         ))
@@ -1892,6 +1970,9 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             SET status = ?, quantidade = ?, estrategia = ?, motivo_envio = ?
             WHERE codigo = ?
         """, ("principal", 0, "", "", codigo))
+
+        cursor.execute("DELETE FROM comentarios_mlb WHERE codigo = ?", (codigo,))
+        cursor.execute("DELETE FROM comentarios_mlb_chat WHERE codigo = ?", (codigo,))
 
     conn.commit()
     conn.close()
@@ -2448,6 +2529,35 @@ def get_comentarios_mlb():
         return jsonify({})
 
 
+@app.route("/comentarios-mlb-chat")
+def get_comentarios_mlb_chat():
+    codigo = str(request.args.get("codigo", "") or "").strip()
+
+    try:
+        conn = sqlite3.connect("status.db")
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id, codigo, mensagem, data_hora
+            FROM comentarios_mlb_chat
+            WHERE codigo = ?
+            ORDER BY id ASC
+        """, (codigo,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        return jsonify([{
+            "id": row["id"],
+            "codigo": row["codigo"],
+            "mensagem": row["mensagem"] or "",
+            "data_hora": row["data_hora"] or "",
+            "data_hora_br": formatar_data_hora_br(row["data_hora"], vazio="")
+        } for row in rows])
+    except Exception:
+        return jsonify([])
+
+
 @app.route("/salvar-comentario", methods=["POST"])
 def salvar_comentario():
     data = request.json
@@ -2471,12 +2581,33 @@ def salvar_comentario():
 
 @app.route("/salvar-comentario-mlb", methods=["POST"])
 def salvar_comentario_mlb():
-    data = request.json
-    codigo = data.get("codigo")
-    comentario = data.get("comentario", "")
+    data = request.json or {}
+    codigo = str(data.get("codigo", "") or "").strip()
+    comentario = str(data.get("comentario", "") or "").strip()
+    modo = str(data.get("modo", "resumo") or "resumo").strip()
 
     conn = sqlite3.connect("status.db")
     cursor = conn.cursor()
+
+    if modo == "chat":
+        data_hora = agora_iso()
+
+        if comentario:
+            cursor.execute("""
+                INSERT INTO comentarios_mlb_chat (codigo, mensagem, data_hora)
+                VALUES (?, ?, ?)
+            """, (codigo, comentario, data_hora))
+
+            cursor.execute("""
+                INSERT INTO comentarios_mlb (codigo, comentario)
+                VALUES (?, ?)
+                ON CONFLICT(codigo) DO UPDATE SET comentario=excluded.comentario
+            """, (codigo, comentario))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"success": True, "data_hora": data_hora, "data_hora_br": formatar_data_hora_br(data_hora)})
 
     cursor.execute("""
         INSERT INTO comentarios_mlb (codigo, comentario)
