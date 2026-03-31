@@ -999,6 +999,10 @@ h1{ margin-bottom:15px; }
                 <button type="button" id="btnFiltroValor500" onclick="setFiltro('valor500')">Valor &gt; 500</button>
                 <button type="button" id="btnFiltroUnidades10" onclick="setFiltro('unidades10')">Unid &gt; 10</button>
                 <button type="button" id="btnFiltroCritico" onclick="setFiltro('critico')">-10 vendas + 500</button>
+                <button type="button" id="btnFiltroNaoOfereceMaisFull" onclick="setFiltroStatusFull('nao_ofereco_mais_full')">Não oferece mais no Full</button>
+                <button type="button" id="btnFiltroEstaNoFull" onclick="setFiltroStatusFull('esta_no_full')">Está no Full</button>
+                <button type="button" id="btnFiltroNuncaFoiFull" onclick="setFiltroStatusFull('nunca_foi_full')">Nunca foi no Full</button>
+                <button type="button" id="btnFiltroSemVenda" onclick="setFiltroStatusFull('sem_venda')">Sem venda</button>
                 <button type="button" onclick="limparFiltros()">Limpar</button>
     
             </div>
@@ -1038,6 +1042,10 @@ const btnFiltrosTopo = document.getElementById("btnFiltrosTopo");
 const btnFiltroValor500 = document.getElementById("btnFiltroValor500");
 const btnFiltroUnidades10 = document.getElementById("btnFiltroUnidades10");
 const btnFiltroCritico = document.getElementById("btnFiltroCritico");
+const btnFiltroNaoOfereceMaisFull = document.getElementById("btnFiltroNaoOfereceMaisFull");
+const btnFiltroEstaNoFull = document.getElementById("btnFiltroEstaNoFull");
+const btnFiltroNuncaFoiFull = document.getElementById("btnFiltroNuncaFoiFull");
+const btnFiltroSemVenda = document.getElementById("btnFiltroSemVenda");
 
 let dadosOriginais = [];
 let comentariosSalvos = {};
@@ -1047,7 +1055,7 @@ let filtroEspecial = "";
 let statusSalvos = {};
 
 const estrategiasNaoEnvio = [
-"30+7 - no full = enviar",
+"30+7",
 "Não temos estoque suficiente",
 "SKU divergente",
 "MLB divergente",
@@ -1056,14 +1064,19 @@ const estrategiasNaoEnvio = [
 "Compras (Matheus)",
 "Compras (Victor)",
 "TESTE diretoria",
-"Otimização geral (arthur, matheus e angela)",
 "TESTE",
 "ENVIAR TRACIONAR",
-"NAO ENVIAR",
 "SOMENTE GORDURA DE 7 DIAS",
 "ESTOQUE SUFICIENTE",
 "REPOR VENDAS 30 DIAS",
-"30+15 - no full = enviar"
+"30+15",
+"NAO COMPENSA ENVIAR $",
+"30+GORDURA",
+"SEM VENDA",
+"SEM ESTOQUE NA 4i",
+"REMANU",
+"OUTRO MLB MELHOR PERFORMADO",
+"AQUECER MLB"
 ];
 
 const motivosEnvio = [...estrategiasNaoEnvio];
@@ -1211,6 +1224,22 @@ function atualizarBotoesAtivos(){
 
     if (btnFiltroCritico){
         btnFiltroCritico.classList.toggle("ativo", filtroEspecial === "critico");
+    }
+
+    if (btnFiltroNaoOfereceMaisFull){
+        btnFiltroNaoOfereceMaisFull.classList.toggle("ativo", filtroUrlStatusFull === "nao_ofereco_mais_full");
+    }
+
+    if (btnFiltroEstaNoFull){
+        btnFiltroEstaNoFull.classList.toggle("ativo", filtroUrlStatusFull === "esta_no_full");
+    }
+
+    if (btnFiltroNuncaFoiFull){
+        btnFiltroNuncaFoiFull.classList.toggle("ativo", filtroUrlStatusFull === "nunca_foi_full");
+    }
+
+    if (btnFiltroSemVenda){
+        btnFiltroSemVenda.classList.toggle("ativo", filtroUrlStatusFull === "sem_venda");
     }
 }
 
@@ -1763,6 +1792,12 @@ function setFiltro(tipo){
     renderCards();
 }
 
+function setFiltroStatusFull(tipo){
+    filtroUrlStatusFull = (filtroUrlStatusFull === tipo) ? "" : tipo;
+    salvarFiltrosNaSessao();
+    renderCards();
+}
+
 function limparFiltros(){
     document.querySelectorAll(".menu select,.menu input").forEach(e => e.value = "");
     filtroEspecial = "";
@@ -1878,6 +1913,19 @@ function aplicarFiltrosBase(){
             const full = String(item["Full"] || "").trim().toUpperCase();
 
             if (observacaoMeli === "Você deixou de oferecer o Full." || full === "NO FULL") return false;
+        }
+
+        if (filtroUrlStatusFull === "sem_venda") {
+            const unidadesVendidas = textoNormalizado(
+                item["Unidades Vendidas"] ||
+                item["unidades vendidas"] ||
+                item["UNIDADES VENDIDAS"] ||
+                item["Unidades vendidas"] ||
+                item["UNIDADE VENDIDA"] ||
+                ""
+            );
+
+            if (unidadesVendidas !== "SEM VENDA") return false;
         }
 
         if (filtroUrlCobertura === "baixo30"){

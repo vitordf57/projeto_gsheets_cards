@@ -462,6 +462,7 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         sku = str(item.get("SKU", "") or item.get("sku", "") or "")
         endereco = str(item.get("ENDEREÇO", "") or item.get("endereco", "") or "")
         titulo = str(item.get("Título", "") or item.get("titulo", "") or "")
+        produto = str(item.get("PRODUTO", "") or item.get("produto", "") or titulo or "")
         conta = str(item.get("Nickname", "") or item.get("nickname", "") or "")
         selo = str(item.get("SELO", "") or item.get("selo", "") or "")
         quantidade_base = item.get("Enviar", item.get("quantidade", 0))
@@ -477,13 +478,14 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         cursor.execute(
             """
             INSERT INTO lotes_picking_itens (
-                numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em
+                numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(numero_lote, codigo) DO UPDATE SET
                 sku = excluded.sku,
                 endereco = excluded.endereco,
                 titulo = excluded.titulo,
+                produto = excluded.produto,
                 conta = excluded.conta,
                 selo = excluded.selo,
                 quantidade = excluded.quantidade,
@@ -491,7 +493,7 @@ def sincronizar_picking_itens(numero_lote, df_lote):
                 coletado = ?,
                 coletado_em = ?
             """,
-            (numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
+            (numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
         )
 
     conn.commit()
@@ -992,6 +994,7 @@ def init_db():
             sku TEXT,
             endereco TEXT,
             titulo TEXT DEFAULT '',
+            produto TEXT DEFAULT '',
             conta TEXT DEFAULT '',
             selo TEXT DEFAULT '',
             quantidade INTEGER DEFAULT 0,
@@ -1025,6 +1028,9 @@ def init_db():
 
     if "titulo" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN titulo TEXT DEFAULT ''")
+
+    if "produto" not in colunas_picking:
+        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN produto TEXT DEFAULT ''")
 
     if "conta" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN conta TEXT DEFAULT ''")
@@ -1362,7 +1368,7 @@ def picking_lote(numero_lote):
             sincronizar_picking_itens(numero_lote, df_boot)
 
     cursor.execute("""
-        SELECT numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
+        SELECT numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
         FROM lotes_picking_itens
         WHERE numero_lote = ?
         ORDER BY coletado ASC, endereco ASC, sku ASC, codigo ASC
@@ -1714,6 +1720,100 @@ def exportar_excel():
         output,
         as_attachment=True,
         download_name="relatorio_envio.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@app.route("/exportar-excel-estrategia")
+def exportar_excel_estrategia():
+    estrategia = str(request.args.get("estrategia", "") or "").strip()
+
+    if not estrategia:
+        return redirect("/home")
+
+    df = carregar_dados_base()
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT codigo, quantidade, estrategia, motivo_envio FROM status_cards")
+        rows = cursor.fetchall()
+        mapa_status = {
+            str(codigo): {
+                "quantidade": quantidade or 0,
+                "estrategia": estrategia_salva or "",
+                "motivo_envio": motivo_envio or ""
+            }
+            for codigo, quantidade, estrategia_salva, motivo_envio in rows
+        }
+    except:
+        mapa_status = {}
+
+    try:
+        cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
+        rows_comentarios_mlb = cursor.fetchall()
+        mapa_comentarios_mlb = {str(codigo): comentario or "" for codigo, comentario in rows_comentarios_mlb}
+    except:
+        mapa_comentarios_mlb = {}
+
+    conn.close()
+
+    if "Código do Anúncio" not in df.columns:
+        df["Código do Anúncio"] = ""
+
+    df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(
+        lambda codigo: mapa_status.get(str(codigo), {}).get("quantidade", 0)
+    ).fillna(0)
+
+    df["Estratégia"] = df["Código do Anúncio"].astype(str).map(
+        lambda codigo: mapa_status.get(str(codigo), {}).get("estrategia", "")
+    ).fillna("")
+
+    df["Motivo do Envio"] = df["Código do Anúncio"].astype(str).map(
+        lambda codigo: mapa_status.get(str(codigo), {}).get("motivo_envio", "")
+    ).fillna("")
+
+    df["Motivo do Envio"] = df["Motivo do Envio"].where(
+        df["Motivo do Envio"].astype(str).str.strip() != "",
+        df["Estratégia"]
+    )
+
+    df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
+    df["LETICIA"] = ""
+
+    df = df[df["Estratégia"].astype(str).str.strip().str.casefold() == estrategia.casefold()].copy()
+
+    colunas_exportar = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Título",
+        "LOTE",
+        "Quantidade para Enviar",
+        "Estratégia",
+        "Motivo do Envio",
+        "Comentário",
+        "LETICIA"
+    ]
+
+    for col in colunas_exportar:
+        if col not in df.columns:
+            df[col] = ""
+
+    output = BytesIO()
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df[colunas_exportar].to_excel(writer, index=False, sheet_name="Relatorio")
+
+    output.seek(0)
+
+    nome_arquivo = f"relatorio_estrategia_{secure_filename(estrategia) or 'estrategia'}.xlsx"
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=nome_arquivo,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -3123,7 +3223,709 @@ def api_full_distribuicao_detalhe():
             "erro": f"Erro ao carregar detalhes da métrica Full: {str(e)}"
         }), 500
     
+import unicodedata
+import re
+
+UPLOAD_FOLDER_RELATORIOS = os.path.join("static", "uploads_relatorios")
+os.makedirs(UPLOAD_FOLDER_RELATORIOS, exist_ok=True)
+
+
+def init_uploads_db():
+    conn = sqlite3.connect("status.db")
+    c = conn.cursor()
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS uploads_arquivos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome_arquivo TEXT,
+            conta TEXT,
+            sistema TEXT,
+            tipo_relatorio TEXT,
+            caminho TEXT,
+            data_upload TEXT,
+            status TEXT
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def normalizar_mlb_teste(valor):
+    texto = str(valor or "").strip().upper()
+    numeros = "".join(ch for ch in texto if ch.isdigit())
+    if not numeros:
+        return texto
+    return f"MLB{numeros}"
+
+
+def normalizar_texto_coluna(valor):
+    texto = str(valor or "").strip().lower()
+    texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
+    texto = re.sub(r"\s+", " ", texto)
+    return texto
+
+
+def encontrar_coluna(df, candidatos, obrigatoria=False):
+    if df is None or df.empty:
+        return None
+
+    mapa = {normalizar_texto_coluna(col): col for col in df.columns}
+    candidatos_norm = [normalizar_texto_coluna(c) for c in candidatos if str(c).strip()]
+
+    for cand in candidatos_norm:
+        if cand in mapa:
+            return mapa[cand]
+
+    for col in df.columns:
+        col_norm = normalizar_texto_coluna(col)
+        for cand in candidatos_norm:
+            if cand and cand in col_norm:
+                return col
+            if cand and col_norm in cand:
+                return col
+
+    if obrigatoria:
+        raise KeyError(f"Coluna não encontrada. Esperado um destes nomes: {', '.join(candidatos)}")
+    return None
+
+
+def garantir_colunas_unicas(colunas):
+    contador = {}
+    resultado = []
+
+    for idx, col in enumerate(list(colunas)):
+        nome = str(col or "").strip()
+        if not nome or nome.lower().startswith("unnamed:"):
+            nome = f"coluna_{idx}"
+
+        base = nome
+        if base in contador:
+            contador[base] += 1
+            nome = f"{base}__{contador[base]}"
+        else:
+            contador[base] = 0
+
+        resultado.append(nome)
+
+    return resultado
+
+
+def ler_planilha_com_cabecalho_inteligente(caminho, candidatos_coluna_chave=None):
+    caminho = str(caminho or "").strip()
+    if not caminho or not os.path.exists(caminho):
+        return pd.DataFrame()
+
+    ext = os.path.splitext(caminho)[1].lower()
+
+    def _ler_sem_header(header=None):
+        if ext in [".csv", ".txt"]:
+            return pd.read_csv(caminho, header=header, dtype=str)
+        return pd.read_excel(caminho, header=header, dtype=str)
+
+    bruto = _ler_sem_header(header=None).fillna("")
+    candidatos_norm = [normalizar_texto_coluna(c) for c in (candidatos_coluna_chave or []) if str(c).strip()]
+
+    melhor_idx = None
+    melhor_score = -1
+    limite = min(len(bruto), 30)
+
+    for idx in range(limite):
+        linha = [str(v or "").strip() for v in bruto.iloc[idx].tolist()]
+        valores_norm = [normalizar_texto_coluna(v) for v in linha]
+        score = sum(1 for c in candidatos_norm if c and c in valores_norm)
+        nao_vazios = sum(1 for v in linha if str(v).strip())
+
+        if score > melhor_score and nao_vazios > 0:
+            melhor_score = score
+            melhor_idx = idx
+
+    if melhor_idx is None:
+        df = _ler_sem_header(header=0).fillna("")
+        df.columns = garantir_colunas_unicas(df.columns)
+        return df
+
+    header_bruto = [str(v or "").strip() for v in bruto.iloc[melhor_idx].tolist()]
+    dados = bruto.iloc[melhor_idx + 1 :].copy().reset_index(drop=True).fillna("")
+    dados.columns = garantir_colunas_unicas(header_bruto)
+
+    # remove linhas que repetem o cabeçalho do arquivo TESTE ou vêm vazias
+    if len(dados):
+        linha_header_norm = [normalizar_texto_coluna(v) for v in header_bruto]
+        mascara_validas = []
+        for _, row in dados.iterrows():
+            valores = [str(v or "").strip() for v in row.tolist()]
+            valores_norm = [normalizar_texto_coluna(v) for v in valores]
+            eh_vazia = not any(valores)
+            eh_repeticao_header = valores_norm == linha_header_norm
+            mascara_validas.append(not eh_vazia and not eh_repeticao_header)
+        dados = dados[pd.Series(mascara_validas, index=dados.index)].reset_index(drop=True)
+
+    return dados
+
+
+def to_num(valor):
+    if valor is None:
+        return 0.0
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    texto = str(valor).strip()
+    if not texto:
+        return 0.0
+    texto = texto.replace("R$", "").replace(" ", "")
+    if "," in texto and "." in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    elif "," in texto:
+        texto = texto.replace(",", ".")
+    try:
+        return float(texto)
+    except Exception:
+        return 0.0
+
+
+def inteiro_ou_zero(valor):
+    numero = to_num(valor)
+    return int(numero) if float(numero).is_integer() else round(numero, 2)
+
+
+def formatar_moeda_br(valor):
+    valor = float(valor or 0)
+    txt = f"{valor:,.2f}"
+    return txt.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def obter_valor_por_nome_ou_indice(linha, candidatos=None, indice=None, default="-"):
+    candidatos = candidatos or []
+    if isinstance(linha, pd.Series):
+        for cand in candidatos:
+            for col in linha.index:
+                if normalizar_texto_coluna(col) == normalizar_texto_coluna(cand):
+                    valor = linha[col]
+                    return valor if str(valor).strip() != "" else default
+        if indice is not None and 0 <= indice < len(linha.index):
+            valor = linha.iloc[indice]
+            return valor if str(valor).strip() != "" else default
+    return default
+
+
+def buscar_upload(cursor, tipos, conta=""):
+    tipos = [t for t in tipos if str(t).strip()]
+    if not tipos:
+        return None
+
+    placeholders = ",".join(["?"] * len(tipos))
+    sql = f"SELECT caminho, nome_arquivo, conta, tipo_relatorio FROM uploads_arquivos WHERE tipo_relatorio IN ({placeholders})"
+    params = list(tipos)
+
+    if conta:
+        sql += " AND (conta = ? OR conta IN ('BASE', 'AMBAS', 'TODAS'))"
+        params.append(conta)
+
+    sql += " ORDER BY id DESC LIMIT 1"
+    cursor.execute(sql, params)
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def montar_historico_mensal(df_vendas, mlb_norm, col_mlb, col_data, col_qtd):
+    meses_ordem = ["AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO", "JANEIRO", "FEVEREIRO", "MARÇO"]
+    resultado = {mes: 0 for mes in meses_ordem}
+    if df_vendas is None or df_vendas.empty:
+        return resultado
+
+    df = df_vendas.copy()
+    df["MLB_FIXO"] = df[col_mlb].apply(normalizar_mlb_teste)
+    df = df[df["MLB_FIXO"] == mlb_norm].copy()
+    if df.empty:
+        return resultado
+
+    df["DATA_FIXA"] = pd.to_datetime(df[col_data], errors="coerce", dayfirst=True)
+    df["QTD_FIXA"] = df[col_qtd].apply(to_num)
+    nomes = {1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL", 5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO", 9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"}
+    grupos = df.groupby(df["DATA_FIXA"].dt.month)["QTD_FIXA"].sum().to_dict()
+    for mes_num, soma in grupos.items():
+        try:
+            nome = nomes.get(int(mes_num))
+        except Exception:
+            nome = None
+        if nome in resultado:
+            resultado[nome] = int(soma)
+    return resultado
+
+
+def montar_ultimas_vendas(df_vendas, mlb_norm, col_mlb, col_data, col_qtd, col_valor=None):
+    janelas = [7, 15, 30, 45, 60]
+    resultado = {dias: {"qtd": 0, "valor": 0.0} for dias in janelas}
+    if df_vendas is None or df_vendas.empty:
+        return resultado
+
+    df = df_vendas.copy()
+    df["MLB_FIXO"] = df[col_mlb].apply(normalizar_mlb_teste)
+    df = df[df["MLB_FIXO"] == mlb_norm].copy()
+    if df.empty:
+        return resultado
+
+    df["DATA_FIXA"] = pd.to_datetime(df[col_data], errors="coerce", dayfirst=True)
+    df["QTD_FIXA"] = df[col_qtd].apply(to_num)
+    if col_valor:
+        df["VALOR_FIXO"] = df[col_valor].apply(to_num)
+    else:
+        df["VALOR_FIXO"] = 0.0
+
+    hoje = pd.Timestamp(datetime.now().date())
+    for dias in janelas:
+        inicio = hoje - pd.Timedelta(days=dias)
+        janela = df[(df["DATA_FIXA"] >= inicio) & (df["DATA_FIXA"] <= hoje)]
+        resultado[dias]["qtd"] = int(janela["QTD_FIXA"].sum())
+        resultado[dias]["valor"] = float(janela["VALOR_FIXO"].sum())
+    return resultado
+
+
+def carregar_linha_por_mlb_robusta(arquivo, candidatos_coluna_mlb, mlb_norm):
+    if not arquivo:
+        return None, None
+    df = ler_planilha_com_cabecalho_inteligente(arquivo, candidatos_coluna_mlb)
+    if df.empty:
+        return None, None
+    col = encontrar_coluna(df, candidatos_coluna_mlb, obrigatoria=True)
+    df["MLB_FIXO"] = df[col].apply(normalizar_mlb_teste)
+    linha = df[df["MLB_FIXO"] == mlb_norm]
+    if linha.empty:
+        return None, df
+    return linha.iloc[0], df
+
+
+def obter_status_ia_teste(card):
+    sugestao = to_num(card.get("sugestao_meli", 0))
+    cobertura = to_num(card.get("cobertura", 0))
+    curva = str(card.get("curva", "") or "").upper()
+    estoque_meli = str(card.get("estoque_meli", "") or "").upper()
+    if sugestao > 0 and (("BAIXO" in estoque_meli) or curva in ["A", "B"]):
+        return {"titulo": f"IA → ENVIAR {int(sugestao)}", "detalhe": "Baseado nos uploads", "classe": "ia-enviar"}
+    if cobertura <= 0 and sugestao <= 0:
+        return {"titulo": "IA → NÃO ENVIAR", "detalhe": "Métricas insuficientes", "classe": "ia-nao-enviar"}
+    return {"titulo": "IA → ACOMPANHAR", "detalhe": "Validação em teste", "classe": "ia-repor"}
+
+
+@app.route("/uploads")
+def tela_uploads():
+    init_uploads_db()
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM uploads_arquivos ORDER BY id DESC")
+    uploads = c.fetchall()
+    conn.close()
+    return render_template("uploads.html", uploads=uploads)
+
+
+@app.route("/uploads/enviar", methods=["POST"])
+def enviar_upload():
+    init_uploads_db()
+
+    sistema = str(request.form.get("sistema", "")).strip()
+    tipo = str(request.form.get("tipo", "")).strip()
+
+    arquivos_para_salvar = [
+        ("BASE", request.files.get("arquivo_base")),
+        ("RENAFCAR", request.files.get("arquivo_renafcar")),
+        ("4IDISTRIBUIDORA", request.files.get("arquivo_4i"))
+    ]
+
+    registros = []
+    timestamp_base = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    for indice, (conta, arquivo) in enumerate(arquivos_para_salvar, start=1):
+        if not arquivo or not arquivo.filename:
+            continue
+
+        nome_seguro = secure_filename(arquivo.filename)
+        nome_final = f"{timestamp_base}_{indice}_{nome_seguro}"
+        caminho = os.path.join(UPLOAD_FOLDER_RELATORIOS, nome_final)
+        arquivo.save(caminho)
+        registros.append((nome_final, conta, sistema, tipo, caminho, agora_str(), "ENVIADO"))
+
+    if not registros:
+        return redirect("/uploads")
+
+    conn = sqlite3.connect("status.db")
+    c = conn.cursor()
+    c.executemany(
+        "INSERT INTO uploads_arquivos (nome_arquivo, conta, sistema, tipo_relatorio, caminho, data_upload, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        registros
+    )
+    conn.commit()
+    conn.close()
+    return redirect("/uploads")
+
+
+@app.route("/teste-cards")
+def teste_cards():
+    return render_template("teste_cards.html")
+
+
+@app.route("/api/teste-card")
+def api_teste_card():
+    init_uploads_db()
+    mlb = normalizar_mlb_teste(request.args.get("mlb", ""))
+    conta = str(request.args.get("conta", "")).strip()
+    if not mlb:
+        return jsonify({"ok": False, "erro": "Informe um MLB válido."}), 400
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    arq_base = buscar_upload(cursor, ["Evolução de Vendas"], conta)
+    arq_vendas = buscar_upload(cursor, ["Vendas"], conta)
+    arq_estoque = buscar_upload(cursor, ["Relatório Geral de Estoque"], conta)
+    arq_planejamento = buscar_upload(cursor, ["Planejamento de Envio"], conta)
+    arq_curva = buscar_upload(cursor, ["Curva ABCD"], conta)
+    arq_cobertura = buscar_upload(cursor, ["Cobertura de Estoque"], conta)
+    arq_unitario = buscar_upload(cursor, ["Saldo Unitário", "Saldo Unitario"], conta)
+    arq_kit = buscar_upload(cursor, ["Saldo Kit", "Saldo Kit e Pares", "Saldo Kit/Pares", "Saldo Kit e pares"], conta)
+    conn.close()
+
+    card = {
+        "mlb": mlb, "sku": "", "titulo": "", "conta": conta or "", "full": "NO FULL", "condicao": "", "lote": "", "exposicao": "", "selo": "", "obs_meli": "", "saldo_apos_envio": 0, "qtd_envio": 0,
+        "outros_mlbs_mesmo_sku": 0, "titulos_iguais": 0, "info_meli": "-", "sugestao_meli": "-", "estoque_meli": "-", "ads": "SEM ADS", "curva": "-", "tendencia": "-", "cobertura": "-", "acao": "-",
+        "historico_mensal": {m: 0 for m in ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"]},
+        "ultimas_vendas": {7:{"qtd":0,"valor":0.0},15:{"qtd":0,"valor":0.0},30:{"qtd":0,"valor":0.0},45:{"qtd":0,"valor":0.0},60:{"qtd":0,"valor":0.0}},
+        "estoque_total_signus": 0, "a_caminho": 0, "estoque_full": 0, "vai_ficar": 0, "fontes": {}
+    }
+
+    try:
+        linha_base, df_base = carregar_linha_por_mlb_robusta(arq_base["caminho"] if arq_base else None, ["Código do Anúncio", "Codigo do Anuncio", "# de anúncio", "Anúncio"], mlb)
+        if linha_base is not None:
+            col_sku = encontrar_coluna(df_base, ["SKU"], obrigatoria=False)
+            col_titulo = encontrar_coluna(df_base, ["Título", "Titulo"], obrigatoria=False)
+            col_conta = encontrar_coluna(df_base, ["Nickname", "Conta"], obrigatoria=False)
+            col_expo = encontrar_coluna(df_base, ["Exposição", "Exposicao"], obrigatoria=False)
+            card["sku"] = str(linha_base.get(col_sku, "") or "") if col_sku else ""
+            card["titulo"] = str(linha_base.get(col_titulo, "") or "") if col_titulo else ""
+            card["conta"] = str(linha_base.get(col_conta, "") or card["conta"]) if col_conta else card["conta"]
+            card["exposicao"] = str(linha_base.get(col_expo, "") or "") if col_expo else ""
+            card["fontes"]["base"] = arq_base["nome_arquivo"]
+            if card["sku"] and col_sku:
+                df_tmp = df_base.copy()
+                df_tmp["SKU_FIXO"] = df_tmp[col_sku].astype(str).str.strip().str.upper()
+                card["outros_mlbs_mesmo_sku"] = max(int((df_tmp["SKU_FIXO"] == card["sku"].strip().upper()).sum()) - 1, 0)
+            if card["titulo"] and col_titulo:
+                df_tmp = df_base.copy()
+                df_tmp["TITULO_FIXO"] = df_tmp[col_titulo].astype(str).str.strip().str.upper()
+                card["titulos_iguais"] = max(int((df_tmp["TITULO_FIXO"] == card["titulo"].strip().upper()).sum()) - 1, 0)
+
+        linha, df = carregar_linha_por_mlb_robusta(arq_estoque["caminho"] if arq_estoque else None, ["# de anúncio", "Código do Anúncio", "Anúncio"], mlb)
+        if linha is not None:
+            card["info_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Info Meli", "INFO MELI"], 27, "-"))
+            col_entrada = encontrar_coluna(df, ["Entrada pendente"], obrigatoria=False)
+            col_transfer = encontrar_coluna(df, ["Em transferencia", "Em transferência"], obrigatoria=False)
+            col_full = encontrar_coluna(df, ["APTAS PRA VENDA", "Aptas pra venda"], obrigatoria=False)
+            card["a_caminho"] = int(to_num(linha.get(col_entrada, 0)) + to_num(linha.get(col_transfer, 0)))
+            card["estoque_full"] = int(to_num(linha.get(col_full, 0)))
+            card["vai_ficar"] = int(card["a_caminho"] + card["estoque_full"])
+            card["fontes"]["info_meli"] = arq_estoque["nome_arquivo"]
+            card["fontes"]["estoque_bloco"] = arq_estoque["nome_arquivo"]
+
+        linha, _ = carregar_linha_por_mlb_robusta(arq_planejamento["caminho"] if arq_planejamento else None, ["Anúncios com este produto", "Anuncios com este produto", "Anúncio"], mlb)
+        if linha is not None:
+            card["sugestao_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Sugestão Meli", "Sugestao Meli"], 17, "-"))
+            card["estoque_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Estoque Meli"], 18, "-"))
+            card["fontes"]["sugestao_meli"] = arq_planejamento["nome_arquivo"]
+            card["fontes"]["estoque_meli"] = arq_planejamento["nome_arquivo"]
+
+        linha, _ = carregar_linha_por_mlb_robusta(arq_curva["caminho"] if arq_curva else None, ["Anúncio", "Anuncio", "Código do Anúncio"], mlb)
+        if linha is not None:
+            card["curva"] = str(obter_valor_por_nome_ou_indice(linha, ["Curva 30d", "Curva 30D"], 14, "-"))
+            card["tendencia"] = str(obter_valor_por_nome_ou_indice(linha, ["Tendência 30-0", "Tendencia 30-0", "Tendência 30", "Tendencia 30"], 15, "-"))
+            card["fontes"]["curva"] = arq_curva["nome_arquivo"]
+            card["fontes"]["tendencia"] = arq_curva["nome_arquivo"]
+
+        linha, _ = carregar_linha_por_mlb_robusta(arq_cobertura["caminho"] if arq_cobertura else None, ["Anúncio", "Anuncio", "Código do Anúncio"], mlb)
+        if linha is not None:
+            card["cobertura"] = str(obter_valor_por_nome_ou_indice(linha, ["Cobertura"], 9, "-"))
+            card["acao"] = str(obter_valor_por_nome_ou_indice(linha, ["Ação Recomendada", "Acao Recomendada"], 10, "-"))
+            card["fontes"]["cobertura"] = arq_cobertura["nome_arquivo"]
+            card["fontes"]["acao"] = arq_cobertura["nome_arquivo"]
+
+        df_vendas = ler_planilha_com_cabecalho_inteligente(arq_vendas["caminho"] if arq_vendas else None, ["# de anúncio", "Código do Anúncio", "Anúncio"])
+        if not df_vendas.empty:
+            col_mlb_v = encontrar_coluna(df_vendas, ["# de anúncio", "Código do Anúncio", "Anúncio"], obrigatoria=True)
+            col_data_v = encontrar_coluna(df_vendas, ["DATA DA VENDA", "Data da venda", "Data"], obrigatoria=True)
+            col_qtd_v = encontrar_coluna(df_vendas, ["UNIDADE VENDIDA", "Unidade vendida", "Quantidade vendida", "Quantidade"], obrigatoria=True)
+            col_valor_v = encontrar_coluna(df_vendas, ["VALOR DA VENDA", "Valor da venda", "Total", "Valor total"], obrigatoria=False)
+            card["historico_mensal"] = montar_historico_mensal(df_vendas, mlb, col_mlb_v, col_data_v, col_qtd_v)
+            card["ultimas_vendas"] = montar_ultimas_vendas(df_vendas, mlb, col_mlb_v, col_data_v, col_qtd_v, col_valor_v)
+            card["fontes"]["vendas"] = arq_vendas["nome_arquivo"]
+
+        sku_norm = str(card["sku"] or "").strip().upper()
+        total_signus = 0
+        for arq, tipo_nome in [(arq_unitario, "unitario"), (arq_kit, "kit")]:
+            if not arq or not sku_norm:
+                continue
+            df_signus = ler_planilha_com_cabecalho_inteligente(arq["caminho"], ["SKU", "Quantidade disponível", "Quantidade disponivel"])
+            if df_signus.empty:
+                continue
+            col_sku = encontrar_coluna(df_signus, ["SKU"], obrigatoria=False)
+            col_qtd = encontrar_coluna(df_signus, ["Quantidade disponível", "Quantidade disponivel"], obrigatoria=False)
+            if not col_sku and len(df_signus.columns) > 0:
+                col_sku = df_signus.columns[0]
+            if not col_qtd:
+                idx = 6 if tipo_nome == "unitario" else 2
+                if len(df_signus.columns) > idx:
+                    col_qtd = df_signus.columns[idx]
+            if col_sku and col_qtd:
+                df_signus["SKU_FIXO"] = df_signus[col_sku].astype(str).str.strip().str.upper()
+                total_signus += df_signus.loc[df_signus["SKU_FIXO"] == sku_norm, col_qtd].apply(to_num).sum()
+        card["estoque_total_signus"] = int(total_signus)
+        card["saldo_apos_envio"] = int(total_signus)
+        if arq_unitario:
+            card["fontes"]["unitario"] = arq_unitario["nome_arquivo"]
+        if arq_kit:
+            card["fontes"]["kit"] = arq_kit["nome_arquivo"]
+
+        card["ia"] = obter_status_ia_teste(card)
+        return jsonify({"ok": True, "dados": card})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)})
+
+
 init_db()
+init_uploads_db()
+
+
+
+# ===== INICIO AJUSTE BASE UNIFICADA TESTE =====
+
+def buscar_upload_like(cursor, termos=None, conta="", preferir_base=False):
+    termos = [str(t).strip() for t in (termos or []) if str(t).strip()]
+    sql = "SELECT caminho, nome_arquivo, conta, tipo_relatorio, sistema, data_upload, id FROM uploads_arquivos WHERE 1=1"
+    params = []
+    if termos:
+        partes = []
+        for termo in termos:
+            partes.append("(tipo_relatorio LIKE ? OR nome_arquivo LIKE ? OR sistema LIKE ?)")
+            like = f"%{termo}%"
+            params.extend([like, like, like])
+        sql += " AND (" + " OR ".join(partes) + ")"
+    if conta:
+        sql += " AND (conta = ? OR conta IN ('BASE', 'AMBAS', 'TODAS'))"
+        params.append(conta)
+    sql += " ORDER BY CASE WHEN conta='BASE' THEN 0 ELSE 1 END, id DESC"
+    cursor.execute(sql, params)
+    row = cursor.fetchone()
+    return dict(row) if row else None
+
+
+def escolher_arquivo_base_unificada(cursor, conta=""):
+    candidatos = [
+        buscar_upload_like(cursor, [], conta, preferir_base=True),
+        buscar_upload_like(cursor, ["base", "seconds", "evolucao de vendas", "evolução de vendas", "relatorio base"], conta, preferir_base=True),
+        buscar_upload(cursor, ["Evolução de Vendas"], conta),
+    ]
+    for cand in candidatos:
+        if cand and str(cand.get('caminho') or '').strip():
+            return cand
+    return None
+
+
+def montar_base_unificada_uploads(conta=""):
+    init_uploads_db()
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    arq_base = escolher_arquivo_base_unificada(cursor, conta)
+    arq_vendas = buscar_upload_like(cursor, ["vendas"], conta) or buscar_upload(cursor, ["Vendas"], conta)
+    arq_estoque = buscar_upload_like(cursor, ["relatorio geral de estoque", "relatório geral de estoque", "estoque full"], conta) or buscar_upload(cursor, ["Relatório Geral de Estoque"], conta)
+    arq_planejamento = buscar_upload_like(cursor, ["planejamento de envio", "planejamento"], conta) or buscar_upload(cursor, ["Planejamento de Envio"], conta)
+    arq_curva = buscar_upload_like(cursor, ["curva abcd", "curva"], conta) or buscar_upload(cursor, ["Curva ABCD"], conta)
+    arq_cobertura = buscar_upload_like(cursor, ["cobertura de estoque", "cobertura"], conta) or buscar_upload(cursor, ["Cobertura de Estoque"], conta)
+    arq_unitario = buscar_upload_like(cursor, ["saldo unitario", "saldo unitário", "signus"], conta) or buscar_upload(cursor, ["Saldo Unitário", "Saldo Unitario"], conta)
+    arq_kit = buscar_upload_like(cursor, ["saldo kit", "kit e pares", "pares"], conta) or buscar_upload(cursor, ["Saldo Kit", "Saldo Kit e Pares", "Saldo Kit/Pares", "Saldo Kit e pares"], conta)
+    conn.close()
+
+    if not arq_base:
+        raise RuntimeError("Nenhum arquivo base foi encontrado nos uploads. Envie primeiro o Arquivo Base.")
+
+    df_base = ler_planilha_com_cabecalho_inteligente(arq_base["caminho"], ["Código do Anúncio", "Codigo do Anuncio", "MLB", "SKU", "Título", "Titulo", "Nickname"])
+    if df_base is None or df_base.empty:
+        raise RuntimeError("O arquivo base foi encontrado, mas não foi possível ler os dados dele.")
+
+    col_mlb_base = encontrar_coluna(df_base, ["Código do Anúncio", "Codigo do Anuncio", "MLB", "# de anúncio", "Anúncio"], obrigatoria=True)
+    col_sku_base = encontrar_coluna(df_base, ["SKU"], obrigatoria=False)
+    col_titulo_base = encontrar_coluna(df_base, ["Título", "Titulo"], obrigatoria=False)
+    col_conta_base = encontrar_coluna(df_base, ["Nickname", "Conta"], obrigatoria=False)
+    col_expo_base = encontrar_coluna(df_base, ["Exposição", "Exposicao"], obrigatoria=False)
+
+    base = df_base.copy().fillna("")
+    base["MLB_FIXO"] = base[col_mlb_base].apply(normalizar_mlb_teste)
+    base = base[base["MLB_FIXO"].astype(str).str.startswith("MLB")].copy()
+    if col_conta_base and conta:
+        base = base[base[col_conta_base].astype(str).str.strip().str.upper() == conta.strip().upper()].copy()
+    base = base.drop_duplicates(subset=["MLB_FIXO"], keep="first").reset_index(drop=True)
+
+    mapas = {}
+    fontes = {
+        "base": arq_base.get("nome_arquivo") if arq_base else "",
+        "vendas": arq_vendas.get("nome_arquivo") if arq_vendas else "",
+        "estoque": arq_estoque.get("nome_arquivo") if arq_estoque else "",
+        "planejamento": arq_planejamento.get("nome_arquivo") if arq_planejamento else "",
+        "curva": arq_curva.get("nome_arquivo") if arq_curva else "",
+        "cobertura": arq_cobertura.get("nome_arquivo") if arq_cobertura else "",
+        "unitario": arq_unitario.get("nome_arquivo") if arq_unitario else "",
+        "kit": arq_kit.get("nome_arquivo") if arq_kit else "",
+    }
+
+    def _mapa_por(df, coluna_chave, chave='MLB'):
+        if df is None or df.empty or not coluna_chave:
+            return {}
+        tmp = df.copy().fillna("")
+        if chave == 'SKU':
+            tmp["CHAVE_FIXA"] = tmp[coluna_chave].astype(str).str.strip().str.upper()
+        else:
+            tmp["CHAVE_FIXA"] = tmp[coluna_chave].apply(normalizar_mlb_teste)
+        tmp = tmp[tmp["CHAVE_FIXA"].astype(str) != ""].drop_duplicates(subset=["CHAVE_FIXA"], keep="first")
+        return {str(row["CHAVE_FIXA"]): row for _, row in tmp.iterrows()}
+
+    df_unitario = ler_planilha_com_cabecalho_inteligente(arq_unitario["caminho"], ["SKU", "Produto", "Linha de produto"]) if arq_unitario else pd.DataFrame()
+    col_sku_unit = encontrar_coluna(df_unitario, ["SKU"], obrigatoria=False) if not df_unitario.empty else None
+    mapa_unitario = _mapa_por(df_unitario, col_sku_unit, 'SKU') if col_sku_unit else {}
+
+    df_kit = ler_planilha_com_cabecalho_inteligente(arq_kit["caminho"], ["SKU", "Produto"]) if arq_kit else pd.DataFrame()
+    col_sku_kit = encontrar_coluna(df_kit, ["SKU"], obrigatoria=False) if not df_kit.empty else None
+    mapa_kit = _mapa_por(df_kit, col_sku_kit, 'SKU') if col_sku_kit else {}
+
+    df_estoque = ler_planilha_com_cabecalho_inteligente(arq_estoque["caminho"], ["MLB", "Tempo até esgotar estoque", "Unidades que ocupan espacio en Full"]) if arq_estoque else pd.DataFrame()
+    col_mlb_estoque = encontrar_coluna(df_estoque, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_estoque.empty else None
+    mapa_estoque = _mapa_por(df_estoque, col_mlb_estoque, 'MLB') if col_mlb_estoque else {}
+
+    df_planejamento = ler_planilha_com_cabecalho_inteligente(arq_planejamento["caminho"], ["MLB", "Unidades sugeridas para enviar", "Nível de estoque", "Observações"]) if arq_planejamento else pd.DataFrame()
+    col_mlb_planej = encontrar_coluna(df_planejamento, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_planejamento.empty else None
+    mapa_planejamento = _mapa_por(df_planejamento, col_mlb_planej, 'MLB') if col_mlb_planej else {}
+
+    df_curva = ler_planilha_com_cabecalho_inteligente(arq_curva["caminho"], ["MLB", "Curva 30d", "Tendência 30-0", "Preço unitário de venda do anúncio (BRL)"]) if arq_curva else pd.DataFrame()
+    col_mlb_curva = encontrar_coluna(df_curva, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_curva.empty else None
+    mapa_curva = _mapa_por(df_curva, col_mlb_curva, 'MLB') if col_mlb_curva else {}
+
+    df_cobertura = ler_planilha_com_cabecalho_inteligente(arq_cobertura["caminho"], ["MLB", "Cobertura", "Ação Recomendada"]) if arq_cobertura else pd.DataFrame()
+    col_mlb_cob = encontrar_coluna(df_cobertura, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_cobertura.empty else None
+    mapa_cobertura = _mapa_por(df_cobertura, col_mlb_cob, 'MLB') if col_mlb_cob else {}
+
+    df_vendas = ler_planilha_com_cabecalho_inteligente(arq_vendas["caminho"], ["MLB", "Data", "Quantidade", "Unidades"]) if arq_vendas else pd.DataFrame()
+    col_mlb_vendas = encontrar_coluna(df_vendas, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_vendas.empty else None
+    col_data_vendas = encontrar_coluna(df_vendas, ["Data", "Data da venda", "Date", "Data do pedido"], obrigatoria=False) if not df_vendas.empty else None
+    col_qtd_vendas = encontrar_coluna(df_vendas, ["Quantidade", "Unidades", "Quantidade vendida", "Qtd", "Unidades vendidas"], obrigatoria=False) if not df_vendas.empty else None
+    col_valor_vendas = encontrar_coluna(df_vendas, ["Valor total", "Total", "Valor", "Preço unitário de venda do anúncio (BRL)", "Preco unitario de venda do anuncio (BRL)"], obrigatoria=False) if not df_vendas.empty else None
+
+    cards = []
+    for _, row in base.iterrows():
+        mlb = normalizar_mlb_teste(row.get(col_mlb_base, ""))
+        sku = str(row.get(col_sku_base, "") or "").strip() if col_sku_base else ""
+        conta_row = str(row.get(col_conta_base, "") or "").strip() if col_conta_base else ""
+        if not mlb:
+            continue
+        unit = mapa_unitario.get(sku.strip().upper(), pd.Series(dtype=object)) if sku else pd.Series(dtype=object)
+        kit = mapa_kit.get(sku.strip().upper(), pd.Series(dtype=object)) if sku else pd.Series(dtype=object)
+        estoque = mapa_estoque.get(mlb, pd.Series(dtype=object))
+        planej = mapa_planejamento.get(mlb, pd.Series(dtype=object))
+        curva = mapa_curva.get(mlb, pd.Series(dtype=object))
+        cobertura = mapa_cobertura.get(mlb, pd.Series(dtype=object))
+
+        hist = montar_historico_mensal(df_vendas, mlb, col_mlb_vendas, col_data_vendas, col_qtd_vendas) if (not df_vendas.empty and col_mlb_vendas and col_data_vendas and col_qtd_vendas) else {m:0 for m in ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"]}
+        ult = montar_ultimas_vendas(df_vendas, mlb, col_mlb_vendas, col_data_vendas, col_qtd_vendas, col_valor_vendas) if (not df_vendas.empty and col_mlb_vendas and col_data_vendas and col_qtd_vendas) else {7:{"qtd":0,"valor":0},15:{"qtd":0,"valor":0},30:{"qtd":0,"valor":0},45:{"qtd":0,"valor":0},60:{"qtd":0,"valor":0}}
+
+        qtd_signus = to_num(obter_valor_por_nome_ou_indice(unit, ["Quantidade disponível", "Saldo disponível", "Quantidade", "Estoque", "Saldo"], default=0))
+        if qtd_signus <= 0:
+            qtd_signus += to_num(obter_valor_por_nome_ou_indice(kit, ["Quantidade disponível", "Saldo disponível", "Quantidade", "Estoque", "Saldo"], default=0))
+        estoque_full = to_num(obter_valor_por_nome_ou_indice(estoque, ["Unidades que ocupan espacio en Full", "Unidades que ocupam espaço em Full", "Estoque Full", "Full"], default=0))
+        a_caminho = to_num(obter_valor_por_nome_ou_indice(estoque, ["Entrada pendente + Em transferência", "Entrada pendente + Em transferencia", "A caminho", "Em transferência"], default=0))
+        sugestao = to_num(obter_valor_por_nome_ou_indice(planej, ["Unidades sugeridas para enviar", "Sugestão de envio", "Sugestao de envio"], default=0))
+        vai_ficar = estoque_full + sugestao
+        info_meli = obter_valor_por_nome_ou_indice(estoque, ["Tempo até esgotar estoque", "Info Meli"], default="-")
+        nivel_estoque = obter_valor_por_nome_ou_indice(planej, ["Nível de estoque", "Nivel de estoque", "Estoque Meli"], default="-")
+        observacoes = obter_valor_por_nome_ou_indice(planej, ["Observações", "Observacoes", "Obs"], default="")
+        curva_30 = obter_valor_por_nome_ou_indice(curva, ["Curva 30d", "Curva"], default="-")
+        tendencia = obter_valor_por_nome_ou_indice(curva, ["Tendência 30-0", "Tendencia 30-0", "Tendência", "Tendencia"], default="-")
+        cobertura_txt = obter_valor_por_nome_ou_indice(cobertura, ["Cobertura", "Cobertura de Estoque"], default="-")
+        acao = obter_valor_por_nome_ou_indice(cobertura, ["Ação Recomendada", "Acao Recomendada"], default="-")
+        preco_unit = to_num(obter_valor_por_nome_ou_indice(curva, ["Preço unitário de venda do anúncio (BRL)", "Preco unitario de venda do anuncio (BRL)", "Preço unitário", "Preco unitario"], default=0))
+
+        vendas30 = ult[30]["qtd"]
+        valor30 = ult[30]["valor"] if ult[30]["valor"] else (vendas30 * preco_unit)
+        ads = "COM ADS" if to_num(valor30) > 0 else "SEM ADS"
+        qtd_envio = int(sugestao) if float(sugestao).is_integer() else round(sugestao,2)
+        saldo_apos = qtd_signus - sugestao
+
+        card = {
+            "Código do Anúncio": mlb,
+            "SKU": sku,
+            "Título": str(row.get(col_titulo_base, "") or "").strip() if col_titulo_base else "",
+            "Nickname": conta_row,
+            "Exposição": str(row.get(col_expo_base, "") or "").strip() if col_expo_base else "",
+            "SELO": str(obter_valor_por_nome_ou_indice(unit, ["Selo"], default="")).strip(),
+            "LINHA": str(obter_valor_por_nome_ou_indice(unit, ["Linha de produto"], default="")).strip(),
+            "PRODUTO": str(obter_valor_por_nome_ou_indice(unit, ["Produto"], default="")).strip(),
+            "LOCALIZAÇÃO": str(obter_valor_por_nome_ou_indice(unit, ["Localização no estoque", "Localizacao no estoque"], default="")).strip(),
+            "ADS": ads,
+            "INFO MELI": info_meli,
+            "SUGESTÃO MELI": qtd_envio,
+            "ESTOQUE MELI": nivel_estoque,
+            "OBSERVAÇÕES": observacoes,
+            "CURVA 30D": curva_30,
+            "TENDÊNCIA 30-0": tendencia,
+            "COBERTURA": cobertura_txt,
+            "AÇÃO RECOMENDADA": acao,
+            "ESTOQUE TOTAL SIGNUS": inteiro_ou_zero(qtd_signus),
+            "A CAMINHO DO FULL": inteiro_ou_zero(a_caminho),
+            "ESTOQUE FULL": inteiro_ou_zero(estoque_full),
+            "ESTOQUE QUE VAI FICAR NO FULL": inteiro_ou_zero(vai_ficar),
+            "Saldo após envio": inteiro_ou_zero(saldo_apos),
+            "Quantidade para Enviar": qtd_envio,
+            "SAUDE DO ESTOQUE 4i": str(obter_valor_por_nome_ou_indice(cobertura, ["Cobertura", "Cobertura de Estoque"], default="")).strip(),
+            "7 DIAS": inteiro_ou_zero(ult[7]["qtd"]),
+            "15 DIAS": inteiro_ou_zero(ult[15]["qtd"]),
+            "30 DIAS": inteiro_ou_zero(ult[30]["qtd"]),
+            "45 DIAS": inteiro_ou_zero(ult[45]["qtd"]),
+            "60 DIAS": inteiro_ou_zero(ult[60]["qtd"]),
+            "Total de Vendas 7 DIAS": formatar_moeda_br(ult[7]["valor"]),
+            "Total de Vendas 15 DIAS": formatar_moeda_br(ult[15]["valor"]),
+            "Total de Vendas 30 DIAS": formatar_moeda_br(ult[30]["valor"]),
+            "Total de Vendas 45 DIAS": formatar_moeda_br(ult[45]["valor"]),
+            "Total de Vendas 60 DIAS": formatar_moeda_br(ult[60]["valor"]),
+            **hist,
+            "fontes": fontes,
+        }
+        ia = obter_status_ia_teste({"sugestao_meli": sugestao, "cobertura": to_num(cobertura_txt), "curva": curva_30, "estoque_meli": nivel_estoque})
+        card["ia_status"] = ia
+        cards.append(card)
+
+    return cards, fontes
+
+
+@app.route('/api/teste-cards-list')
+def api_teste_cards_list_auto():
+    conta = str(request.args.get('conta', '')).strip()
+    try:
+        cards, fontes = montar_base_unificada_uploads(conta)
+        busca = normalizar_texto_coluna(request.args.get('busca', ''))
+        if busca:
+            filtrados = []
+            for item in cards:
+                alvo = ' '.join([
+                    str(item.get('Código do Anúncio','')),
+                    str(item.get('SKU','')),
+                    str(item.get('Título','')),
+                    str(item.get('Nickname','')),
+                ])
+                if busca in normalizar_texto_coluna(alvo):
+                    filtrados.append(item)
+            cards = filtrados
+        cards = sorted(cards, key=lambda x: (str(x.get('Nickname','')), str(x.get('Código do Anúncio',''))))
+        return jsonify({"ok": True, "total": len(cards), "dados": cards, "fontes": fontes})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)}), 500
+
+# ===== FIM AJUSTE BASE UNIFICADA TESTE =====
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

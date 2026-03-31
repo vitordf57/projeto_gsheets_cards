@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.upload-container{
+    width:100%;
+    max-width:1280px;
+    margin:0 auto;
+}
+
+.upload-titulo{
+    margin-bottom:20px;
+}
+
+.upload-box{
+    background:white;
+    padding:30px;
+    border-radius:16px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    margin-bottom:30px;
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+}
+
+.upload-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+    margin-bottom:18px;
+}
+
+.upload-campo{
+    min-width:0;
+}
+
+.upload-campo label{
+    display:block;
+    margin-bottom:8px;
+    font-weight:bold;
+    color:#374151;
+}
+
+.upload-campo select{
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid #d1d5db;
+    background:white;
+}
+
+.arquivos-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+    margin-top:10px;
+}
+
+.arquivo-coluna{
+    min-width:0;
+}
+
+.arquivo-titulo{
+    display:block;
+    margin-bottom:8px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.arquivo-subtitulo{
+    display:block;
+    margin-top:6px;
+    color:#6b7280;
+    font-size:13px;
+}
+
+.drop-area{
+    border:2px dashed #cbd5e1;
+    border-radius:16px;
+    padding:32px 22px;
+    text-align:center;
+    cursor:pointer;
+    transition:0.2s ease;
+    background:#f8fafc;
+    width:100%;
+    min-height:160px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+}
+
+.drop-area:hover{
+    background:#eef4ff;
+    border-color:#60a5fa;
+}
+
+.drop-area strong{
+    display:block;
+    font-size:18px;
+    margin-bottom:4px;
+    color:#111827;
+    line-height:1.4;
+}
+
+.drop-area span{
+    color:#6b7280;
+    font-size:14px;
+    max-width:100%;
+    word-break:break-word;
+}
+
+.upload-acoes{
+    margin-top:20px;
+}
+
+.btn-enviar{
+    padding:14px 18px;
+    width:100%;
+    border-radius:12px;
+    border:none;
+    background:#2563eb;
+    color:white;
+    font-weight:bold;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.btn-enviar:hover{
+    background:#1d4ed8;
+}
+
+.table-wrap{
+    width:100%;
+    overflow-x:visible;
+}
+
+.table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+.table th, .table td{
+    padding:12px 10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    white-space:normal;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+    vertical-align:top;
+}
+
+.table th{
+    background:#f8fafc;
+    font-size:13px;
+    text-transform:uppercase;
+    color:#6b7280;
+}
+
+.status-badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
+    background:#dcfce7;
+    color:#166534;
+}
+
+.sem-registros{
+    color:#6b7280;
+    font-weight:bold;
+}
+
+@media (max-width: 900px){
+    .upload-grid,
+    .arquivos-grid{
+        grid-template-columns:1fr;
+    }
+
+    .upload-box{
+        padding:20px;
+    }
+}
+
+@media (max-width: 700px){
+    .table thead{
+        display:none;
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td{
+        display:block;
+        width:100%;
+    }
+
+    .table tr{
+        border:1px solid #e5e7eb;
+        border-radius:14px;
+        padding:10px 12px;
+        margin-bottom:12px;
+        background:#fff;
+    }
+
+    .table td{
+        border:none;
+        padding:6px 0;
+    }
+
+    .table td::before{
+        content:attr(data-label);
+        display:block;
+        font-size:12px;
+        font-weight:bold;
+        color:#6b7280;
+        text-transform:uppercase;
+        margin-bottom:4px;
+    }
+}
+</style>
+
+<div class="upload-container">
+    <div class="upload-titulo">
+        <h1>📤 Central de Uploads</h1>
+        <p style="color:#6b7280; margin-top:6px;">Módulo separado para salvar os relatórios sem mexer em nada do fluxo atual.</p>
+    </div>
+
+    <div class="upload-box">
+        <form action="/uploads/enviar" method="POST" enctype="multipart/form-data">
+            <div class="upload-grid">
+                <div class="upload-campo">
+                    <label for="sistema">Sistema</label>
+                    <select name="sistema" id="sistema" required>
+                        <option value="Mercado Livre">Mercado Livre</option>
+                        <option value="Magic">Magic</option>
+                        <option value="Signus">Signus</option>
+                        <option value="Seconds">Seconds</option>
+                    </select>
+                </div>
+
+                <div class="upload-campo">
+                    <label for="tipo">Tipo de Relatório</label>
+                    <select name="tipo" id="tipo" required>
+                        <option value="Vendas">Vendas</option>
+                        <option value="Planejamento de Envio">Planejamento de Envio</option>
+                        <option value="Relatório Geral do Estoque">Relatório Geral do Estoque</option>
+                        <option value="Curva ABCD">Curva ABCD</option>
+                        <option value="Sugestão de Envio">Sugestão de Envio</option>
+                        <option value="Cobertura de Estoque">Cobertura de Estoque</option>
+                        <option value="Saldo Unitário">Saldo Unitário</option>
+                        <option value="Saldo Kit">Saldo Kit</option>
+                        <option value="Evolução de Vendas">Evolução de Vendas</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="arquivos-grid">
+                <div class="arquivo-coluna">
+                    <label class="arquivo-titulo" for="arquivo_base">Arquivo base</label>
+                    <label for="arquivo_base" class="drop-area">
+                        <strong>Arraste o arquivo aqui ou clique para selecionar</strong>
+                        <span id="nomeArquivoBase">Nenhum arquivo selecionado</span>
+                        <span class="arquivo-subtitulo">Base única com as duas contas juntas</span>
+                    </label>
+                    <input type="file" name="arquivo_base" id="arquivo_base" style="display:none;">
+                </div>
+
+                <div class="arquivo-coluna">
+                    <label class="arquivo-titulo" for="arquivo_renafcar">Arquivo da conta RENAFCAR</label>
+                    <label for="arquivo_renafcar" class="drop-area">
+                        <strong>Arraste o arquivo aqui ou clique para selecionar</strong>
+                        <span id="nomeArquivoRenafcar">Nenhum arquivo selecionado</span>
+                        <span class="arquivo-subtitulo">Este arquivo será salvo como RENAFCAR</span>
+                    </label>
+                    <input type="file" name="arquivo_renafcar" id="arquivo_renafcar" style="display:none;">
+                </div>
+
+                <div class="arquivo-coluna">
+                    <label class="arquivo-titulo" for="arquivo_4i">Arquivo da conta 4IDISTRIBUIDORA</label>
+                    <label for="arquivo_4i" class="drop-area">
+                        <strong>Arraste o arquivo aqui ou clique para selecionar</strong>
+                        <span id="nomeArquivo4i">Nenhum arquivo selecionado</span>
+                        <span class="arquivo-subtitulo">Este arquivo será salvo como 4IDISTRIBUIDORA</span>
+                    </label>
+                    <input type="file" name="arquivo_4i" id="arquivo_4i" style="display:none;">
+                </div>
+            </div>
+
+            <div class="upload-acoes">
+                <button type="submit" class="btn-enviar">Enviar Arquivos</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="upload-box">
+        <h2 style="margin-top:0;">Histórico de Uploads</h2>
+
+        {% if uploads %}
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Arquivo</th>
+                        <th>Conta</th>
+                        <th>Sistema</th>
+                        <th>Tipo</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in uploads %}
+                    <tr>
+                        <td data-label="ID">{{ u["id"] }}</td>
+                        <td data-label="Arquivo">{{ u["nome_arquivo"] }}</td>
+                        <td data-label="Conta">{{ u["conta"] }}</td>
+                        <td data-label="Sistema">{{ u["sistema"] }}</td>
+                        <td data-label="Tipo">{{ u["tipo_relatorio"] }}</td>
+                        <td data-label="Data">{{ u["data_upload"] }}</td>
+                        <td data-label="Status"><span class="status-badge">{{ u["status"] }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <div class="sem-registros">Nenhum upload realizado ainda.</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function atualizarNomeArquivo(inputId, spanId, textoPadrao){
+    const input = document.getElementById(inputId);
+    const span = document.getElementById(spanId);
+    if (!input || !span) return;
+
+    input.addEventListener("change", function(){
+        const nome = this.files && this.files.length ? this.files[0].name : textoPadrao;
+        span.innerText = nome;
+    });
+}
+
+atualizarNomeArquivo("arquivo_base", "nomeArquivoBase", "Nenhum arquivo selecionado");
+atualizarNomeArquivo("arquivo_renafcar", "nomeArquivoRenafcar", "Nenhum arquivo selecionado");
+atualizarNomeArquivo("arquivo_4i", "nomeArquivo4i", "Nenhum arquivo selecionado");
+</script>
+
+{% endblock %}

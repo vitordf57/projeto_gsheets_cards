@@ -334,7 +334,7 @@
             </div>
 
             <div class="card-item-picking" style="margin-top:12px; background:#f8fafc; border:1px solid #e5e7eb; box-shadow:none;">
-                <div class="item-label">Título do anúncio</div>
+                <div class="item-label">Produto</div>
                 <div class="item-valor-principal" id="previewTitulo">-</div>
 
                 <div class="grid-item-ref" style="margin-top:12px;">
@@ -358,15 +358,15 @@
                 <textarea id="observacaoManual" class="textarea-manual" placeholder="Descreva aqui qualquer problema encontrado. Se a quantidade informada for menor que a esperada, este campo é obrigatório."></textarea>
             </div>
 
-            <button class="btn-coletar" id="botaoColetarManual" onclick="coletarManual('{{ lote['numero_lote'] }}')">Confirmar coleta</button>
+            <button class="btn-coletar" id="botaoColetarManual" data-numero-lote="{{ lote['numero_lote'] }}" onclick="coletarManual(this.dataset.numeroLote)">Confirmar coleta</button>
         </div>
 
         <div class="lote-linha-titulo" style="font-size:22px; margin:14px 0 10px 0;">Itens do lote</div>
         <div class="lista-referencia" id="listaItensPicking">
             {% for item in itens %}
                 <div class="item-ref-picking {% if item['divergencia'] %}pendente-divergencia{% elif item['coletado'] %}coletado-ok{% endif %}" id="item-{{ item['codigo'] }}">
-                    <div class="item-label">Título do anúncio</div>
-                    <div class="item-valor-principal" style="font-size:18px;">{{ item['titulo'] or '-' }}</div>
+                    <div class="item-label">Produto</div>
+                    <div class="item-valor-principal" style="font-size:18px;">{{ item['produto'] or item['titulo'] or '-' }}</div>
 
                     <div class="grid-item-ref" style="margin-top:12px;">
                         <div class="item-caixa-ref">
@@ -434,8 +434,9 @@
 </div>
 
 {% if lote %}
+<script id="itensPendentesData" type="application/json">{{ itens|tojson|safe }}</script>
 <script>
-const itensPendentes = {{ itens|tojson }};
+const itensPendentes = JSON.parse(document.getElementById('itensPendentesData').textContent);
 
 function limparAlertas(){
     document.getElementById('alertaAcao').style.display = 'none';
@@ -471,7 +472,7 @@ function atualizarPreviewItem(){
     const sku = document.getElementById('skuManual').value.trim();
     const item = buscarItemPorSku(sku);
 
-    document.getElementById('previewTitulo').innerText = item ? (item.titulo || '-') : '-';
+    document.getElementById('previewTitulo').innerText = item ? (item.produto || item.titulo || '-') : '-';
     document.getElementById('previewEndereco').innerText = item ? (item.endereco || '-') : '-';
     document.getElementById('previewSelo').innerText = item ? (item.selo || '-') : '-';
     document.getElementById('previewQuantidade').innerText = item ? (item.quantidade || 0) : '0';
