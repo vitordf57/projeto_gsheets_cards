@@ -1,974 +1,2439 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <style>
-    h1{
-        margin-bottom: 20px;
+    :root{
+        --bg-1:#0f172a;
+        --bg-2:#111827;
+        --panel:#ffffff;
+        --line:#e5e7eb;
+        --text:#0f172a;
+        --muted:#64748b;
+        --primary:#2563eb;
+        --primary-2:#1d4ed8;
+        --success:#059669;
+        --warning:#d97706;
+        --danger:#dc2626;
+        --violet:#7c3aed;
+        --cyan:#0891b2;
+        --shadow:0 12px 28px rgba(15, 23, 42, 0.12);
     }
-    
-    .dashboard-grid{
+
+    .full-dashboard{
+        height:calc(100vh - 72px);
         display:grid;
-        grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-        gap:20px;
-        margin-bottom:25px;
-        align-items:stretch;
+        grid-template-rows:1fr;
+        gap:6px;
+        color:var(--text);
+        overflow:hidden;
     }
-    
-    .kpi-card{
-        background:white;
-        border-radius:16px;
-        padding:22px;
-        box-shadow:0 4px 14px rgba(0,0,0,0.08);
-        transition:0.2s ease;
-        border-left:6px solid #e5e7eb;
+
+    .hero-dashboard{
+        background:linear-gradient(135deg, var(--bg-1), var(--primary-2) 55%, #0ea5e9 100%);
+        color:#fff;
+        border-radius:24px;
+        padding:12px 14px;
+        box-shadow:var(--shadow);
+        display:grid;
+        grid-template-rows:auto auto 1fr;
+        gap:8px;
+        align-items:start;
+        min-height:0;
+        height:100%;
+        overflow:hidden;
     }
-    
-    .kpi-card:hover{
-        transform:translateY(-3px);
+
+    .hero-title{
+        font-size:28px;
+        font-weight:800;
+        line-height:1.1;
+        margin:0 0 8px 0;
+        letter-spacing:-0.02em;
     }
-    
-    .kpi-title{
+
+    .hero-subtitle{
+        margin:0;
+        color:rgba(255,255,255,0.82);
         font-size:14px;
-        color:#6b7280;
-        margin-bottom:12px;
-        text-transform:uppercase;
-        font-weight:bold;
-    }
-    
-    .kpi-split{
-        display:grid;
-        grid-template-columns: 1fr;
-        gap:12px;
-    }
-    
-    .kpi-side{
-        border-radius:12px;
-        padding:14px;
-        cursor:pointer;
-        background:#f8fafc;
-        border:1px solid #e5e7eb;
-        transition:0.2s ease;
-    }
-    
-    .kpi-side:hover{
-        transform:translateY(-2px);
-    }
-    
-    .kpi-side-blue{
-        border-left:6px solid #1c5ed6;
-    }
-    
-    .kpi-side-orange{
-        border-left:6px solid #f28c28;
-    }
-    
-    .kpi-side-label{
-        font-size:12px;
-        font-weight:bold;
-        margin-bottom:8px;
-        text-transform:uppercase;
-    }
-    
-    .kpi-side-blue .kpi-side-label{
-        color:#1c5ed6;
-    }
-    
-    .kpi-side-orange .kpi-side-label{
-        color:#f28c28;
-    }
-    
-    .kpi-side-value{
-        font-size:30px;
-        font-weight:bold;
-        color:#111827;
+        line-height:1.5;
+        max-width:860px;
     }
 
-    .fluxo-lista-card{
+    .hero-pill-row{
         display:flex;
-        flex-direction:column;
+        flex-wrap:wrap;
+        gap:8px;
+        margin-top:12px;
     }
 
-    .fluxo-lista-card .kpi-title{
-        margin-bottom:16px;
+    .hero-pill{
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.18);
+        color:#fff;
+        border-radius:999px;
+        padding:7px 12px;
+        font-size:12px;
+        font-weight:700;
+        backdrop-filter:blur(8px);
     }
 
-    .kpi-card-wide{
-        grid-column: span 1;
+    .hero-title-row{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
     }
 
-    .kpi-lista{
+    .hero-title-wrap{
+        min-width:0;
+    }
+
+
+    .hero-topbar{
         display:grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns:minmax(260px, 1fr) minmax(420px, 1.05fr) auto;
+        align-items:center;
         gap:12px;
     }
 
-    .kpi-item{
-        background:#f8fafc;
-        border:1px solid #e5e7eb;
-        border-left:6px solid #1c5ed6;
-        border-radius:12px;
-        padding:14px;
-        cursor:pointer;
-        transition:0.2s ease;
+    .hero-topbar-right{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:10px;
+        flex-wrap:nowrap;
     }
 
-    .kpi-item:hover{
-        transform:translateY(-2px);
-    }
-
-    .kpi-item.ativo{
-        background:#eef4ff;
-        border:2px solid #1c5ed6;
-    }
-
-    .kpi-item-label{
-        font-size:12px;
-        font-weight:bold;
-        color:#1c5ed6;
-        margin-bottom:8px;
-        text-transform:uppercase;
-    }
-
-    .kpi-item-value{
-        font-size:30px;
-        font-weight:bold;
-        color:#111827;
-    }
-    
-    .charts-grid{
+    .hero-content-grid{
         display:grid;
-        grid-template-columns: 1fr 1fr;
-        gap:20px;
-    }
-    
-    .chart-card{
-        background:white;
-        border-radius:16px;
-        padding:20px;
-        box-shadow:0 4px 14px rgba(0,0,0,0.08);
+        grid-template-columns:minmax(0, 2.08fr) minmax(280px, 0.52fr);
+        gap:10px;
+        align-items:stretch;
+        min-height:0;
         height:100%;
     }
-    
-    .chart-card h3{
+
+    .hero-left-column,
+    .hero-right-column{
+        min-width:0;
+        display:grid;
+        gap:10px;
+        align-content:stretch;
+        min-height:0;
+    }
+
+    .hero-right-column{
+        grid-template-rows:1fr;
+    }
+
+    .hero-full-toggle{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:nowrap;
+        padding:8px 12px;
+        border-radius:18px;
+        background:rgba(255,255,255,0.10);
+        border:1px solid rgba(255,255,255,0.16);
+        backdrop-filter:blur(10px);
+        height:68px;
+        min-height:68px;
+    }
+
+
+    .hero-top-metrics{
+        display:grid;
+        grid-template-columns:repeat(6, minmax(0, 1fr));
+        gap:8px;
         margin-top:0;
-        margin-bottom:15px;
     }
-    
-    .chart-wrap{
+
+    .hero-top-metric{
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:18px;
+        padding:10px 12px;
+        backdrop-filter:blur(10px);
+        min-height:74px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+    }
+
+    .hero-top-metric-label{
+        font-size:11px;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:0.05em;
+        color:rgba(255,255,255,0.72);
+        margin-bottom:8px;
+    }
+
+    .hero-top-metric-value{
+        font-size:24px;
+        line-height:1;
+        font-weight:900;
+        color:#fff;
+    }
+
+    .hero-top-metric-sub{
+        margin-top:6px;
+        font-size:11px;
+        color:rgba(255,255,255,0.76);
+    }
+
+    .hero-monitoradas-progress{
+        margin-top:8px;
+        height:7px;
+        border-radius:999px;
+        background:rgba(255,255,255,0.16);
+        overflow:hidden;
+    }
+
+    .hero-monitoradas-progress-fill{
+        height:100%;
+        border-radius:999px;
+        background:linear-gradient(90deg, #60a5fa, #22d3ee);
+    }
+
+    .hero-monitoradas-topbar{
+        width:100%;
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:18px;
+        padding:8px 12px;
+        backdrop-filter:blur(10px);
+        display:grid;
+        grid-template-columns:auto 1fr;
+        align-items:center;
+        gap:10px;
+        height:68px;
+        min-height:68px;
+        overflow:hidden;
+    }
+
+    .hero-monitoradas-topbar h3{
+        margin:0;
+        font-size:12px;
+        font-weight:800;
+        color:#fff;
+        white-space:nowrap;
+    }
+
+    .hero-monitoradas-topbar .hero-monitoradas-subtitle{
+        display:none;
+    }
+
+    .hero-account-list.topbar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-start;
+        gap:8px;
+        overflow:hidden;
+        padding-right:0;
+        flex-wrap:nowrap;
+    }
+
+    .hero-account-list.topbar .account-item{
+        background:rgba(255,255,255,0.16);
+        border:1px solid rgba(255,255,255,0.20);
+        padding:6px 10px;
+        border-radius:999px;
+        display:flex;
+        align-items:center;
+        gap:8px;
+        height:40px;
+        cursor:pointer;
+        flex:1 1 0;
+        min-width:0;
+    }
+
+    .hero-account-list.topbar .account-top{
+        margin-bottom:0;
+        flex:0 0 auto;
+    }
+
+    .hero-account-list.topbar .account-title{
+        color:#fff;
+        font-size:12px;
+        white-space:nowrap;
+    }
+
+    .hero-account-list.topbar .account-badge{
+        display:none;
+    }
+
+    .hero-account-list.topbar .account-meta{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        color:rgba(255,255,255,0.90);
+        font-size:11px;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .hero-account-list.topbar .progress-track{
+        display:none;
+    }
+
+    .hero-full-toggle-label{
+        font-size:11px;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:0.08em;
+        color:rgba(255,255,255,0.78);
+        white-space:nowrap;
+    }
+
+    .hero-full-toggle-buttons{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        flex-wrap:wrap;
+    }
+
+    .hero-full-chip{
+        border:1px solid rgba(255,255,255,0.18);
+        background:rgba(255,255,255,0.10);
+        color:rgba(255,255,255,0.92);
+        height:40px;
+        padding:0 18px;
+        border-radius:999px;
+        font-size:13px;
+        font-weight:800;
+        cursor:pointer;
+        transition:all 0.2s ease;
+    }
+
+    .hero-full-chip:hover{
+        transform:translateY(-1px);
+        background:rgba(255,255,255,0.16);
+    }
+
+    .hero-full-chip.active{
+        background:#fff;
+        color:var(--primary-2);
+        border-color:#fff;
+        box-shadow:0 8px 20px rgba(15,23,42,0.18);
+    }
+
+    .hero-side{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:10px;
+        min-height:0;
+        height:100%;
+    }
+
+    .hero-mini-card{
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:18px;
+        padding:12px 14px;
+        min-height:82px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        backdrop-filter:blur(10px);
+    }
+
+    .hero-mini-label{
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:0.06em;
+        color:rgba(255,255,255,0.72);
+        font-weight:800;
+        margin-bottom:6px;
+    }
+
+    .hero-mini-value{
+        font-size:24px;
+        font-weight:800;
+        line-height:1;
+    }
+
+    .hero-mini-sub{
+        font-size:12px;
+        color:rgba(255,255,255,0.78);
+        margin-top:6px;
+    }
+
+    .hero-monitoradas-card{
+        grid-column:1 / -1;
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:18px;
+        padding:12px;
+        backdrop-filter:blur(10px);
+        display:flex;
+        flex-direction:column;
+        min-height:0;
+        height:100%;
+        overflow:hidden;
+    }
+
+    .hero-monitoradas-card h3{
+        margin:0 0 4px 0;
+        font-size:16px;
+        font-weight:800;
+        color:#fff;
+    }
+
+    .hero-monitoradas-subtitle{
+        font-size:12px;
+        color:rgba(255,255,255,0.78);
+        margin-bottom:12px;
+    }
+
+    .hero-account-list{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        min-height:0;
+        overflow:auto;
+        padding-right:4px;
+        flex:1;
+    }
+
+    .hero-account-list .account-item{
+        background:rgba(255,255,255,0.10);
+        border:1px solid rgba(255,255,255,0.14);
+    }
+
+    .hero-account-list .account-title{
+        color:#fff;
+    }
+
+    .hero-account-list .account-badge{
+        background:rgba(255,255,255,0.16);
+        color:#fff;
+    }
+
+    .hero-account-list .account-meta{
+        color:rgba(255,255,255,0.78);
+    }
+
+    .hero-calendar-card{
+        grid-column:1 / -1;
+        background:rgba(255,255,255,0.12);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:22px;
+        padding:10px;
+        backdrop-filter:blur(10px);
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        min-height:0;
+        height:100%;
+        overflow:hidden;
+    }
+
+    .hero-calendar-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        flex-wrap:wrap;
+    }
+
+    .hero-calendar-title-wrap h3{
+        margin:0 0 4px 0;
+        font-size:18px;
+        font-weight:800;
+        color:#fff;
+    }
+
+    .hero-calendar-title-wrap p{
+        margin:0;
+        font-size:12px;
+        color:rgba(255,255,255,0.78);
+    }
+
+    .hero-calendar-nav{
+        display:flex;
+        align-items:center;
+        gap:10px;
+    }
+
+    .calendar-nav-btn{
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        background:rgba(255,255,255,0.14);
+        color:#fff;
+        font-size:20px;
+        font-weight:800;
+        cursor:pointer;
+        transition:0.2s ease;
+    }
+
+    .calendar-nav-btn:hover{
+        transform:translateY(-1px);
+        background:rgba(255,255,255,0.22);
+    }
+
+    .hero-calendar-month{
+        min-width:220px;
+        text-align:center;
+        font-size:18px;
+        font-weight:800;
+        color:#fff;
+        letter-spacing:-0.01em;
+    }
+
+    .hero-calendar-weekdays,
+    .hero-calendar-grid{
+        display:grid;
+        grid-template-columns:repeat(7, minmax(0, 1fr));
+        gap:10px;
+    }
+
+    .hero-calendar-weekday{
+        text-align:center;
+        font-size:11px;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:0.08em;
+        color:rgba(255,255,255,0.72);
+        padding:0 4px;
+    }
+
+    .hero-calendar-grid{
+        flex:1;
+        align-content:start;
+        min-height:0;
+    }
+
+    .calendar-day{
+        min-height:74px;
+        border-radius:18px;
+        border:1px solid rgba(255,255,255,0.12);
+        background:rgba(255,255,255,0.10);
+        padding:10px;
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        cursor:pointer;
+        transition:0.2s ease;
         position:relative;
-        height:360px;
-    }
-    
-    @media (max-width: 1100px){
-        .dashboard-grid{
-            grid-template-columns:1fr;
-        }
-    
-        .charts-grid{
-            grid-template-columns:1fr;
-        }
-
-        .kpi-card-wide{
-            grid-column: span 1;
-        }
-    }
-    
-    @media (max-width: 700px){
-        .dashboard-grid{
-            grid-template-columns:1fr;
-        }
-    
-        .kpi-split{
-            grid-template-columns:1fr;
-        }
-
-        .kpi-card-wide{
-            grid-column: span 1;
-        }
-
-        .kpi-lista{
-            grid-template-columns:1fr;
-        }
+        overflow:hidden;
     }
 
-    .status-full-card-popup{
-    position:relative;
-    cursor:pointer;
-}
-
-.status-full-card-popup:hover{
-    transform:translateY(-2px);
-}
-
-.painel-flutuante-status{
-    display:none;
-    position:absolute;
-    top:calc(100% + 10px);
-    left:0;
-    min-width:420px;
-    max-width:520px;
-    background:#ffffff;
-    border:1px solid #dbe1ea;
-    border-radius:16px;
-    box-shadow:0 14px 35px rgba(0,0,0,0.16);
-    padding:14px;
-    z-index:999;
-}
-
-.painel-flutuante-status.aberto{
-    display:block;
-}
-
-.painel-secao-status{
-    margin-bottom:14px;
-}
-
-.painel-secao-status:last-child{
-    margin-bottom:0;
-}
-
-.painel-secao-titulo{
-    font-size:12px;
-    font-weight:bold;
-    color:#6b7280;
-    text-transform:uppercase;
-    margin-bottom:8px;
-}
-
-.painel-opcoes-status{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-
-.painel-opcao-status{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:14px;
-    padding:10px 12px;
-    border-radius:12px;
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
-    cursor:pointer;
-    transition:0.2s ease;
-}
-
-.painel-opcao-status:hover{
-    background:#eef4ff;
-    border-color:#c7d7fe;
-}
-
-.painel-opcao-label{
-    font-size:14px;
-    font-weight:600;
-    color:#111827;
-}
-
-.painel-opcao-valor{
-    font-size:18px;
-    font-weight:bold;
-    color:#111827;
-}
-
-@media (max-width: 700px){
-    .painel-flutuante-status{
-        min-width:290px;
-        max-width:92vw;
-        left:0;
+    .calendar-day:hover{
+        transform:translateY(-2px);
+        background:rgba(255,255,255,0.16);
+        border-color:rgba(255,255,255,0.24);
     }
-}
 
-.full-metricas-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap:16px;
-    margin-top:18px;
-}
+    .calendar-day.outside{
+        opacity:0.36;
+    }
 
-.full-metrica-card{
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
-    border-left:6px solid #1c5ed6;
-    border-radius:14px;
-    padding:16px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.04);
-}
+    .calendar-day.today{
+        box-shadow:0 0 0 2px rgba(255,255,255,0.46) inset;
+    }
 
-.full-metrica-titulo{
-    font-size:13px;
-    font-weight:bold;
-    color:#374151;
-    line-height:1.4;
-    margin-bottom:10px;
-    text-transform:uppercase;
-}
+    .calendar-day.holiday{
+        background:rgba(251,113,133,0.16);
+        border-color:rgba(251,113,133,0.28);
+    }
 
-.full-metrica-valor{
-    font-size:32px;
-    font-weight:bold;
-    color:#111827;
-}
+    .calendar-day.has-events{
+        background:rgba(255,255,255,0.18);
+    }
 
-.full-metrica-vazio{
-    color:#6b7280;
-    font-style:italic;
-    padding:12px 4px;
-}
+    .calendar-day.has-collected{
+        box-shadow:inset 0 0 0 2px rgba(52,211,153,0.34);
+    }
 
-.full-metrica-card{
-    cursor:pointer;
-    transition:0.2s ease;
-}
+    .calendar-day.has-pending{
+        box-shadow:inset 0 0 0 2px rgba(251,191,36,0.28);
+    }
 
-.full-metrica-card:hover{
-    transform:translateY(-2px);
-    box-shadow:0 8px 18px rgba(0,0,0,0.08);
-}
+    .calendar-day-top{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:8px;
+    }
 
-.full-metrica-card.ativo{
-    border:2px solid #1c5ed6;
-    background:#eef4ff;
-}
+    .calendar-day-number{
+        font-size:18px;
+        font-weight:900;
+        color:#fff;
+        line-height:1;
+    }
 
-.full-metricas-detalhe-box{
-    margin-top:22px;
-    border-top:1px solid #e5e7eb;
-    padding-top:18px;
-}
+    .calendar-day-badge{
+        min-width:28px;
+        height:28px;
+        border-radius:999px;
+        padding:0 8px;
+        background:rgba(255,255,255,0.18);
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        font-size:11px;
+        font-weight:800;
+        color:#fff;
+    }
 
-.full-metricas-detalhe-topo{
-    margin-bottom:12px;
-    font-size:16px;
-    color:#111827;
-}
+    .calendar-day-badge.collected{
+        background:rgba(16,185,129,0.24);
+    }
 
-.full-metricas-detalhe-tabela-wrap{
-    overflow:auto;
-}
+    .calendar-day-badge.pending{
+        background:rgba(245,158,11,0.24);
+    }
 
-.full-metricas-detalhe-tabela{
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
-}
+    .calendar-day-meta{
+        margin-top:auto;
+        display:flex;
+        flex-direction:column;
+        gap:4px;
+    }
 
-.full-metricas-detalhe-tabela th,
-.full-metricas-detalhe-tabela td{
-    border:1px solid #e5e7eb;
-    padding:10px 12px;
-    text-align:left;
-    vertical-align:top;
-}
+    .calendar-day-text{
+        font-size:11px;
+        font-weight:700;
+        color:rgba(255,255,255,0.86);
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
 
-.full-metricas-detalhe-tabela th{
-    background:#eef4ff;
-    font-weight:bold;
-}
+    .calendar-day-holiday{
+        font-size:10px;
+        font-weight:700;
+        color:#ffd5dc;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
 
-.full-metricas-detalhe-vazio{
-    color:#666;
-    font-style:italic;
-    padding:12px 4px;
-}
+    .calendar-legend{
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+    }
 
+    .calendar-legend-item{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        font-size:11px;
+        font-weight:800;
+        color:rgba(255,255,255,0.86);
+        background:rgba(255,255,255,0.10);
+        border:1px solid rgba(255,255,255,0.14);
+        border-radius:999px;
+        padding:7px 10px;
+    }
 
+    .calendar-legend-dot{
+        width:10px;
+        height:10px;
+        border-radius:999px;
+        display:inline-block;
+    }
 
-.chart-card-grafico{
-    position:relative;
-}
+    .calendar-legend-dot.green{background:#34d399;}
+    .calendar-legend-dot.yellow{background:#fbbf24;}
+    .calendar-legend-dot.red{background:#fb7185;}
 
-.menu-contexto-grafico{
-    display:none;
-    position:fixed;
-    min-width:220px;
-    background:#ffffff;
-    border:1px solid #dbe1ea;
-    border-radius:12px;
-    box-shadow:0 14px 35px rgba(0,0,0,0.18);
-    z-index:5000;
-    overflow:hidden;
-}
+    .calendar-empty{
+        flex:1;
+        min-height:180px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:18px;
+        border:1px dashed rgba(255,255,255,0.22);
+        background:rgba(255,255,255,0.06);
+        color:rgba(255,255,255,0.76);
+        font-weight:700;
+        text-align:center;
+        padding:20px;
+    }
 
-.menu-contexto-grafico.aberto{
-    display:block;
-}
+    .coleta-modal{
+        position:fixed;
+        inset:0;
+        background:rgba(15,23,42,0.56);
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:24px;
+        z-index:2000;
+    }
 
-.menu-contexto-item{
-    width:100%;
-    border:none;
-    background:white;
-    text-align:left;
-    padding:12px 14px;
-    cursor:pointer;
-    font-size:14px;
-    font-weight:600;
-    color:#111827;
-}
+    .coleta-modal.open{display:flex;}
 
-.menu-contexto-item:hover{
-    background:#eef4ff;
-}
+    .coleta-modal-card{
+        width:min(960px, 100%);
+        max-height:90vh;
+        overflow:auto;
+        background:#fff;
+        border-radius:26px;
+        box-shadow:0 24px 60px rgba(15,23,42,0.28);
+        padding:22px;
+        color:#0f172a;
+    }
 
+    .coleta-modal-header{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:18px;
+    }
+
+    .coleta-modal-title h3{
+        margin:0 0 4px 0;
+        font-size:24px;
+        font-weight:900;
+    }
+
+    .coleta-modal-title p{
+        margin:0;
+        color:#64748b;
+        font-size:14px;
+    }
+
+    .coleta-close{
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        background:#eef2ff;
+        color:#1d4ed8;
+        font-size:24px;
+        font-weight:800;
+        cursor:pointer;
+    }
+
+    .coleta-modal-grid{
+        display:grid;
+        grid-template-columns:minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+        gap:18px;
+    }
+
+    .coleta-panel{
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        border-radius:20px;
+        padding:16px;
+    }
+
+    .coleta-panel h4{
+        margin:0 0 12px 0;
+        font-size:15px;
+        font-weight:900;
+        color:#0f172a;
+    }
+
+    .coleta-event-list{
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        max-height:420px;
+        overflow:auto;
+    }
+
+    .coleta-event-item{
+        border:1px solid #dbe3f1;
+        border-radius:16px;
+        padding:12px;
+        background:#fff;
+        cursor:pointer;
+        transition:0.2s ease;
+    }
+
+    .coleta-event-item:hover,
+    .coleta-event-item.active{
+        border-color:#2563eb;
+        box-shadow:0 0 0 3px rgba(37,99,235,0.10);
+    }
+
+    .coleta-event-top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin-bottom:8px;
+    }
+
+    .coleta-event-title{
+        font-size:14px;
+        font-weight:900;
+        color:#0f172a;
+    }
+
+    .coleta-status-chip{
+        display:inline-flex;
+        align-items:center;
+        padding:6px 10px;
+        border-radius:999px;
+        font-size:11px;
+        font-weight:800;
+    }
+
+    .coleta-status-chip.ok{background:#dcfce7;color:#166534;}
+    .coleta-status-chip.pending{background:#fef3c7;color:#92400e;}
+
+    .coleta-event-meta{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        font-size:12px;
+        color:#64748b;
+    }
+
+    .coleta-form-grid{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:12px;
+    }
+
+    .coleta-field{
+        display:flex;
+        flex-direction:column;
+        gap:7px;
+    }
+
+    .coleta-field.full{grid-column:1 / -1;}
+
+    .coleta-field label{
+        font-size:12px;
+        font-weight:800;
+        color:#475569;
+        text-transform:uppercase;
+        letter-spacing:0.04em;
+    }
+
+    .coleta-field input,
+    .coleta-field select,
+    .coleta-field textarea{
+        width:100%;
+        border:1px solid #d7deea;
+        border-radius:14px;
+        padding:12px 14px;
+        font-size:14px;
+        outline:none;
+        background:#fff;
+        color:#0f172a;
+        box-sizing:border-box;
+    }
+
+    .coleta-field textarea{
+        min-height:96px;
+        resize:vertical;
+    }
+
+    .coleta-field input:focus,
+    .coleta-field select:focus,
+    .coleta-field textarea:focus{
+        border-color:#2563eb;
+        box-shadow:0 0 0 3px rgba(37,99,235,0.10);
+    }
+
+    .coleta-form-actions{
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+        margin-top:14px;
+    }
+
+    .coleta-btn{
+        border:none;
+        border-radius:14px;
+        padding:12px 16px;
+        font-size:13px;
+        font-weight:800;
+        cursor:pointer;
+        transition:0.2s ease;
+    }
+
+    .coleta-btn.primary{background:linear-gradient(135deg, #2563eb, #0ea5e9); color:#fff;}
+    .coleta-btn.secondary{background:#eef2ff; color:#1d4ed8;}
+
+    .coleta-feedback{
+        display:none;
+        margin-top:14px;
+        border-radius:14px;
+        padding:12px 14px;
+        font-size:13px;
+        font-weight:800;
+    }
+
+    .coleta-feedback.show{display:block;}
+    .coleta-feedback.ok{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+    .coleta-feedback.error{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
+
+    .dashboard-toolbar{
+        display:grid;
+        grid-template-columns:minmax(0, 1.55fr) minmax(320px, 0.75fr);
+        gap:14px;
+        align-items:stretch;
+    }
+
+    .toolbar-main{
+        background:var(--panel);
+        border-radius:22px;
+        padding:16px 18px;
+        box-shadow:var(--shadow);
+        display:grid;
+        grid-template-columns:1fr;
+        gap:14px;
+        align-items:stretch;
+    }
+
+    .filters-grid{
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:14px 12px;
+        align-items:end;
+    }
+
+    .filter-box{
+        display:flex;
+        flex-direction:column;
+        min-width:0;
+    }
+
+    .filter-box label{
+        display:block;
+        font-size:11px;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:0.05em;
+        color:var(--muted);
+        margin-bottom:7px;
+        padding-left:2px;
+    }
+
+    .filter-box select,
+    .filter-box input{
+        width:100%;
+        height:46px;
+        border-radius:14px;
+        border:1px solid #d7deea;
+        padding:0 14px;
+        background:#f8fafc;
+        font-size:14px;
+        font-weight:700;
+        color:var(--text);
+        outline:none;
+    }
+
+    .filter-box select:focus,
+    .filter-box input:focus{
+        border-color:var(--primary);
+        box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+        background:#fff;
+    }
+
+    .toolbar-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        justify-content:flex-end;
+        padding-top:2px;
+    }
+
+    .btn-dashboard{
+        border:none;
+        border-radius:14px;
+        padding:12px 16px;
+        font-size:13px;
+        font-weight:800;
+        cursor:pointer;
+        transition:0.2s ease;
+        min-width:170px;
+    }
+
+    .btn-dashboard:hover{
+        transform:translateY(-2px);
+    }
+
+    .btn-primary{
+        background:linear-gradient(135deg, var(--primary), #0ea5e9);
+        color:#fff;
+    }
+
+    .btn-light{
+        background:#f8fafc;
+        color:var(--text);
+        border:1px solid var(--line);
+    }
+
+    .dashboard-body{
+        display:none;
+    }
+
+    .dashboard-main,
+    .dashboard-side{
+        min-height:0;
+        display:grid;
+        gap:14px;
+    }
+
+    .dashboard-main{
+        grid-template-rows:auto;
+    }
+
+    .dashboard-side{
+        grid-template-rows:auto;
+    }
+
+    .kpis-grid{
+        display:grid;
+        grid-template-columns:repeat(5, minmax(0,1fr));
+        gap:12px;
+    }
+
+    .kpi-profissional{
+        background:var(--panel);
+        border-radius:20px;
+        padding:16px;
+        box-shadow:var(--shadow);
+        border:1px solid rgba(148,163,184,0.12);
+        position:relative;
+        overflow:hidden;
+        cursor:pointer;
+        transition:0.2s ease;
+    }
+
+    .kpi-profissional:hover{
+        transform:translateY(-3px);
+    }
+
+    .kpi-profissional::after{
+        content:"";
+        position:absolute;
+        inset:auto -30px -30px auto;
+        width:90px;
+        height:90px;
+        border-radius:50%;
+        background:rgba(37,99,235,0.06);
+    }
+
+    .kpi-profissional.kpi-blue{border-left:5px solid var(--primary);}
+    .kpi-profissional.kpi-green{border-left:5px solid var(--success);}
+    .kpi-profissional.kpi-orange{border-left:5px solid var(--warning);}
+    .kpi-profissional.kpi-red{border-left:5px solid var(--danger);}
+    .kpi-profissional.kpi-violet{border-left:5px solid var(--violet);}
+    .kpi-profissional.kpi-cyan{border-left:5px solid var(--cyan);}
+    .kpi-profissional.kpi-indigo{border-left:5px solid #4f46e5;}
+    .kpi-profissional.kpi-teal{border-left:5px solid #0f766e;}
+    .kpi-profissional.kpi-amber{border-left:5px solid #d97706;}
+    .kpi-profissional.kpi-slate{border-left:5px solid #475569;}
+
+    .kpi-label{
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:0.05em;
+        color:var(--muted);
+        font-weight:800;
+        margin-bottom:10px;
+        position:relative;
+        z-index:1;
+    }
+
+    .kpi-value{
+        font-size:32px;
+        line-height:1;
+        font-weight:900;
+        color:var(--text);
+        position:relative;
+        z-index:1;
+    }
+
+    .kpi-subline{
+        margin-top:10px;
+        font-size:12px;
+        color:var(--muted);
+        position:relative;
+        z-index:1;
+    }
+
+    .panel-grid-2{
+        min-height:0;
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:14px;
+    }
+
+    .panel-card{
+        background:var(--panel);
+        border-radius:22px;
+        box-shadow:var(--shadow);
+        padding:16px;
+        min-height:0;
+        display:flex;
+        flex-direction:column;
+        border:1px solid rgba(148,163,184,0.12);
+    }
+
+    .panel-card h3{
+        margin:0 0 4px 0;
+        font-size:16px;
+        font-weight:800;
+        color:var(--text);
+    }
+
+    .toolbar-side-card{
+        height:100%;
+    }
+
+    .panel-subtitle{
+        font-size:12px;
+        color:var(--muted);
+        margin-bottom:12px;
+    }
+
+    .chart-zone{
+        flex:1;
+        min-height:220px;
+        position:relative;
+    }
+
+    .ranking-list,
+    .account-list,
+    .insight-list{
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        min-height:0;
+        overflow:auto;
+        padding-right:4px;
+    }
+
+    .ranking-item,
+    .account-item,
+    .insight-item{
+        background:#f8fafc;
+        border:1px solid var(--line);
+        border-radius:16px;
+        padding:12px 14px;
+    }
+
+    .ranking-top,
+    .account-top,
+    .insight-top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        margin-bottom:6px;
+    }
+
+    .ranking-title,
+    .account-title,
+    .insight-title{
+        font-size:13px;
+        font-weight:800;
+        color:var(--text);
+        line-height:1.3;
+    }
+
+    .ranking-badge,
+    .account-badge,
+    .insight-badge{
+        font-size:11px;
+        font-weight:800;
+        padding:4px 8px;
+        border-radius:999px;
+        background:#e0ecff;
+        color:var(--primary-2);
+        white-space:nowrap;
+    }
+
+    .ranking-meta,
+    .account-meta,
+    .insight-meta{
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+        font-size:12px;
+        color:var(--muted);
+    }
+
+    .progress-track{
+        margin-top:8px;
+        height:8px;
+        border-radius:999px;
+        background:#e5e7eb;
+        overflow:hidden;
+    }
+
+    .progress-fill{
+        height:100%;
+        border-radius:999px;
+        background:linear-gradient(90deg, var(--primary), #06b6d4);
+    }
+
+    .table-wrap{
+        min-height:0;
+        overflow:auto;
+        border:1px solid var(--line);
+        border-radius:18px;
+    }
+
+    .dashboard-table{
+        width:100%;
+        border-collapse:collapse;
+        font-size:12px;
+        background:#fff;
+    }
+
+    .dashboard-table th,
+    .dashboard-table td{
+        padding:10px 12px;
+        border-bottom:1px solid #edf2f7;
+        text-align:left;
+        vertical-align:top;
+        white-space:nowrap;
+    }
+
+    .dashboard-table th{
+        position:sticky;
+        top:0;
+        z-index:1;
+        background:#eff6ff;
+        color:#0f172a;
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:0.05em;
+    }
+
+    .status-chip{
+        display:inline-flex;
+        align-items:center;
+        border-radius:999px;
+        padding:4px 8px;
+        font-size:11px;
+        font-weight:800;
+        background:#eef2ff;
+        color:#3730a3;
+    }
+
+    .status-enviando{background:#dbeafe; color:#1d4ed8;}
+    .status-naoenviar{background:#fee2e2; color:#b91c1c;}
+    .status-homologar{background:#ede9fe; color:#6d28d9;}
+    .status-ecommerce{background:#cffafe; color:#0f766e;}
+    .status-compras{background:#fef3c7; color:#b45309;}
+    .status-principal{background:#e5e7eb; color:#374151;}
+
+    .panel-header-actions{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        margin-bottom:12px;
+    }
+
+    .tiny-button{
+        border:none;
+        background:#eef4ff;
+        color:var(--primary-2);
+        border-radius:10px;
+        padding:8px 10px;
+        font-size:11px;
+        font-weight:800;
+        cursor:pointer;
+    }
+
+    .empty-state{
+        flex:1;
+        min-height:150px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:var(--muted);
+        font-weight:700;
+        text-align:center;
+        background:#f8fafc;
+        border:1px dashed #cbd5e1;
+        border-radius:16px;
+        padding:20px;
+    }
+
+    @media (max-width: 1600px){
+        .filters-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
+        .kpis-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
+    }
+
+    @media (max-width: 1220px){
+        .full-dashboard{height:auto; overflow:visible;}
+        .hero-content-grid,
+        .coleta-modal-grid,
+        .dashboard-toolbar,
+        .dashboard-body,
+        .panel-grid-2,
+        .toolbar-main{grid-template-columns:1fr;}
+        .dashboard-main,
+        .dashboard-side{grid-template-rows:auto;}
+    }
+
+    @media (max-width: 900px){
+        .hero-side,
+        .coleta-form-grid,
+        .filters-grid,
+        .kpis-grid,
+        .panel-grid-2,
+        .hero-account-list.topbar,
+        .hero-top-metrics{grid-template-columns:1fr;}
+        .toolbar-actions{justify-content:stretch;}
+        .btn-dashboard{width:100%;}
+        .hero-topbar,
+        .hero-title-row{align-items:flex-start;}
+        .hero-topbar{grid-template-columns:1fr;}
+        .hero-topbar-right{justify-content:stretch;}
+        .hero-full-toggle,
+        .hero-monitoradas-topbar{width:100%; justify-content:space-between;}
+    }
 </style>
 
-<h1>🏠 Dashboard Geral</h1>
-
-<div class="dashboard-grid">
-
-    <div class="chart-card chart-card-grafico">
-        <h3>📊 Estratégias em quantidade</h3>
-        <div class="chart-wrap">
-            <canvas id="graficoEstrategias"></canvas>
-        </div>
-    </div>
-
-    <div class="kpi-card fluxo-lista-card">
-        <div class="kpi-title">Fluxo de Decisão</div>
-        <div class="kpi-split">
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({ tela: 'enviando' })">
-                <div class="kpi-side-label">ENVIANDO</div>
-                <div class="kpi-side-value" id="kpiMlbEnviando">0</div>
-                <div style="font-size:12px; margin-top:8px; color:#374151;">
-                    Peças: <strong id="kpiPecasEnviando">0</strong>
-                </div>
+<div class="full-dashboard">
+    <section class="hero-dashboard">
+        <div class="hero-topbar">
+            <div class="hero-title-wrap">
+                <h1 class="hero-title">🚀 Command Center Full</h1>
             </div>
 
-            <div class="kpi-side kpi-side-orange" onclick="irParaPainel({ tela: 'naoEnviar' })">
-                <div class="kpi-side-label">NÃO ENVIAR</div>
-                <div class="kpi-side-value" id="kpiMlbNaoEnviar">0</div>
-                <div style="font-size:12px; margin-top:8px; color:#374151;">
-                    Peças: <strong id="kpiPecasNaoEnviar">0</strong>
-                </div>
+            <div class="hero-monitoradas-topbar">
+                <h3>🏢 Contas monitoradas</h3>
+                <div class="hero-monitoradas-subtitle">Total MLBs e quantidade analisada por conta.</div>
+                <div class="hero-account-list topbar" id="listaContasResumo"></div>
             </div>
 
-            <div class="kpi-side kpi-side-blue" onclick="irParaPainel({ tela: 'homologar' })">
-                <div class="kpi-side-label">HOMOLOGAR</div>
-                <div class="kpi-side-value" id="kpiMlbHomologar">0</div>
-                <div style="font-size:12px; margin-top:8px; color:#374151;">
-                    Peças: <strong id="kpiPecasHomologar">0</strong>
+            <div class="hero-topbar-right">
+                <div class="hero-full-toggle" aria-label="Filtro Full">
+                    <span class="hero-full-toggle-label">Recorte</span>
+                    <div class="hero-full-toggle-buttons">
+                        <button type="button" class="hero-full-chip active" id="btnModoSomenteFull" data-modo-full="somente_full">No Full</button>
+                        <button type="button" class="hero-full-chip" id="btnModoTodosRelacionados" data-modo-full="todos_relacionados">Não Full</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-</div>
-
-<div id="menuContextoGrafico" class="menu-contexto-grafico">
-    <button type="button" class="menu-contexto-item" onclick="exportarEstrategiaContexto()">Exportar para Excel</button>
-</div>
-
-<div class="chart-card" style="margin-top:20px;">
-    <h3>📦 Distribuição dos anúncios no Full</h3>
-    <div id="fullMetricasGrid" class="full-metricas-grid"></div>
-
-    <div id="fullMetricasDetalheBox" class="full-metricas-detalhe-box" style="display:none;">
-        <div class="full-metricas-detalhe-topo">
-            <strong id="fullMetricasDetalheTitulo">Detalhes</strong>
+        <div class="hero-top-metrics">
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">MLBs no Full</div>
+                <div class="hero-top-metric-value" id="heroTotalMlbsFull">0</div>
+                <div class="hero-top-metric-sub">Ambas as contas</div>
+            </div>
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">Peças no Full</div>
+                <div class="hero-top-metric-value" id="heroTotalPecasFull">0</div>
+                <div class="hero-top-metric-sub">Soma geral</div>
+            </div>
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">Ruptura</div>
+                <div class="hero-top-metric-value" id="heroTotalRuptura">0</div>
+                <div class="hero-top-metric-sub">MLBs rupturados</div>
+            </div>
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">Crítico</div>
+                <div class="hero-top-metric-value" id="heroTotalCriticoMeli">0</div>
+                <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
+            </div>
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">Médio</div>
+                <div class="hero-top-metric-value" id="heroTotalMedioMeli">0</div>
+                <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
+            </div>
+            <div class="hero-top-metric">
+                <div class="hero-top-metric-label">Baixo</div>
+                <div class="hero-top-metric-value" id="heroTotalBaixoMeli">0</div>
+                <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
+            </div>
         </div>
 
-        <div class="full-metricas-detalhe-tabela-wrap">
-            <table class="full-metricas-detalhe-tabela">
-                <thead>
-                    <tr>
-                        <th>MLB</th>
-                        <th>SKU</th>
-                        <th>Conta</th>
-                        <th>Status</th>
-                        <th>Unidades</th>
-                    </tr>
-                </thead>
-                <tbody id="fullMetricasDetalheBody"></tbody>
-            </table>
+        <div class="hero-content-grid">
+            <div class="hero-left-column">
+                <div class="hero-calendar-card">
+                    <div class="hero-calendar-head">
+                        <div class="hero-calendar-title-wrap">
+                            <h3>📅 Agenda de Coletas</h3>
+                            <p>Clique em um dia para cadastrar ou editar número do lote, total de MLBs, total de peças e status da coleta.</p>
+                        </div>
+                        <div class="hero-calendar-nav">
+                            <button type="button" class="calendar-nav-btn" id="btnCalendarioPrev">‹</button>
+                            <div class="hero-calendar-month" id="calendarMonthLabel">-</div>
+                            <button type="button" class="calendar-nav-btn" id="btnCalendarioNext">›</button>
+                        </div>
+                    </div>
+                    <div class="hero-calendar-weekdays">
+                        <div class="hero-calendar-weekday">Dom</div>
+                        <div class="hero-calendar-weekday">Seg</div>
+                        <div class="hero-calendar-weekday">Ter</div>
+                        <div class="hero-calendar-weekday">Qua</div>
+                        <div class="hero-calendar-weekday">Qui</div>
+                        <div class="hero-calendar-weekday">Sex</div>
+                        <div class="hero-calendar-weekday">Sáb</div>
+                    </div>
+                    <div class="hero-calendar-grid" id="calendarGrid"></div>
+                    <div class="calendar-legend">
+                        <span class="calendar-legend-item"><span class="calendar-legend-dot green"></span> Coletado</span>
+                        <span class="calendar-legend-item"><span class="calendar-legend-dot yellow"></span> Não coletado</span>
+                        <span class="calendar-legend-item"><span class="calendar-legend-dot red"></span> Feriado</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-right-column">
+                <div class="hero-monitoradas-card">
+                    <h3>📍 Insights do Full</h3>
+                    <div class="hero-monitoradas-subtitle">Leituras rápidas para decisão operacional.</div>
+                    <div class="hero-account-list" id="listaInsights"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="coleta-modal" id="coletaModal">
+        <div class="coleta-modal-card">
+            <div class="coleta-modal-header">
+                <div class="coleta-modal-title">
+                    <h3 id="coletaModalTitulo">Coletas do dia</h3>
+                    <p id="coletaModalSubtitulo">Cadastre ou ajuste manualmente a coleta reservada.</p>
+                </div>
+                <button type="button" class="coleta-close" id="btnFecharModalColeta">×</button>
+            </div>
+
+            <div class="coleta-modal-grid">
+                <div class="coleta-panel">
+                    <h4>Lotes agendados na data</h4>
+                    <div class="coleta-event-list" id="coletaEventList"></div>
+                </div>
+
+                <div class="coleta-panel">
+                    <h4>Cadastro manual da coleta</h4>
+                    <div class="coleta-form-grid">
+                        <div class="coleta-field">
+                            <label for="coletaNumeroLote">Número do lote</label>
+                            <input type="text" id="coletaNumeroLote" placeholder="Ex: 12345">
+                        </div>
+                        <div class="coleta-field">
+                            <label for="coletaStatus">Status</label>
+                            <select id="coletaStatus">
+                                <option value="NAO_COLETADO">Não coletado</option>
+                                <option value="COLETADO">Coletado</option>
+                            </select>
+                        </div>
+                        <div class="coleta-field">
+                            <label for="coletaTotalMlbs">Total de MLBs</label>
+                            <input type="number" id="coletaTotalMlbs" min="0" step="1" placeholder="0">
+                        </div>
+                        <div class="coleta-field">
+                            <label for="coletaTotalPecas">Total de peças</label>
+                            <input type="number" id="coletaTotalPecas" min="0" step="1" placeholder="0">
+                        </div>
+                        <div class="coleta-field full">
+                            <label for="coletaObservacao">Observação</label>
+                            <textarea id="coletaObservacao" placeholder="Observações da coleta, transportadora, janela, etc."></textarea>
+                        </div>
+                    </div>
+                    <div class="coleta-form-actions">
+                        <button type="button" class="coleta-btn primary" id="btnSalvarColeta">Salvar coleta</button>
+                        <button type="button" class="coleta-btn secondary" id="btnNovaColeta">Novo cadastro</button>
+                    </div>
+                    <div class="coleta-feedback" id="coletaFeedback"></div>
+                </div>
+            </div>
         </div>
     </div>
+
+
+    <section class="dashboard-body">
+        <div class="dashboard-main">
+            <div class="kpis-grid">
+                <div class="kpi-profissional kpi-blue" data-kpi="mlbs_full">
+                    <div class="kpi-label">Quantidade de lotes</div>
+                    <div class="kpi-value" id="kpiMlbsFull">0</div>
+                    <div class="kpi-subline" id="kpiLotesSub">Coletados: 0 • Não coletados: 0</div>
+                </div>
+                <div class="kpi-profissional kpi-green" data-kpi="pecas_full">
+                    <div class="kpi-label">Peças em Full</div>
+                    <div class="kpi-value" id="kpiPecasFull">0</div>
+                    <div class="kpi-subline">Unidades totais na malha Full</div>
+                </div>
+                <div class="kpi-profissional kpi-red" data-kpi="ruptura">
+                    <div class="kpi-label">Ruptura</div>
+                    <div class="kpi-value" id="kpiRuptura">0</div>
+                    <div class="kpi-subline">Itens com risco ou já em ruptura</div>
+                </div>
+                <div class="kpi-profissional kpi-orange" data-kpi="enviando">
+                    <div class="kpi-label">Enviando</div>
+                    <div class="kpi-value" id="kpiEnviando">0</div>
+                    <div class="kpi-subline">MLBs com quantidade em trânsito</div>
+                </div>
+                <div class="kpi-profissional kpi-cyan" data-kpi="ecommerce_compras">
+                    <div class="kpi-label">Ecommerce + Compras</div>
+                    <div class="kpi-value" id="kpiEcoCompras">0</div>
+                    <div class="kpi-subline">Ações fora da tela principal</div>
+                </div>
+                <div class="kpi-profissional kpi-violet" data-kpi="testes">
+                    <div class="kpi-label">Testes Enviados</div>
+                    <div class="kpi-value" id="kpiTestes">0</div>
+                    <div class="kpi-subline">Leitura por estratégia / motivo / lote</div>
+                </div>
+                <div class="kpi-profissional kpi-indigo" data-kpi="magic">
+                    <div class="kpi-label">Magic</div>
+                    <div class="kpi-value" id="kpiMagic">0</div>
+                    <div class="kpi-subline">Itens marcados na coluna MAGIC</div>
+                </div>
+                <div class="kpi-profissional kpi-teal" data-kpi="acompanhar">
+                    <div class="kpi-label">Acompanhar</div>
+                    <div class="kpi-value" id="kpiAcompanhar">0</div>
+                    <div class="kpi-subline">Itens em leitura de acompanhamento</div>
+                </div>
+                <div class="kpi-profissional kpi-amber" data-kpi="critico">
+                    <div class="kpi-label">Crítico</div>
+                    <div class="kpi-value" id="kpiCritico">0</div>
+                    <div class="kpi-subline">Observação MELI com status crítico</div>
+                </div>
+                <div class="kpi-profissional kpi-slate" data-kpi="baixo">
+                    <div class="kpi-label">Baixo</div>
+                    <div class="kpi-value" id="kpiBaixo">0</div>
+                    <div class="kpi-subline">Observação MELI com status baixo</div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <script>
+const dashboardState = {
+    dados: [],
+    statusSalvos: {},
+    dadosProcessados: [],
+    coletasCalendario: [],
+    calendarCurrentDate: new Date(),
+    selectedDateKey: "",
+    selectedColetaNumeroLote: "",
+    charts: {}
+};
+
+const filtrosDashboard = {
+    conta: "",
+    saudeFull: "",
+    statusCard: "",
+    cobertura: "",
+    busca: "",
+    modoFull: "somente_full"
+};
 
 function numero(v){
-    if(v === null || v === undefined || v === "") return 0;
-    return Number(String(v).replaceAll(".","").replace(",","."));
+    if (v === null || v === undefined || v === "") return 0;
+    if (typeof v === "number") return isNaN(v) ? 0 : v;
+    const texto = String(v).trim();
+    if (!texto) return 0;
+    const normalizado = texto.includes(",")
+        ? texto.replaceAll(".", "").replace(",", ".")
+        : texto;
+    const n = Number(normalizado);
+    return isNaN(n) ? 0 : n;
 }
 
-function extrairDiasCobertura(texto){
-    const t = String(texto || "");
-    const match = t.match(/(\d+)\s*dias/i);
-    return match ? Number(match[1]) : null;
-}
-
-const urlParamsHome = new URLSearchParams(window.location.search);
-
-function numero(v){
-    if(v === null || v === undefined || v === "") return 0;
-    return Number(String(v).replaceAll(".","").replace(",","."));
-}
-
-function extrairDiasCobertura(texto){
-    const t = String(texto || "");
-    const match = t.match(/(\d+)\s*dias/i);
-    return match ? Number(match[1]) : null;
+function texto(valor){
+    return String(valor || "").trim();
 }
 
 function textoNormalizado(valor){
-    return String(valor || "").toUpperCase().trim();
+    return texto(valor).toUpperCase();
 }
 
-function atualizarUrlFiltroStatusFull(){
+function extrairDiasCobertura(textoCobertura){
+    const match = String(textoCobertura || "").match(/(\d+)\s*dias/i);
+    return match ? Number(match[1]) : null;
+}
+
+function slugStatus(status){
+    const s = textoNormalizado(status);
+    if (s === "NAO_ENVIAR" || s === "NAOENVIAR") return "naoEnviar";
+    if (s === "ENVIANDO") return "enviando";
+    if (s === "HOMOLOGAR") return "homologar";
+    if (s === "ECOMMERCE") return "ecommerce";
+    if (s === "COMPRAS") return "compras";
+    return "principal";
+}
+
+function nomeStatus(status){
+    const s = slugStatus(status);
+    if (s === "naoEnviar") return "Não enviar";
+    if (s === "enviando") return "Enviando";
+    if (s === "homologar") return "Homologar";
+    if (s === "ecommerce") return "Ecommerce";
+    if (s === "compras") return "Compras";
+    return "Principal";
+}
+
+function classeStatus(status){
+    const s = slugStatus(status);
+    if (s === "naoEnviar") return "status-chip status-naoenviar";
+    if (s === "enviando") return "status-chip status-enviando";
+    if (s === "homologar") return "status-chip status-homologar";
+    if (s === "ecommerce") return "status-chip status-ecommerce";
+    if (s === "compras") return "status-chip status-compras";
+    return "status-chip status-principal";
+}
+
+function lerFiltrosDaUrl(){
+    const params = new URLSearchParams(window.location.search);
+    filtrosDashboard.conta = params.get("dashConta") || "";
+    filtrosDashboard.saudeFull = params.get("dashSaudeFull") || "";
+    filtrosDashboard.statusCard = params.get("dashStatus") || "";
+    filtrosDashboard.cobertura = params.get("dashCobertura") || "";
+    filtrosDashboard.busca = params.get("dashBusca") || "";
+    filtrosDashboard.modoFull = params.get("dashModoFull") || "somente_full";
+}
+
+function atualizarUrlDashboard(){
     const params = new URLSearchParams(window.location.search);
 
-    if (filtroStatusFullAtivo) {
-        params.set("statusFullFiltro", filtroStatusFullAtivo);
-    } else {
-        params.delete("statusFullFiltro");
-    }
+    const mapa = {
+        dashConta: filtrosDashboard.conta,
+        dashSaudeFull: filtrosDashboard.saudeFull,
+        dashStatus: filtrosDashboard.statusCard,
+        dashCobertura: filtrosDashboard.cobertura,
+        dashBusca: filtrosDashboard.busca,
+        dashModoFull: filtrosDashboard.modoFull
+    };
+
+    Object.entries(mapa).forEach(([chave, valor]) => {
+        if (valor) params.set(chave, valor);
+        else params.delete(chave);
+    });
 
     const query = params.toString();
     history.replaceState({}, "", "/home" + (query ? "?" + query : ""));
 }
 
-function irParaPainel(filtros){
-    const params = new URLSearchParams();
+function preencherFiltrosBase(){
+    const btnFull = document.getElementById("btnModoSomenteFull");
+    const btnNaoFull = document.getElementById("btnModoTodosRelacionados");
+    if (!btnFull || !btnNaoFull) return;
 
-    if (filtros.saude) params.set("saude", filtros.saude);
-    if (filtros.saudeFull) params.set("saudeFull", filtros.saudeFull);
-    if (filtros.analise) params.set("analise", filtros.analise);
-    if (filtros.magic) params.set("magic", filtros.magic);
-    if (filtros.cobertura) params.set("cobertura", filtros.cobertura);
-    if (filtros.full) params.set("full", filtros.full);
-    if (filtros.conta) params.set("conta", filtros.conta);
-    if (filtros.tela) params.set("tela", filtros.tela);
-
-    if (filtroStatusFullAtivo) {
-        params.set("statusFullFiltro", filtroStatusFullAtivo);
-    }
-
-    window.location.href = "/?" + params.toString();
+    btnFull.classList.toggle("active", filtrosDashboard.modoFull === "somente_full");
+    btnNaoFull.classList.toggle("active", filtrosDashboard.modoFull === "todos_relacionados");
 }
 
+function obterResumoLotes(statusSalvos){
+    const lotesMap = {};
 
-function porConta(dados, nickname){
-    return dados.filter(item =>
-        String(item["Nickname"] || "").toUpperCase().trim() === nickname.toUpperCase().trim()
-    );
-}
-
-let filtroStatusFullAtivo = urlParamsHome.get("statusFullFiltro") || "";
-
-let graficoEstrategias = null;
-let estrategiaContextoAtual = "";
-
-
-function aplicarFiltroStatusFull(lista){
-    if (filtroStatusFullAtivo === "nao_ofereco_mais_full"){
-        return lista.filter(item =>
-            String(item["OBSERVAÇÃO MELI"] || "").trim() === "Você deixou de oferecer o Full."
+    Object.values(statusSalvos || {}).forEach(registro => {
+        const ultimoLote = registro?.ultimo_lote || {};
+        const numeroLote = texto(
+            ultimoLote.numero_lote ||
+            registro.numero_lote ||
+            registro.lote ||
+            registro.lote_filete
         );
-    }
 
-    if (filtroStatusFullAtivo === "esta_no_full"){
-        return lista.filter(item =>
-            String(item["Full"] || "").trim().toUpperCase() === "NO FULL"
-        );
-    }
+        if (!numeroLote) return;
 
-    if (filtroStatusFullAtivo === "nunca_foi_full"){
-        return lista.filter(item => {
-            const observacaoMeli = String(item["OBSERVAÇÃO MELI"] || "").trim();
-            const full = String(item["Full"] || "").trim().toUpperCase();
-
-            return observacaoMeli !== "Você deixou de oferecer o Full." && full !== "NO FULL";
-        });
-    }
-
-    if (filtroStatusFullAtivo === "sem_venda"){
-    return lista.filter(item => {
-        const unidadesVendidas = textoNormalizado(
-            item["Unidades Vendidas"] ||
-            item["unidades vendidas"] ||
-            item["UNIDADES VENDIDAS"] ||
-            item["Unidades vendidas"] ||
-            item["UNIDADE VENDIDA"] ||
+        const statusLote = textoNormalizado(
+            ultimoLote.status ||
+            registro.status_lote ||
+            registro.lote_status ||
             ""
         );
 
-        return unidadesVendidas === "SEM VENDA";
+        if (!lotesMap[numeroLote]) {
+            lotesMap[numeroLote] = { coletado: false };
+        }
+
+        if (
+            statusLote.includes("COLETADO") ||
+            statusLote.includes("FINALIZADO") ||
+            statusLote.includes("FECHADO")
+        ) {
+            lotesMap[numeroLote].coletado = true;
+        }
     });
+
+    const lotes = Object.values(lotesMap);
+    const total = lotes.length;
+    const coletados = lotes.filter(l => l.coletado).length;
+    const naoColetados = Math.max(0, total - coletados);
+
+    return { total, coletados, naoColetados };
 }
 
-    return lista;
-}
-
-
-function renderGraficoEstrategias(dadosFiltrados, statusSalvos){
-    const mapaEstrategias = {};
-
-    dadosFiltrados.forEach(item => {
-        const codigo = String(item["Código do Anúncio"] || "").trim();
+function processarDados(dados, statusSalvos){
+    return dados.map(item => {
+        const codigo = texto(item["Código do Anúncio"]);
         const registro = statusSalvos[codigo] || {};
-        const estrategia = String(registro.estrategia || "").trim();
+        const fullValor = texto(item["Full"]);
+        const fullAtivo = textoNormalizado(fullValor) === "NO FULL";
+        const estoqueFull = numero(item["FULL"] || item["Aptas para venda"] || item["APTAS PRA VENDA"] || item["Estoque Full"]);
+        const vendas30 = numero(item["30 DIAS"] || item["Total de Vendas 30 DIAS"]);
+        const cobertura = texto(item["Cobertura"]);
+        const coberturaDias = extrairDiasCobertura(cobertura);
+        const saudeFull = texto(item["SAUDE_ESTOQUE_FULL"]);
+        const magic = texto(item["MAGIC"]);
+        const analise = texto(item["ANALISE"] || item["ANÁLISE"]);
+        const observacaoMeli = texto(item["OBSERVAÇÃO MELI"] || item["OBSERVACAO MELI"] || item["Observação Meli"]);
+        const estoqueMeli = texto(item["ESTOQUE MELI"] || item["Estoque Meli"] || item["ESTOQUE_MELI"]);
+        const status = slugStatus(registro.status || "principal");
+        const qtdStatus = numero(registro.quantidade || 0);
+        const estrategia = texto(registro.estrategia);
+        const motivo = texto(registro.motivo_envio);
+        const ultimoLote = registro.ultimo_lote || {};
+        const ehTeste = textoNormalizado(estrategia).includes("TESTE") || textoNormalizado(motivo).includes("TESTE") || textoNormalizado(ultimoLote.numero_lote || "").includes("TESTE");
 
-        if (!estrategia) return;
+        return {
+            raw: item,
+            codigo,
+            sku: texto(item["SKU"]),
+            titulo: texto(item["Título"]),
+            conta: texto(item["Nickname"]),
+            full: fullValor,
+            fullAtivo,
+            estoqueFull,
+            vendas30,
+            cobertura,
+            coberturaDias,
+            saudeFull,
+            magic,
+            analise,
+            observacaoMeli,
+            estoqueMeli,
+            status,
+            qtdStatus,
+            estrategia,
+            motivo,
+            ultimoLote,
+            ehTeste,
+            sinalRuptura: textoNormalizado(saudeFull) === "RUPTURA" || textoNormalizado(cobertura).includes("RUPTURA")
+        };
+    });
+}
 
-        const quantidade = Number(registro.quantidade || 0);
-        mapaEstrategias[estrategia] = (mapaEstrategias[estrategia] || 0) + quantidade;
+function aplicarFiltros(lista){
+    return lista.filter(item => {
+        if (filtrosDashboard.modoFull === "somente_full" && !item.fullAtivo) return false;
+        if (filtrosDashboard.conta && item.conta !== filtrosDashboard.conta) return false;
+        if (filtrosDashboard.saudeFull && item.saudeFull !== filtrosDashboard.saudeFull) return false;
+        if (filtrosDashboard.statusCard && item.status !== filtrosDashboard.statusCard) return false;
+
+        if (filtrosDashboard.cobertura){
+            if (filtrosDashboard.cobertura === "ruptura" && !item.sinalRuptura) return false;
+            if (filtrosDashboard.cobertura === "ate15" && !(item.coberturaDias !== null && item.coberturaDias <= 15)) return false;
+            if (filtrosDashboard.cobertura === "ate30" && !(item.coberturaDias !== null && item.coberturaDias <= 30)) return false;
+            if (filtrosDashboard.cobertura === "acima30" && !(item.coberturaDias !== null && item.coberturaDias > 30)) return false;
+        }
+
+        if (filtrosDashboard.busca){
+            const b = textoNormalizado(filtrosDashboard.busca);
+            const alvo = [item.codigo, item.sku, item.titulo].map(textoNormalizado).join(" ");
+            if (!alvo.includes(b)) return false;
+        }
+
+        return true;
+    });
+}
+
+function destruirGrafico(id){
+    if (dashboardState.charts[id]){
+        dashboardState.charts[id].destroy();
+        dashboardState.charts[id] = null;
+    }
+}
+
+function renderChart(id, config){
+    destruirGrafico(id);
+    const el = document.getElementById(id);
+    if (!el) return;
+    dashboardState.charts[id] = new Chart(el.getContext("2d"), config);
+}
+
+function atualizarHeroEResumo(lista){
+    const totalMlbsFull = lista.filter(item => item.fullAtivo).length;
+    const totalPecasFull = lista.reduce((s, item) => s + item.estoqueFull, 0);
+    const rupturas = lista.filter(item => item.sinalRuptura).length;
+    const criticoMeli = lista.filter(item => {
+        const valor = textoNormalizado(item.estoqueMeli);
+        return valor.includes("CRITICO") || valor.includes("CRÍTICO");
+    }).length;
+    const medioMeli = lista.filter(item => {
+        const valor = textoNormalizado(item.estoqueMeli);
+        return valor.includes("MEDIO") || valor.includes("MÉDIO");
+    }).length;
+    const baixoMeli = lista.filter(item => textoNormalizado(item.estoqueMeli).includes("BAIXO")).length;
+
+    const elTotalMlbs = document.getElementById("heroTotalMlbsFull");
+    const elTotalPecas = document.getElementById("heroTotalPecasFull");
+    const elRuptura = document.getElementById("heroTotalRuptura");
+    const elCritico = document.getElementById("heroTotalCriticoMeli");
+    const elMedio = document.getElementById("heroTotalMedioMeli");
+    const elBaixo = document.getElementById("heroTotalBaixoMeli");
+
+    if (elTotalMlbs) elTotalMlbs.innerText = formatarInteiro(totalMlbsFull);
+    if (elTotalPecas) elTotalPecas.innerText = formatarInteiro(totalPecasFull);
+    if (elRuptura) elRuptura.innerText = formatarInteiro(rupturas);
+    if (elCritico) elCritico.innerText = formatarInteiro(criticoMeli);
+    if (elMedio) elMedio.innerText = formatarInteiro(medioMeli);
+    if (elBaixo) elBaixo.innerText = formatarInteiro(baixoMeli);
+
+    const resumoLotes = obterResumoLotes(dashboardState.statusSalvos);
+    const magic = lista.filter(item => {
+        const valor = textoNormalizado(item.magic);
+        return valor.includes("MAGIC");
+    }).length;
+    const acompanhar = lista.filter(item => {
+        const valorAnalise = textoNormalizado(item.analise);
+        const valorSaude = textoNormalizado(item.saudeFull);
+        return valorAnalise === "ACOMPANHAR" || valorSaude === "ACOMPANHAR";
+    }).length;
+    const critico = lista.filter(item => textoNormalizado(item.observacaoMeli).includes("CRITICO") || textoNormalizado(item.observacaoMeli).includes("CRÍTICO")).length;
+    const baixo = lista.filter(item => textoNormalizado(item.observacaoMeli).includes("BAIXO")).length;
+    const semEstoque = lista.filter(item => textoNormalizado(item.observacaoMeli).includes("SEM ESTOQUE")).length;
+
+    if (document.getElementById("kpiMlbsFull")) document.getElementById("kpiMlbsFull").innerText = formatarInteiro(resumoLotes.total);
+    if (document.getElementById("kpiLotesSub")) {
+        document.getElementById("kpiLotesSub").innerText = `Coletados: ${formatarInteiro(resumoLotes.coletados)} • Não coletados: ${formatarInteiro(resumoLotes.naoColetados)}`;
+    }
+    if (document.getElementById("kpiPecasFull")) document.getElementById("kpiPecasFull").innerText = formatarInteiro(totalPecasFull);
+    if (document.getElementById("kpiRuptura")) document.getElementById("kpiRuptura").innerText = formatarInteiro(rupturas);
+    if (document.getElementById("kpiEnviando")) document.getElementById("kpiEnviando").innerText = formatarInteiro(lista.filter(item => item.status === "enviando").length);
+    if (document.getElementById("kpiEcoCompras")) document.getElementById("kpiEcoCompras").innerText = formatarInteiro(lista.filter(item => item.status === "ecommerce" || item.status === "compras").length);
+    if (document.getElementById("kpiTestes")) document.getElementById("kpiTestes").innerText = formatarInteiro(lista.filter(item => item.ehTeste).length);
+    if (document.getElementById("kpiMagic")) document.getElementById("kpiMagic").innerText = formatarInteiro(magic);
+    if (document.getElementById("kpiAcompanhar")) document.getElementById("kpiAcompanhar").innerText = formatarInteiro(acompanhar);
+    if (document.getElementById("kpiCritico")) document.getElementById("kpiCritico").innerText = formatarInteiro(critico);
+    if (document.getElementById("kpiBaixo")) document.getElementById("kpiBaixo").innerText = formatarInteiro(baixo);
+    if (document.getElementById("kpiSemEstoque")) document.getElementById("kpiSemEstoque").innerText = formatarInteiro(semEstoque);
+}
+
+
+const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function normalizarDataISO(valor){
+    const bruto = String(valor || "").trim();
+    if (!bruto) return "";
+    const base = bruto.split(" ")[0].split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(base)) return base;
+    const br = base.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+    return "";
+}
+
+function dataIsoParaBr(dataIso){
+    const m = String(dataIso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return dataIso || "";
+    return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+function calcularPascoa(ano){
+    const a = ano % 19;
+    const b = Math.floor(ano / 100);
+    const c = ano % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mes = Math.floor((h + l - 7 * m + 114) / 31);
+    const dia = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(ano, mes - 1, dia);
+}
+
+function adicionarDias(data, dias){
+    const copia = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+    copia.setDate(copia.getDate() + dias);
+    return copia;
+}
+
+function formatarDateIso(date){
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const dia = String(date.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
+function obterFeriadosBrasil(ano){
+    const pascoa = calcularPascoa(ano);
+    const fixos = [
+        ["01-01", "Confraternização Universal"],
+        ["04-21", "Tiradentes"],
+        ["05-01", "Dia do Trabalho"],
+        ["09-07", "Independência do Brasil"],
+        ["10-12", "Nossa Senhora Aparecida"],
+        ["11-02", "Finados"],
+        ["11-15", "Proclamação da República"],
+        ["11-20", "Consciência Negra"],
+        ["12-25", "Natal"]
+    ];
+
+    const mapa = {};
+    fixos.forEach(([md, nome]) => {
+        mapa[`${ano}-${md}`] = nome;
     });
 
-    const ordenado = Object.entries(mapaEstrategias)
-        .sort((a, b) => b[1] - a[1]);
+    mapa[formatarDateIso(adicionarDias(pascoa, -47))] = "Carnaval";
+    mapa[formatarDateIso(adicionarDias(pascoa, -46))] = "Carnaval";
+    mapa[formatarDateIso(adicionarDias(pascoa, -2))] = "Sexta-feira Santa";
+    mapa[formatarDateIso(adicionarDias(pascoa, 60))] = "Corpus Christi";
 
-    const labels = ordenado.map(item => item[0]);
-    const valores = ordenado.map(item => item[1]);
+    return mapa;
+}
 
-    const canvas = document.getElementById("graficoEstrategias");
-    if (!canvas) return;
+function obterEventosPorData(dataIso){
+    return (dashboardState.coletasCalendario || []).filter(item => normalizarDataISO(item.data_coleta_agendada) === dataIso);
+}
 
-    if (graficoEstrategias){
-        graficoEstrategias.destroy();
-        graficoEstrategias = null;
-    }
+function limparFormularioColeta(manteraData = true){
+    dashboardState.selectedColetaNumeroLote = "";
+    document.getElementById("coletaNumeroLote").value = "";
+    document.getElementById("coletaTotalMlbs").value = "";
+    document.getElementById("coletaTotalPecas").value = "";
+    document.getElementById("coletaStatus").value = "NAO_COLETADO";
+    document.getElementById("coletaObservacao").value = "";
+    if (!manteraData) dashboardState.selectedDateKey = "";
+    atualizarListaColetasDia();
+}
 
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function preencherFormularioColeta(item){
+    dashboardState.selectedColetaNumeroLote = String(item?.numero_lote || "").trim();
+    document.getElementById("coletaNumeroLote").value = dashboardState.selectedColetaNumeroLote;
+    document.getElementById("coletaTotalMlbs").value = numero(item?.total_mlbs || 0) || "";
+    document.getElementById("coletaTotalPecas").value = numero(item?.total_pecas || 0) || "";
+    document.getElementById("coletaStatus").value = textoNormalizado(item?.status_coleta) === "COLETADO" ? "COLETADO" : "NAO_COLETADO";
+    document.getElementById("coletaObservacao").value = texto(item?.observacao || "");
+    atualizarListaColetasDia();
+}
 
-    if (!labels.length){
-        ctx.save();
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#6b7280";
-        ctx.fillText("Nenhuma estratégia com quantidade encontrada.", canvas.width / 2, canvas.height / 2);
-        ctx.restore();
+function atualizarListaColetasDia(){
+    const lista = obterEventosPorData(dashboardState.selectedDateKey);
+    const container = document.getElementById("coletaEventList");
+    if (!container) return;
+
+    if (!lista.length){
+        container.innerHTML = '<div class="empty-state" style="min-height:180px;">Nenhum lote reservado nessa data ainda. Você pode cadastrar manualmente ao lado.</div>';
         return;
     }
 
-    graficoEstrategias = new Chart(ctx, {
+    container.innerHTML = lista.map(item => {
+        const ativo = dashboardState.selectedColetaNumeroLote && dashboardState.selectedColetaNumeroLote === String(item.numero_lote || "").trim();
+        const coletado = textoNormalizado(item.status_coleta) === "COLETADO";
+        return `
+            <div class="coleta-event-item ${ativo ? "active" : ""}" data-lote="${escapeHtml(item.numero_lote)}">
+                <div class="coleta-event-top">
+                    <div class="coleta-event-title">Lote ${escapeHtml(item.numero_lote)}</div>
+                    <span class="coleta-status-chip ${coletado ? "ok" : "pending"}">${coletado ? "Coletado" : "Não coletado"}</span>
+                </div>
+                <div class="coleta-event-meta">
+                    <span>MLBs: <strong>${formatarInteiro(item.total_mlbs)}</strong></span>
+                    <span>Peças: <strong>${formatarInteiro(item.total_pecas)}</strong></span>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    container.querySelectorAll(".coleta-event-item").forEach(el => {
+        el.addEventListener("click", () => {
+            const lote = el.getAttribute("data-lote") || "";
+            const item = lista.find(x => String(x.numero_lote || "").trim() === lote);
+            if (item) preencherFormularioColeta(item);
+        });
+    });
+}
+
+function abrirModalColeta(dataIso){
+    dashboardState.selectedDateKey = dataIso;
+    const titulo = document.getElementById("coletaModalTitulo");
+    const subtitulo = document.getElementById("coletaModalSubtitulo");
+    if (titulo) titulo.innerText = `Coletas do dia ${dataIsoParaBr(dataIso)}`;
+    if (subtitulo) subtitulo.innerText = "Cadastre ou ajuste manualmente número do lote, totais e status da coleta.";
+    limparFormularioColeta(true);
+    document.getElementById("coletaModal").classList.add("open");
+}
+
+function fecharModalColeta(){
+    document.getElementById("coletaModal").classList.remove("open");
+    document.getElementById("coletaFeedback").className = "coleta-feedback";
+    document.getElementById("coletaFeedback").innerText = "";
+}
+
+function exibirFeedbackColeta(tipo, mensagem){
+    const box = document.getElementById("coletaFeedback");
+    box.className = `coleta-feedback show ${tipo}`;
+    box.innerText = mensagem;
+}
+
+function renderCalendarioColetas(){
+    const grid = document.getElementById("calendarGrid");
+    const label = document.getElementById("calendarMonthLabel");
+    if (!grid || !label) return;
+
+    const viewDate = dashboardState.calendarCurrentDate || new Date();
+    const ano = viewDate.getFullYear();
+    const mes = viewDate.getMonth();
+    label.innerText = `${MESES_PT[mes]} ${ano}`;
+
+    const primeiroDia = new Date(ano, mes, 1);
+    const ultimoDia = new Date(ano, mes + 1, 0);
+    const inicioGrid = new Date(primeiroDia);
+    inicioGrid.setDate(primeiroDia.getDate() - primeiroDia.getDay());
+    const feriados = obterFeriadosBrasil(ano);
+    const hojeIso = formatarDateIso(new Date());
+
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+        const atual = new Date(inicioGrid);
+        atual.setDate(inicioGrid.getDate() + i);
+        const dataIso = formatarDateIso(atual);
+        const eventos = obterEventosPorData(dataIso);
+        const mesAtual = atual.getMonth() === mes;
+        const holidayName = feriados[dataIso] || "";
+        const coletados = eventos.filter(e => textoNormalizado(e.status_coleta) === "COLETADO").length;
+        const pendentes = Math.max(0, eventos.length - coletados);
+        const classes = ["calendar-day"];
+        if (!mesAtual) classes.push("outside");
+        if (dataIso === hojeIso) classes.push("today");
+        if (holidayName) classes.push("holiday");
+        if (eventos.length) classes.push("has-events");
+        if (coletados) classes.push("has-collected");
+        if (pendentes) classes.push("has-pending");
+
+        let badge = "";
+        if (coletados) badge = `<span class="calendar-day-badge collected">${coletados}</span>`;
+        else if (pendentes) badge = `<span class="calendar-day-badge pending">${pendentes}</span>`;
+
+        const meta = [];
+        if (holidayName) meta.push(`<div class="calendar-day-holiday">${escapeHtml(holidayName)}</div>`);
+        if (eventos.length) {
+            const textoResumo = coletados && pendentes
+                ? `${coletados} coletado(s) • ${pendentes} pendente(s)`
+                : (coletados ? `${coletados} coletado(s)` : `${pendentes} pendente(s)`);
+            meta.push(`<div class="calendar-day-text">${textoResumo}</div>`);
+            if (eventos[0]?.numero_lote) meta.push(`<div class="calendar-day-text">Lote ${escapeHtml(eventos[0].numero_lote)}</div>`);
+        }
+
+        cells.push(`
+            <button type="button" class="${classes.join(" ")}" data-date="${dataIso}">
+                <div class="calendar-day-top">
+                    <div class="calendar-day-number">${atual.getDate()}</div>
+                    ${badge}
+                </div>
+                <div class="calendar-day-meta">${meta.join("")}</div>
+            </button>
+        `);
+    }
+
+    grid.innerHTML = cells.join("");
+    grid.querySelectorAll(".calendar-day").forEach(btn => {
+        btn.addEventListener("click", () => abrirModalColeta(btn.getAttribute("data-date") || ""));
+    });
+}
+
+async function carregarColetasCalendario(){
+    try {
+        const resp = await fetch('/api/coletas-calendario');
+        const dados = await resp.json();
+        dashboardState.coletasCalendario = Array.isArray(dados) ? dados : [];
+    } catch {
+        dashboardState.coletasCalendario = [];
+    }
+    renderCalendarioColetas();
+}
+
+async function salvarColetaCalendario(){
+    const numeroLote = texto(document.getElementById("coletaNumeroLote").value);
+    const totalMlbs = Math.max(0, parseInt(document.getElementById("coletaTotalMlbs").value || '0', 10) || 0);
+    const totalPecas = Math.max(0, parseInt(document.getElementById("coletaTotalPecas").value || '0', 10) || 0);
+    const status = texto(document.getElementById("coletaStatus").value) || 'NAO_COLETADO';
+    const observacao = texto(document.getElementById("coletaObservacao").value);
+
+    if (!dashboardState.selectedDateKey) {
+        exibirFeedbackColeta('error', 'Selecione uma data do calendário.');
+        return;
+    }
+    if (!numeroLote) {
+        exibirFeedbackColeta('error', 'Informe o número do lote.');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/coletas-calendario/salvar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                numero_lote: numeroLote,
+                data_coleta_agendada: dashboardState.selectedDateKey,
+                total_mlbs: totalMlbs,
+                total_pecas: totalPecas,
+                status_coleta: status,
+                observacao
+            })
+        });
+        const dados = await resp.json();
+        if (!resp.ok || !dados.ok) {
+            throw new Error(dados.erro || 'Não foi possível salvar a coleta.');
+        }
+        exibirFeedbackColeta('ok', 'Coleta salva com sucesso.');
+        await carregarColetasCalendario();
+        atualizarListaColetasDia();
+        renderDashboardFull();
+    } catch (e) {
+        exibirFeedbackColeta('error', e.message || 'Erro ao salvar coleta.');
+    }
+}
+
+function renderResumoContas(lista){
+    const container = document.getElementById("listaContasResumo");
+    if (!container) return;
+
+    const mapa = {};
+    lista.forEach(item => {
+        const conta = item.conta || "SEM CONTA";
+        if (!mapa[conta]) mapa[conta] = { mlbs: 0, analisados: 0 };
+        mapa[conta].mlbs += 1;
+        if (item.status !== "principal") mapa[conta].analisados += 1;
+    });
+
+    const linhas = Object.entries(mapa).sort((a,b) => {
+        if (b[1].analisados !== a[1].analisados) return b[1].analisados - a[1].analisados;
+        return b[1].mlbs - a[1].mlbs;
+    }).slice(0, 2);
+
+    if (!linhas.length){
+        container.innerHTML = '<div class="empty-state">Nenhuma conta encontrada.</div>';
+        return;
+    }
+
+    container.innerHTML = linhas.map(([conta, v]) => `
+        <div class="account-item" onclick="abrirPainelConta('${escapeJs(conta)}')">
+            <div class="account-top">
+                <div class="account-title">${escapeHtml(conta)}</div>
+            </div>
+            <div class="account-meta">
+                <span>${formatarInteiro(v.mlbs)}</span>
+                <span>|</span>
+                <span>${formatarInteiro(v.analisados)}</span>
+            </div>
+        </div>
+    `).join("");
+}
+
+function renderInsights(lista){
+    const container = document.getElementById("listaInsights");
+    if (!container) return;
+
+    const ruptura = lista.filter(item => item.sinalRuptura).length;
+    const topConta = agruparPorConta(lista)[0];
+    const topVenda = [...lista].sort((a,b) => b.vendas30 - a.vendas30)[0];
+    const totalNaoEnviar = lista.filter(item => item.status === "naoEnviar").reduce((s, item) => s + item.qtdStatus, 0);
+    const totalCompras = lista.filter(item => item.status === "compras").reduce((s, item) => s + item.qtdStatus, 0);
+
+    const insights = [
+        {
+            titulo: ruptura > 0 ? "Ruptura pede ação imediata" : "Sem ruptura no recorte atual",
+            badge: ruptura > 0 ? `${formatarInteiro(ruptura)} críticos` : "Saudável",
+            meta: ruptura > 0 ? "Priorize envio, homologação ou compra para evitar ruptura." : "Nenhum item em ruptura dentro do filtro atual."
+        },
+        {
+            titulo: topConta ? `Maior peso no Full: ${topConta.conta}` : "Sem conta dominante",
+            badge: topConta ? `${formatarInteiro(topConta.pecas)} peças` : "-",
+            meta: topConta ? `${formatarInteiro(topConta.mlbs)} MLBs nesse recorte.` : "Aplique filtros para refinar a leitura."
+        },
+        {
+            titulo: topVenda ? `Maior vendedor: ${topVenda.codigo}` : "Sem top seller",
+            badge: topVenda ? `${formatarInteiro(topVenda.vendas30)} vendas` : "-",
+            meta: topVenda ? topVenda.titulo || topVenda.sku : "Sem histórico de vendas para exibir."
+        },
+        {
+            titulo: "Peças travadas em Não Enviar",
+            badge: formatarInteiro(totalNaoEnviar),
+            meta: "Volume somado das quantidades paradas na decisão de não envio."
+        },
+        {
+            titulo: "Peças puxadas para Compras",
+            badge: formatarInteiro(totalCompras),
+            meta: "Leitura operacional do que foi desviado para suprimento."
+        }
+    ];
+
+    container.innerHTML = insights.map(item => `
+        <div class="insight-item">
+            <div class="insight-top">
+                <div class="insight-title">${escapeHtml(item.titulo)}</div>
+                <div class="insight-badge">${escapeHtml(item.badge)}</div>
+            </div>
+            <div class="insight-meta">${escapeHtml(item.meta)}</div>
+        </div>
+    `).join("");
+}
+
+function renderTabela(lista){
+    const tbody = document.getElementById("tbodyDetalhamento");
+    if (!tbody) return;
+
+    const linhas = [...lista]
+        .sort((a,b) => b.vendas30 - a.vendas30)
+        .slice(0, 18);
+
+    if (!linhas.length){
+        tbody.innerHTML = '<tr><td colspan="8">Nenhum item encontrado com os filtros atuais.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = linhas.map(item => `
+        <tr>
+            <td>${escapeHtml(item.conta)}</td>
+            <td>${escapeHtml(item.codigo)}</td>
+            <td>${escapeHtml(item.sku)}</td>
+            <td title="${escapeHtml(item.titulo)}">${escapeHtml(item.titulo.slice(0, 34))}${item.titulo.length > 34 ? '…' : ''}</td>
+            <td>${escapeHtml(item.full || '-')}</td>
+            <td>${formatarInteiro(item.vendas30)}</td>
+            <td>${formatarInteiro(item.estoqueFull)}</td>
+            <td><span class="${classeStatus(item.status)}">${escapeHtml(nomeStatus(item.status))}</span></td>
+        </tr>
+    `).join("");
+}
+
+function renderGraficos(lista){
+    const contas = agruparPorConta(lista);
+
+    const topVendas = [...lista].sort((a,b) => b.vendas30 - a.vendas30).slice(0, 8);
+    renderChart("chartTopVendas", {
         type: "bar",
         data: {
-            labels: labels,
+            labels: topVendas.map(item => item.codigo),
             datasets: [{
-                label: "Quantidade",
-                data: valores,
-                borderWidth: 1
+                label: "Vendas 30 dias",
+                data: topVendas.map(item => item.vendas30),
+                borderRadius: 10,
+                maxBarThickness: 42
+            }]
+        },
+        options: baseChartOptions(true)
+    });
+
+    renderChart("chartRupturaConta", {
+        type: "doughnut",
+        data: {
+            labels: contas.map(item => item.conta),
+            datasets: [{
+                label: "Ruptura",
+                data: contas.map(item => item.rupturas)
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        autoSkip: false,
-                        maxRotation: 35,
-                        minRotation: 0
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
+                legend: { position: "bottom" }
             }
         }
     });
+}
 
-    canvas.oncontextmenu = function(event){
-        event.preventDefault();
-
-        if (!graficoEstrategias) return false;
-
-        const elementos = graficoEstrategias.getElementsAtEventForMode(
-            event,
-            "nearest",
-            { intersect: true },
-            true
-        );
-
-        if (!elementos || !elementos.length){
-            fecharMenuContextoGrafico();
-            return false;
+function baseChartOptions(horizontal){
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: horizontal ? "y" : "x",
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 } },
+            y: { ticks: { autoSkip: false } }
         }
-
-        const elemento = elementos[0];
-        const label = graficoEstrategias.data.labels[elemento.index];
-
-        if (!label){
-            fecharMenuContextoGrafico();
-            return false;
-        }
-
-        estrategiaContextoAtual = String(label || "").trim();
-        abrirMenuContextoGrafico(event.clientX, event.clientY);
-        return false;
     };
 }
 
-
-
-function abrirMenuContextoGrafico(x, y){
-    const menu = document.getElementById("menuContextoGrafico");
-    if (!menu) return;
-
-    menu.classList.add("aberto");
-    menu.style.left = x + "px";
-    menu.style.top = y + "px";
-
-    requestAnimationFrame(() => {
-        const rect = menu.getBoundingClientRect();
-        const maxX = window.innerWidth - rect.width - 10;
-        const maxY = window.innerHeight - rect.height - 10;
-        menu.style.left = Math.max(10, Math.min(x, maxX)) + "px";
-        menu.style.top = Math.max(10, Math.min(y, maxY)) + "px";
+function agruparPorConta(lista){
+    const mapa = {};
+    lista.forEach(item => {
+        const conta = item.conta || "SEM CONTA";
+        if (!mapa[conta]) mapa[conta] = { conta, mlbs: 0, pecas: 0, rupturas: 0 };
+        mapa[conta].mlbs += 1;
+        mapa[conta].pecas += item.estoqueFull;
+        mapa[conta].rupturas += item.sinalRuptura ? 1 : 0;
     });
+    return Object.values(mapa).sort((a,b) => b.pecas - a.pecas);
 }
 
-function fecharMenuContextoGrafico(){
-    const menu = document.getElementById("menuContextoGrafico");
-    if (!menu) return;
-    menu.classList.remove("aberto");
+function renderDashboardFull(){
+    const lista = aplicarFiltros(dashboardState.dadosProcessados);
+    atualizarUrlDashboard();
+    atualizarHeroEResumo(lista);
+    renderResumoContas(lista);
+    renderInsights(lista);
+    renderCalendarioColetas();
 }
 
-function exportarEstrategiaContexto(){
-    if (!estrategiaContextoAtual) return;
-    window.location.href = "/exportar-excel-estrategia?estrategia=" + encodeURIComponent(estrategiaContextoAtual);
-    fecharMenuContextoGrafico();
+function exportarVisaoAtual(){
+    const lista = aplicarFiltros(dashboardState.dadosProcessados);
+    const linhas = lista.map(item => ({
+        Conta: item.conta,
+        MLB: item.codigo,
+        SKU: item.sku,
+        Titulo: item.titulo,
+        Full: item.full,
+        Pecas_Full: item.estoqueFull,
+        Vendas_30_Dias: item.vendas30,
+        Cobertura: item.cobertura,
+        Saude_Full: item.saudeFull,
+        Status: nomeStatus(item.status),
+        Quantidade_Status: item.qtdStatus,
+        Estrategia: item.estrategia,
+        Motivo: item.motivo
+    }));
+
+    const csv = converterParaCsv(linhas);
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "dashboard_full_visao_atual.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
-function renderDashboard(dados, statusSalvos){
-    const dadosFiltrados = aplicarFiltroStatusFull(dados);
-
-    const renaf = porConta(dadosFiltrados, "RENAFCAR");
-    const conta4i = porConta(dadosFiltrados, "4IDISTRIBUIDORA");
-
-    const rupturaRenaf = renaf.filter(item =>
-        String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() === "RUPTURA"
-    ).length;
-
-    const ruptura4i = conta4i.filter(item =>
-        String(item["SAUDE_ESTOQUE_FULL"] || "").toUpperCase().trim() === "RUPTURA"
-    ).length;
-
-    const magicRenaf = renaf.filter(item =>
-        String(item["MAGIC"] || "").toUpperCase().trim() === "SUG DE ENVIO MAGIC"
-    ).length;
-
-    const magic4i = conta4i.filter(item =>
-        String(item["MAGIC"] || "").toUpperCase().trim() === "SUG DE ENVIO MAGIC"
-    ).length;
-
-    const baixo30Renaf = renaf.filter(item =>
-        String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
-    ).length;
-
-    const baixo304i = conta4i.filter(item =>
-        String(item["ANALISE"] || "").toUpperCase().trim() === "ANALISE DE ENVIO"
-    ).length;
-
-    const acompanharRenaf = renaf.filter(item =>
-        String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
-    ).length;
-
-    const acompanhar4i = conta4i.filter(item =>
-        String(item["ANALISE"] || "").toUpperCase().trim() === "ACOMPANHAR"
-    ).length; 
-
-    let totalMlbEnviando = 0;
-    let totalMlbNaoEnviar = 0;
-    let totalMlbHomologar = 0;
-    let totalPecasEnviando = 0;
-    let totalPecasNaoEnviar = 0;
-    let totalPecasHomologar = 0;
-
-    dadosFiltrados.forEach(item => {
-        const codigo = String(item["Código do Anúncio"] || "");
-        const registro = statusSalvos[codigo] || {};
-        const status = String(registro.status || "principal");
-        const quantidade = Number(registro.quantidade || 0);
-
-        if (status === "enviando") {
-            totalMlbEnviando += 1;
-            totalPecasEnviando += quantidade;
-        }
-
-        if (status === "nao_enviar" || status === "naoEnviar") {
-            totalMlbNaoEnviar += 1;
-            totalPecasNaoEnviar += quantidade;
-        }
-
-        if (status === "homologar") {
-            totalMlbHomologar += 1;
-            totalPecasHomologar += quantidade;
-        }
-    });
-
-    document.getElementById("kpiMlbEnviando").innerText = totalMlbEnviando;
-    document.getElementById("kpiMlbNaoEnviar").innerText = totalMlbNaoEnviar;
-    document.getElementById("kpiMlbHomologar").innerText = totalMlbHomologar;
-    document.getElementById("kpiPecasEnviando").innerText = totalPecasEnviando;
-    document.getElementById("kpiPecasNaoEnviar").innerText = totalPecasNaoEnviar;
-    document.getElementById("kpiPecasHomologar").innerText = totalPecasHomologar;
-
-    renderGraficoEstrategias(dadosFiltrados, statusSalvos);
-
-    const infoEstoqueMap = {};
-
-    dadosFiltrados.forEach(item => {
-        const valorOriginal = String(item["SAUDE DO ESTOQUE 4i"] || "").trim();
-        const chave = valorOriginal !== "" ? valorOriginal : "SEM DADO";
-        infoEstoqueMap[chave] = (infoEstoqueMap[chave] || 0) + 1;
-    });
-
-    const infoOrdenada = Object.entries(infoEstoqueMap)
-        .sort((a, b) => b[1] - a[1]);
-
+function converterParaCsv(linhas){
+    if (!linhas.length) return "Sem dados\n";
+    const headers = Object.keys(linhas[0]);
+    const escapeCsv = (valor) => `"${String(valor ?? "").replaceAll('"', '""')}"`;
+    return [
+        headers.join(","),
+        ...linhas.map(row => headers.map(h => escapeCsv(row[h])).join(","))
+    ].join("\n");
 }
 
-Promise.all([
-    fetch("/dados-dashboard").then(r => r.json()),
-    fetch("/status").then(r => r.json())
-]).then(([dados, statusSalvos]) => {
-    renderDashboard(dados, statusSalvos);
-    carregarGraficoFull();
-});
-
-function fecharTodosPaineisStatusFull(){
-    document.querySelectorAll(".painel-flutuante-status").forEach(painel => {
-        painel.classList.remove("aberto");
-    });
-}
-
-function togglePainelStatusFull(idPainel){
-    const painel = document.getElementById(idPainel);
-    if(!painel) return;
-
-    const estavaAberto = painel.classList.contains("aberto");
-
-    fecharTodosPaineisStatusFull();
-
-    if(!estavaAberto){
-        painel.classList.add("aberto");
-    }
-}
-
-document.addEventListener("click", function(event){
-    fecharTodosPaineisStatusFull();
-
-    const menu = document.getElementById("menuContextoGrafico");
-    if (menu && !menu.contains(event.target)){
-        fecharMenuContextoGrafico();
-    }
-});
-
-document.addEventListener("scroll", function(){
-    fecharMenuContextoGrafico();
-}, true);
-
-document.addEventListener("keydown", function(event){
-    if (event.key === "Escape"){
-        fecharMenuContextoGrafico();
-    }
-});
-
-function carregarGraficoFull(){
-    fetch("/api/full-distribuicao")
-        .then(res => res.json())
-        .then(resp => {
-            const container = document.getElementById("fullMetricasGrid");
-            if (!container) return;
-
-            container.innerHTML = "";
-
-            if (!resp.ok || !resp.dados || !resp.dados.length) {
-                container.innerHTML = `<div class="full-metrica-vazio">Nenhuma informação encontrada.</div>`;
-                return;
-            }
-
-            resp.dados.forEach(item => {
-                const card = document.createElement("div");
-                card.className = "full-metrica-card";
-                card.dataset.coluna = item.coluna || item.titulo;
-                card.dataset.titulo = item.titulo;
-
-                card.innerHTML = `
-                    <div class="full-metrica-titulo">${item.titulo}</div>
-                    <div class="full-metrica-valor">${item.valor}</div>
-                `;
-
-                card.onclick = () => {
-                    document.querySelectorAll(".full-metrica-card").forEach(c => c.classList.remove("ativo"));
-                    card.classList.add("ativo");
-                    carregarDetalheMetricaFull(card.dataset.coluna, card.dataset.titulo);
-                };
-
-                container.appendChild(card);
-            });
-        })
-        .catch(() => {
-            const container = document.getElementById("fullMetricasGrid");
-            if (!container) return;
-            container.innerHTML = `<div class="full-metrica-vazio">Erro ao carregar informações do Full.</div>`;
+function aplicarListeners(){
+    document.querySelectorAll("[data-modo-full]").forEach(botao => {
+        botao.addEventListener("click", () => {
+            filtrosDashboard.modoFull = botao.dataset.modoFull || "somente_full";
+            preencherFiltrosBase();
+            renderDashboardFull();
         });
-}
+    });
 
-function carregarDetalheMetricaFull(coluna, titulo){
-    fetch("/api/full-distribuicao-detalhe?coluna=" + encodeURIComponent(coluna))
-        .then(res => res.json())
-        .then(resp => {
-            const box = document.getElementById("fullMetricasDetalheBox");
-            const body = document.getElementById("fullMetricasDetalheBody");
-            const tituloEl = document.getElementById("fullMetricasDetalheTitulo");
+    const btnPrev = document.getElementById('btnCalendarioPrev');
+    const btnNext = document.getElementById('btnCalendarioNext');
+    const btnFechar = document.getElementById('btnFecharModalColeta');
+    const btnSalvar = document.getElementById('btnSalvarColeta');
+    const btnNovo = document.getElementById('btnNovaColeta');
+    const modal = document.getElementById('coletaModal');
 
-            if (!box || !body || !tituloEl) return;
+    if (btnPrev) btnPrev.addEventListener('click', () => {
+        dashboardState.calendarCurrentDate = new Date(dashboardState.calendarCurrentDate.getFullYear(), dashboardState.calendarCurrentDate.getMonth() - 1, 1);
+        renderCalendarioColetas();
+    });
+    if (btnNext) btnNext.addEventListener('click', () => {
+        dashboardState.calendarCurrentDate = new Date(dashboardState.calendarCurrentDate.getFullYear(), dashboardState.calendarCurrentDate.getMonth() + 1, 1);
+        renderCalendarioColetas();
+    });
+    if (btnFechar) btnFechar.addEventListener('click', fecharModalColeta);
+    if (btnSalvar) btnSalvar.addEventListener('click', salvarColetaCalendario);
+    if (btnNovo) btnNovo.addEventListener('click', () => limparFormularioColeta(true));
+    if (modal) modal.addEventListener('click', (e) => {
+        if (e.target === modal) fecharModalColeta();
+    });
 
-            box.style.display = "block";
-            tituloEl.innerText = "Detalhes - " + titulo;
-            body.innerHTML = "";
-
-            if (!resp.ok || !resp.dados || !resp.dados.length){
-                body.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="full-metricas-detalhe-vazio">Nenhum item encontrado para esta métrica.</td>
-                    </tr>
-                `;
-                return;
+    document.querySelectorAll(".kpi-profissional").forEach(card => {
+        card.addEventListener("click", () => {
+            const kpi = card.dataset.kpi;
+            if (kpi === "ruptura") {
+                filtrosDashboard.cobertura = "ruptura";
+            } else if (kpi === "enviando") {
+                filtrosDashboard.statusCard = "enviando";
+            } else if (kpi === "ecommerce_compras") {
+                filtrosDashboard.statusCard = "ecommerce";
+            } else if (kpi === "testes") {
+                filtrosDashboard.busca = "teste";
+            } else if (kpi === "magic") {
+                filtrosDashboard.busca = "magic";
+            } else if (kpi === "acompanhar") {
+                filtrosDashboard.busca = "acompanhar";
+            } else if (kpi === "critico") {
+                filtrosDashboard.busca = "critico";
+            } else if (kpi === "baixo") {
+                filtrosDashboard.busca = "baixo";
             }
-
-            resp.dados.forEach(item => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${item.mlb || ""}</td>
-                    <td>${item.sku || ""}</td>
-                    <td>${item.conta || ""}</td>
-                    <td>${item.status || ""}</td>
-                    <td>${item.unidades || 0}</td>
-                `;
-                body.appendChild(tr);
-            });
-        })
-        .catch(() => {
-            const box = document.getElementById("fullMetricasDetalheBox");
-            const body = document.getElementById("fullMetricasDetalheBody");
-            const tituloEl = document.getElementById("fullMetricasDetalheTitulo");
-
-            if (!box || !body || !tituloEl) return;
-
-            box.style.display = "block";
-            tituloEl.innerText = "Detalhes";
-            body.innerHTML = `
-                <tr>
-                    <td colspan="5" class="full-metricas-detalhe-vazio">Erro ao carregar os detalhes.</td>
-                </tr>
-            `;
+            preencherFiltrosBase(dashboardState.dados);
+            renderDashboardFull();
         });
+    });
 }
 
+function abrirPainelConta(conta){
+    filtrosDashboard.conta = conta;
+    preencherFiltrosBase(dashboardState.dados);
+    renderDashboardFull();
+}
+
+function irParaPainelComFiltros(){
+    const params = new URLSearchParams();
+    if (filtrosDashboard.conta) params.set("conta", filtrosDashboard.conta);
+    if (filtrosDashboard.saudeFull) params.set("saudeFull", filtrosDashboard.saudeFull);
+    if (filtrosDashboard.statusCard) params.set("tela", filtrosDashboard.statusCard === "naoEnviar" ? "naoEnviar" : filtrosDashboard.statusCard);
+    if (filtrosDashboard.busca) params.set("busca", filtrosDashboard.busca);
+    if (filtrosDashboard.modoFull === "somente_full") params.set("full", "NO FULL");
+    if (filtrosDashboard.cobertura === "ruptura") params.set("saudeFull", "RUPTURA");
+    window.location.href = "/?" + params.toString();
+}
+
+function formatarInteiro(valor){
+    return Number(valor || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+}
+
+function escapeHtml(valor){
+    return String(valor || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function escapeJs(valor){
+    return String(valor || "").replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+async function iniciarDashboardFull(){
+    lerFiltrosDaUrl();
+    aplicarListeners();
+
+    const [dados, statusSalvos, coletas] = await Promise.all([
+        fetch("/dados-dashboard").then(r => r.json()),
+        fetch("/status").then(r => r.json()),
+        fetch("/api/coletas-calendario").then(r => r.json()).catch(() => [])
+    ]);
+
+    dashboardState.dados = Array.isArray(dados) ? dados : [];
+    dashboardState.statusSalvos = statusSalvos || {};
+    dashboardState.coletasCalendario = Array.isArray(coletas) ? coletas : [];
+    dashboardState.dadosProcessados = processarDados(dashboardState.dados, dashboardState.statusSalvos);
+    dashboardState.calendarCurrentDate = new Date();
+
+    preencherFiltrosBase(dashboardState.dadosProcessados);
+    renderDashboardFull();
+}
+
+iniciarDashboardFull().catch(() => {
+    const area = document.querySelector(".dashboard-body");
+    if (area) {
+        area.innerHTML = '<div class="empty-state">Erro ao carregar o dashboard Full. Verifique os dados e tente novamente.</div>';
+    }
+});
 </script>
-
 {% endblock %}

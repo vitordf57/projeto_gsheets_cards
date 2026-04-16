@@ -321,6 +321,55 @@ h1{ margin-bottom:15px; }
     font-weight:bold;
 }
 
+.mlb-topo-coluna{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.tipo-mlb-box{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    background:#eef4ff;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid #bfd3ff;
+    color:#1c4fb8;
+    min-width:220px;
+    max-width:280px;
+    transition:0.2s;
+}
+
+.tipo-mlb-box:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,0.10);
+}
+
+.tipo-mlb-titulo{
+    font-weight:bold;
+    white-space:nowrap;
+}
+
+.select-tipo-mlb{
+    border:none;
+    background:transparent;
+    font-size:12px;
+    font-weight:700;
+    color:#1c4fb8;
+    outline:none;
+    width:100%;
+    cursor:pointer;
+    padding:0;
+    min-width:0;
+}
+
+.select-tipo-mlb:focus{
+    box-shadow:none;
+}
+
 .badges{
     display:flex;
     gap:10px;
@@ -426,6 +475,10 @@ h1{ margin-bottom:15px; }
     flex-shrink:0;
 }
 
+.saldo-final-abaixo{
+    margin-top:10px;
+}
+
 .estrategia-meio{
     font-size:12px;
     background:#fff4db;
@@ -451,6 +504,25 @@ h1{ margin-bottom:15px; }
 
 .estrategia-subtitulo{
     margin-top:2px;
+}
+
+.motivo-meio{
+    font-size:12px;
+    background:#eef4ff;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid #bfd3ff;
+    color:#1c4fb8;
+    min-width:260px;
+    max-width:360px;
+    cursor:pointer;
+    transition:0.2s;
+    flex:1;
+}
+
+.motivo-meio:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,0.10);
 }
 
 .envio-area input{
@@ -706,6 +778,53 @@ h1{ margin-bottom:15px; }
     background:#198754;
 }
 
+.mlb-envio-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.mlb-info-mini{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#7c3aed;
+    color:#fff;
+    font-size:12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:help;
+    position:relative;
+}
+
+.mlb-info-tooltip{
+    display:none;
+    position:absolute;
+    top:115%;
+    left:0;
+    width:320px;
+    max-width:90vw;
+    background:#111827;
+    color:#fff;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    z-index:999;
+    line-height:1.45;
+    font-size:12px;
+    white-space:normal;
+}
+
+.mlb-info-mini:hover .mlb-info-tooltip{
+    display:block;
+}
+
+.mlb-info-tooltip strong{
+    color:#c4b5fd;
+}
+
 .whats-chat-box{
     background:#e5ddd5;
     border-radius:18px;
@@ -912,7 +1031,7 @@ h1{ margin-bottom:15px; }
 <div class="page-wrap">
     <div style="padding: 30px;">
 
-    <h1>📦 Painel Estratégico Full</h1>
+    <h1>📦 MLBS Em Análise</h1>
 
     <div class="top-menu" style="display:none;"></div>
 
@@ -992,18 +1111,46 @@ h1{ margin-bottom:15px; }
                     <option value="">Toda condição</option>
                 </select>
 
+                <select id="filtroInfoMeli" onchange="renderCards()">
+                    <option value="">Todo INFO MELI</option>
+                </select>
+
+                <select id="filtroEstoqueMeli" onchange="renderCards()">
+                    <option value="">Todo ESTOQUE MELI</option>
+                </select>
+
+                <select id="filtroUltimos" onchange="renderCards()">
+                    <option value="">Todos ULTIMOS</option>
+                </select>
+
                 <select id="filtroLote" onchange="renderCards()">
                     <option value="">Todos os lotes</option>
                 </select>
+
+                <select id="filtroTipoMlb" onchange="renderCards()">
+                    <option value="">Todo tipo MLB</option>
+                    <option value="MLB EM TESTE">MLB EM TESTE</option>
+                    <option value="MLB DE GIRO">MLB DE GIRO</option>
+                </select>
+
+                <select id="filtroPrioridade" onchange="renderCards()">
+                    <option value="">Toda prioridade</option>
+                    <option value="ALTA">ALTA</option>
+                    <option value="URGENTE">URGENTE</option>
+                </select>
     
-                <button type="button" id="btnFiltroValor500" onclick="setFiltro('valor500')">Valor &gt; 500</button>
+                <button type="button" id="btnFiltroValor500" onclick="setFiltro('valor400')">Valor &gt; 400</button>
                 <button type="button" id="btnFiltroUnidades10" onclick="setFiltro('unidades10')">Unid &gt; 10</button>
-                <button type="button" id="btnFiltroCritico" onclick="setFiltro('critico')">-10 vendas + 500</button>
+                <button type="button" id="btnFiltroVendas3" onclick="setFiltro('vendas3')">Vendas &gt; 3 (30D)</button>
+                <button type="button" id="btnFiltroCritico" onclick="setFiltro('critico')">- 10 VENDAS + 400</button>
                 <button type="button" id="btnFiltroNaoOfereceMaisFull" onclick="setFiltroStatusFull('nao_ofereco_mais_full')">Não oferece mais no Full</button>
                 <button type="button" id="btnFiltroEstaNoFull" onclick="setFiltroStatusFull('esta_no_full')">Está no Full</button>
                 <button type="button" id="btnFiltroNuncaFoiFull" onclick="setFiltroStatusFull('nunca_foi_full')">Nunca foi no Full</button>
                 <button type="button" id="btnFiltroSemVenda" onclick="setFiltroStatusFull('sem_venda')">Sem venda</button>
+                <button type="button" id="btnFiltroRuptura" onclick="setFiltroSaudeFull('RUPTURA')">Ruptura</button>
+                <button type="button" id="btnFiltroSugEnvio" onclick="setFiltroMagic('SUG DE ENVIO MAGIC')">Sug de Envio</button>
                 <button type="button" onclick="limparFiltros()">Limpar</button>
+                <button type="button" id="btnResetTelaAtual" onclick="resetarCardsTelaAtual()">Resetar tela</button>
     
             </div>
         </div>
@@ -1013,6 +1160,9 @@ h1{ margin-bottom:15px; }
 
     <div id="principal" class="grid"></div>
 <div id="enviando" class="grid hidden"></div>
+<div id="ecommerce" class="grid hidden"></div>
+<div id="compras" class="grid hidden"></div>
+<div id="acompanhamento" class="grid hidden"></div>
 <div id="homologar" class="grid hidden"></div>
 <div id="naoEnviar" class="grid hidden"></div>
 </div>
@@ -1020,10 +1170,16 @@ h1{ margin-bottom:15px; }
 <script>
 const principal = document.getElementById("principal");
 const enviando = document.getElementById("enviando");
+const ecommerce = document.getElementById("ecommerce");
+const compras = document.getElementById("compras");
+const acompanhamento = document.getElementById("acompanhamento");
 const homologar = document.getElementById("homologar");
 const naoEnviar = document.getElementById("naoEnviar");
 
 const contEnv = document.getElementById("contEnvSidebar");
+const contEcom = document.getElementById("contEcomSidebar");
+const contCompras = document.getElementById("contComprasSidebar");
+const contAcompanhamento = document.getElementById("contAcompanhamentoSidebar");
 const contHom = document.getElementById("contHomSidebar");
 const contNao = document.getElementById("contNaoSidebar");
 const contPrincipalSidebar = null;
@@ -1037,15 +1193,24 @@ const filtroSelo = document.getElementById("filtroSelo");
 const filtroLogica = document.getElementById("filtroLogica");
 const filtroSaude = document.getElementById("filtroSaude");
 const filtroCondicao = document.getElementById("filtroCondicao");
+const filtroInfoMeli = document.getElementById("filtroInfoMeli");
+const filtroEstoqueMeli = document.getElementById("filtroEstoqueMeli");
+const filtroUltimos = document.getElementById("filtroUltimos");
 const filtroLote = document.getElementById("filtroLote");
+const filtroTipoMlb = document.getElementById("filtroTipoMlb");
+const filtroPrioridade = document.getElementById("filtroPrioridade");
 const btnFiltrosTopo = document.getElementById("btnFiltrosTopo");
 const btnFiltroValor500 = document.getElementById("btnFiltroValor500");
 const btnFiltroUnidades10 = document.getElementById("btnFiltroUnidades10");
 const btnFiltroCritico = document.getElementById("btnFiltroCritico");
+const btnFiltroVendas3 = document.getElementById("btnFiltroVendas3");
 const btnFiltroNaoOfereceMaisFull = document.getElementById("btnFiltroNaoOfereceMaisFull");
 const btnFiltroEstaNoFull = document.getElementById("btnFiltroEstaNoFull");
 const btnFiltroNuncaFoiFull = document.getElementById("btnFiltroNuncaFoiFull");
 const btnFiltroSemVenda = document.getElementById("btnFiltroSemVenda");
+const btnFiltroRuptura = document.getElementById("btnFiltroRuptura");
+const btnFiltroSugEnvio = document.getElementById("btnFiltroSugEnvio");
+const btnResetTelaAtual = document.getElementById("btnResetTelaAtual");
 
 let dadosOriginais = [];
 let comentariosSalvos = {};
@@ -1055,28 +1220,34 @@ let filtroEspecial = "";
 let statusSalvos = {};
 
 const estrategiasNaoEnvio = [
-"30+7",
-"Não temos estoque suficiente",
-"SKU divergente",
-"MLB divergente",
 "Arthur",
 "Matheus",
-"Compras (Matheus)",
-"Compras (Victor)",
+"Matheus Compras",
+"Vitor Compras",
+"Balcao",
 "TESTE diretoria",
 "TESTE",
-"ENVIAR TRACIONAR",
-"SOMENTE GORDURA DE 7 DIAS",
 "ESTOQUE SUFICIENTE",
-"REPOR VENDAS 30 DIAS",
+"30+7",
 "30+15",
 "NAO COMPENSA ENVIAR $",
 "30+GORDURA",
 "SEM VENDA",
 "SEM ESTOQUE NA 4i",
-"REMANU",
 "OUTRO MLB MELHOR PERFORMADO",
-"AQUECER MLB"
+"AQUECER MLB",
+"RUPTURADO",
+"VAI RUPTURAR",
+"SKU OU MLB DIVERGENTE",
+" - ",
+"REPOSIÇÃO",
+"POSSIVEL ESTOQUE ECESSIVO",
+"ESTOQUE 4i VAI FICAR BAIXO",
+"EM QUEDA",
+"TESTE C2",
+"ACOMPANHAR",
+"ESTOQUE BAIXO NA 4i",
+"BEM PERFORMADO"
 ];
 
 const motivosEnvio = [...estrategiasNaoEnvio];
@@ -1107,6 +1278,54 @@ let renderizando = false;
 let debounceTimer = null;
 let skuAtualComentario = null;
 let codigoAtualComentario = null;
+let tiposMlbSalvos = JSON.parse(localStorage.getItem("tiposMlbSalvos") || "{}");
+
+function salvarTipoMlb(codigo, valor){
+    tiposMlbSalvos[String(codigo)] = valor || "";
+    localStorage.setItem("tiposMlbSalvos", JSON.stringify(tiposMlbSalvos));
+    if (filtroTipoMlb && filtroTipoMlb.value){
+        renderCards();
+    }
+}
+
+function obterTipoMlbSalvo(codigo){
+    return tiposMlbSalvos[String(codigo)] || "";
+}
+
+function valorSelecionadoTipoMlb(codigo, valor){
+    return obterTipoMlbSalvo(codigo) === valor ? "selected" : "";
+}
+
+function obterPrioridadeSalva(codigo){
+    return (statusSalvos[String(codigo)]?.prioridade || "").toUpperCase().trim();
+}
+
+function valorSelecionadoPrioridade(codigo, valor){
+    return obterPrioridadeSalva(codigo) === String(valor || "").toUpperCase().trim() ? "selected" : "";
+}
+
+function salvarPrioridade(codigo, valor){
+    const registroAtual = statusSalvos[String(codigo)] || {};
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            prioridade: valor || "",
+            status: registroAtual.status || "principal",
+            quantidade: registroAtual.quantidade || 0,
+            estrategia: registroAtual.estrategia || "",
+            motivo_envio: registroAtual.motivo_envio || ""
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            ...registroAtual,
+            prioridade: valor || ""
+        };
+        renderCards();
+    });
+}
 
 function valorParaNumero(v){
     if(!v) return 0;
@@ -1139,6 +1358,68 @@ function calcularSaldoProjetado(estoqueEmpresa, quantidadeEnviar){
     return numeroInteiro(estoqueEmpresa) - numeroInteiro(quantidadeEnviar);
 }
 
+function formatarDataHoraBr(valor){
+    const texto = String(valor || "").trim();
+    if (!texto) return "-";
+
+    const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (match){
+        const [, ano, mes, dia, hora='00', minuto='00'] = match;
+        return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+    }
+
+    const data = new Date(texto);
+    if (!isNaN(data.getTime())){
+        const dia = String(data.getDate()).padStart(2, '0');
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const ano = data.getFullYear();
+        const hora = String(data.getHours()).padStart(2, '0');
+        const minuto = String(data.getMinutes()).padStart(2, '0');
+        return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+    }
+
+    return texto;
+}
+
+function montarTooltipUltimoLoteMlb(codigo){
+    const registro = statusSalvos[String(codigo)] || {};
+    const ultimoLote = registro.ultimo_lote || {};
+    const numeroLote = String(ultimoLote.numero_lote || '').trim();
+
+    if (!numeroLote){
+        return `
+            <div class="mlb-info-tooltip">
+                <strong>Envio MLB:</strong><br>
+                Este MLB ainda não foi enviado.
+            </div>
+        `;
+    }
+
+    const quantidade = numeroInteiro(ultimoLote.quantidade || 0);
+    const dataBr = formatarDataHoraBr(ultimoLote.data_geracao || '');
+
+    return `
+        <div class="mlb-info-tooltip">
+            <strong>Envio MLB:</strong><br>
+            Já foi enviado<br>
+            Lote: ${numeroLote}<br>
+            Quantidade: ${quantidade}<br>
+            Data: ${dataBr}
+        </div>
+    `;
+}
+
+function montarTextoSaldoFinal(item, saldo){
+    const mediaSignus = numeroInteiro(item["MEDIA_SIGNUS"] || 0);
+    const precisaCompra = saldo <= mediaSignus;
+    const comprasTexto = precisaCompra ? ` | <span style="color:#b45309; font-weight:700;">COMPRAS</span>` : "";
+
+    return `
+        Saldo 4i após envio: ${saldo} | Média mensal SKU: ${mediaSignus}${comprasTexto}
+        ${montarTooltipSaldoSku(item)}
+    `;
+}
+
 function obterEstadoAtualFiltros(){
     return {
         conta: filtroConta.value || "",
@@ -1147,7 +1428,12 @@ function obterEstadoAtualFiltros(){
         analise: filtroLogica.value || "",
         saude: filtroSaude.value || "",
         condicao: filtroCondicao.value || "",
+        infoMeli: filtroInfoMeli.value || "",
+        estoqueMeli: filtroEstoqueMeli.value || "",
+        ultimos: filtroUltimos.value || "",
         lote: filtroLote.value || "",
+        tipoMlb: filtroTipoMlb.value || "",
+        prioridade: filtroPrioridade.value || "",
         magic: filtroUrlMagic || "",
         cobertura: filtroUrlCobertura || "",
         full: filtroUrlFull || "",
@@ -1179,7 +1465,12 @@ function restaurarFiltrosDaSessaoSeNecessario(){
     if (!urlParams.get("analise") && estado.analise) filtroLogica.value = estado.analise;
     if (!urlParams.get("saude") && estado.saude) filtroSaude.value = estado.saude;
     if (!urlParams.get("condicao") && estado.condicao) filtroCondicao.value = estado.condicao;
+    if (!urlParams.get("infoMeli") && estado.infoMeli) filtroInfoMeli.value = estado.infoMeli;
+    if (!urlParams.get("estoqueMeli") && estado.estoqueMeli) filtroEstoqueMeli.value = estado.estoqueMeli;
+    if (!urlParams.get("ultimos") && estado.ultimos) filtroUltimos.value = estado.ultimos;
     if (!urlParams.get("lote") && estado.lote) filtroLote.value = estado.lote;
+    if (!urlParams.get("tipoMlb") && estado.tipoMlb) filtroTipoMlb.value = estado.tipoMlb;
+    if (!urlParams.get("prioridade") && estado.prioridade) filtroPrioridade.value = estado.prioridade;
 
     if (!urlParams.get("filtroEspecial") && estado.filtroEspecial) {
         filtroEspecial = estado.filtroEspecial;
@@ -1201,7 +1492,12 @@ function atualizarBotoesAtivos(){
         filtroLogica,
         filtroSaude,
         filtroCondicao,
-        filtroLote
+        filtroInfoMeli,
+        filtroEstoqueMeli,
+        filtroUltimos,
+        filtroLote,
+        filtroTipoMlb,
+        filtroPrioridade
     ];
 
     campos.forEach(campo => {
@@ -1215,7 +1511,7 @@ function atualizarBotoesAtivos(){
     }
 
     if (btnFiltroValor500){
-        btnFiltroValor500.classList.toggle("ativo", filtroEspecial === "valor500");
+        btnFiltroValor500.classList.toggle("ativo", filtroEspecial === "valor400");
     }
 
     if (btnFiltroUnidades10){
@@ -1224,6 +1520,10 @@ function atualizarBotoesAtivos(){
 
     if (btnFiltroCritico){
         btnFiltroCritico.classList.toggle("ativo", filtroEspecial === "critico");
+    }
+
+    if (btnFiltroVendas3){
+        btnFiltroVendas3.classList.toggle("ativo", filtroEspecial === "vendas3");
     }
 
     if (btnFiltroNaoOfereceMaisFull){
@@ -1241,6 +1541,14 @@ function atualizarBotoesAtivos(){
     if (btnFiltroSemVenda){
         btnFiltroSemVenda.classList.toggle("ativo", filtroUrlStatusFull === "sem_venda");
     }
+
+    if (btnFiltroRuptura){
+        btnFiltroRuptura.classList.toggle("ativo", filtroUrlSaudeFull === "RUPTURA");
+    }
+
+    if (btnFiltroSugEnvio){
+        btnFiltroSugEnvio.classList.toggle("ativo", filtroUrlMagic === "SUG DE ENVIO MAGIC");
+    }
 }
 
 function togglePainelFiltros(){
@@ -1257,7 +1565,11 @@ function existeFiltroAtivo(){
         filtroLogica.value ||
         filtroSaude.value ||
         filtroCondicao.value ||
+        filtroInfoMeli.value ||
+        filtroEstoqueMeli.value ||
+        filtroUltimos.value ||
         filtroLote.value ||
+        filtroTipoMlb.value ||
         filtroEspecial ||
         filtroUrlMagic ||
         filtroUrlCobertura ||
@@ -1295,10 +1607,118 @@ function atualizarUrlFiltros(){
     salvarFiltrosNaSessao();
 }
 
+
+function obterTipoLeadTime(item){
+    const lote = textoNormalizado(item["LOTE"]);
+    const selo = textoNormalizado(item["SELO"]);
+    if (lote.includes("CAIXA") || selo.includes("CAIXA")) return "CAIXA";
+    return "DIVERSOS";
+}
+
+function obterDiasLeadTime(item){
+    return obterTipoLeadTime(item) === "CAIXA" ? 15 : 10;
+}
+
+function obterHistoricoMensal3Meses(item){
+    const meses = ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"];
+    const historico = meses.map(nome => ({
+        nome,
+        valor: numeroInteiro(item[nome] || 0)
+    }));
+
+    const ultimos3 = historico.slice(-3);
+    return ultimos3;
+}
+
+function classificarHistoricoMensal(item){
+    const ultimos3 = obterHistoricoMensal3Meses(item);
+    const [m1, m2, m3] = ultimos3.map(x => numeroInteiro(x.valor || 0));
+
+    let status = "ESTÁVEL";
+    if (m1 < m2 && m2 < m3){
+        status = "SUBIDA";
+    } else if (m1 > m2 && m2 > m3){
+        status = "QUEDA";
+    } else {
+        const base1 = m1 === 0 ? 1 : m1;
+        const base2 = m2 === 0 ? 1 : m2;
+        const variacao12 = Math.abs(m2 - m1) / base1;
+        const variacao23 = Math.abs(m3 - m2) / base2;
+
+        if (variacao12 <= 0.2 && variacao23 <= 0.2){
+            status = "ESTÁVEL";
+        } else {
+            status = "OSCILANDO";
+        }
+    }
+
+    return {
+        status,
+        texto: `${ultimos3[0].nome}: ${m1} | ${ultimos3[1].nome}: ${m2} | ${ultimos3[2].nome}: ${m3}`
+    };
+}
+
+function classificarCurtoPrazo(item){
+    const vendas7 = numeroInteiro(item["7 DIAS"]);
+    const vendas15 = numeroInteiro(item["15 DIAS"]);
+    const vendas30 = numeroInteiro(item["30 DIAS"]);
+
+    const media7 = vendas7 / 7;
+    const media15 = vendas15 / 15;
+    const media30 = vendas30 / 30;
+
+    let status = "OSCILANDO";
+
+    if (media7 > media15 && media15 > media30){
+        status = "SUBIDA";
+    } else if (media7 < media15 && media15 < media30){
+        status = "QUEDA";
+    } else {
+        const variacao3015 = media30 > 0 ? Math.abs(media30 - media15) / media30 : 0;
+        const variacao157 = media15 > 0 ? Math.abs(media15 - media7) / media15 : 0;
+
+        if (variacao3015 <= 0.2 && variacao157 <= 0.2){
+            status = "ESTÁVEL";
+        } else {
+            status = "OSCILANDO";
+        }
+    }
+
+    return {
+        status,
+        texto: `30D: ${vendas30} (${media30.toFixed(2)}/dia) | 15D: ${vendas15} (${media15.toFixed(2)}/dia) | 7D: ${vendas7} (${media7.toFixed(2)}/dia)`
+    };
+}
+
+function montarLeituraFinalTendencia(item){
+    const historico = classificarHistoricoMensal(item);
+    const curtoPrazo = classificarCurtoPrazo(item);
+
+    let final = `${historico.status} + ${curtoPrazo.status}`;
+    if (historico.status === "OSCILANDO" && curtoPrazo.status === "QUEDA"){
+        final = "INSTÁVEL EM QUEDA";
+    } else if (historico.status === "OSCILANDO" && curtoPrazo.status === "SUBIDA"){
+        final = "INSTÁVEL EM SUBIDA";
+    } else if (historico.status === "QUEDA" && curtoPrazo.status === "QUEDA"){
+        final = "QUEDA CONSISTENTE";
+    } else if (historico.status === "SUBIDA" && curtoPrazo.status === "SUBIDA"){
+        final = "SUBIDA CONSISTENTE";
+    } else if (historico.status === "ESTÁVEL" && curtoPrazo.status === "ESTÁVEL"){
+        final = "ESTÁVEL";
+    }
+
+    return {
+        historico,
+        curtoPrazo,
+        final
+    };
+}
+
 function sugestaoIA(item){
     const estoqueEmpresa = numeroInteiro(item["ESTOQUE TOTAL SIGNUS"]);
     const estoqueFull = numeroInteiro(item["ESTOQUE FULL"]);
     const vendas7 = numeroInteiro(item["7 DIAS"]);
+    const vendas15 = numeroInteiro(item["15 DIAS"]);
     const vendas30 = numeroInteiro(item["30 DIAS"]);
     const valor30 = valorParaNumero(item["Total de Vendas 30 DIAS"]);
     const metrica30 = numeroInteiro(item["METRICAS 30 DIAS DO MELI"]);
@@ -1311,15 +1731,33 @@ function sugestaoIA(item){
     const acao = textoNormalizado(item["Ação Recomendada"]);
     const sugestaoMeli = textoNormalizado(item["SUGESTAO MELI"]);
 
-    const prazoCriacaoLote = 2;
-    const prazoOperacao = 4;
-    const prazoAptoVenda = 3;
-    const diasReposicao = prazoCriacaoLote + prazoOperacao + prazoAptoVenda;
+    const leitura = montarLeituraFinalTendencia(item);
+    const leadTimeTipo = obterTipoLeadTime(item);
+    const diasReposicao = obterDiasLeadTime(item);
 
-    const mediaDia30 = vendas30 > 0 ? (vendas30 / 30) : 0;
-    const mediaDia7 = vendas7 > 0 ? (vendas7 / 7) : 0;
-    const mediaDiaConsiderada = Math.max(mediaDia30, mediaDia7);
+    let baseEnvio = vendas30;
+    let origemBase = "30 DIAS";
 
+    if (leitura.curtoPrazo.status === "QUEDA"){
+        baseEnvio = Math.max(vendas15, vendas7);
+        origemBase = vendas15 >= vendas7 ? "15 DIAS" : "7 DIAS";
+    } else if (leitura.curtoPrazo.status === "OSCILANDO"){
+        baseEnvio = Math.ceil((vendas30 + vendas15) / 2);
+        origemBase = "MÉDIA 30D + 15D";
+    } else if (leitura.curtoPrazo.status === "ESTÁVEL"){
+        baseEnvio = vendas30;
+        origemBase = "30 DIAS";
+    } else if (leitura.curtoPrazo.status === "SUBIDA"){
+        baseEnvio = vendas30;
+        origemBase = "30 DIAS";
+    }
+
+    if (leitura.historico.status === "QUEDA" && leitura.curtoPrazo.status === "QUEDA"){
+        baseEnvio = Math.max(vendas7, Math.min(vendas15, baseEnvio));
+        origemBase = vendas7 >= vendas15 ? "7 DIAS" : "15 DIAS";
+    }
+
+    const mediaDiaConsiderada = baseEnvio > 0 ? (baseEnvio / 30) : 0;
     const demandaProjetada30 = Math.ceil(mediaDiaConsiderada * 30);
     const consumoAteApto = Math.ceil(mediaDiaConsiderada * diasReposicao);
     const estoqueFullQuandoApto = Math.max(estoqueFull - consumoAteApto, 0);
@@ -1343,7 +1781,7 @@ function sugestaoIA(item){
         motivosNegativos.push("Venda de 30 dias está baixa");
     }
 
-    if (valor30 >= 500){
+    if (valor30 >= 400){
         score += 1;
         motivosPositivos.push("Faturamento dos últimos 30 dias é bom");
     } else {
@@ -1371,7 +1809,7 @@ function sugestaoIA(item){
         tendencia.includes("POSITIVA")
     ){
         score += 1;
-        motivosPositivos.push("Tendência está positiva");
+        motivosPositivos.push("Tendência MELI está positiva");
     }
 
     if (
@@ -1408,6 +1846,24 @@ function sugestaoIA(item){
         motivosNegativos.push("O estoque atual ainda segura o prazo operacional");
     }
 
+    if (leitura.historico.status === "SUBIDA"){
+        score += 1;
+        motivosPositivos.push("Histórico mensal mostra subida");
+    } else if (leitura.historico.status === "QUEDA"){
+        motivosNegativos.push("Histórico mensal mostra queda");
+    } else if (leitura.historico.status === "OSCILANDO"){
+        motivosNegativos.push("Histórico mensal está oscilando");
+    }
+
+    if (leitura.curtoPrazo.status === "SUBIDA"){
+        score += 1;
+        motivosPositivos.push("Curto prazo mostra subida");
+    } else if (leitura.curtoPrazo.status === "QUEDA"){
+        motivosNegativos.push("Curto prazo está em queda");
+    } else if (leitura.curtoPrazo.status === "OSCILANDO"){
+        motivosNegativos.push("Curto prazo está oscilando");
+    }
+
     const metricasBoas = score >= 5 && (vendas30 > 0 || vendas7 > 0);
 
     let sugestao = 0;
@@ -1421,36 +1877,65 @@ function sugestaoIA(item){
         statusIA = "NÃO ENVIAR";
         detalhe = "Métricas insuficientes";
         classe = "ia-nao-enviar";
-        explicacao = "O MLB não está performando bem o suficiente para justificar reposição agora, considerando também o giro recente e o prazo operacional até ficar apto.";
+        explicacao = "O MLB não está performando bem o suficiente para justificar reposição agora, considerando histórico, curto prazo e o lead time da operação.";
+    }
+    else if (leitura.curtoPrazo.status === "QUEDA" && leitura.historico.status !== "SUBIDA"){
+        if (necessidade30Dias <= 0){
+            sugestao = 0;
+            statusIA = "NÃO ENVIAR";
+            detalhe = "Queda recente e Full cobre o prazo";
+            classe = "ia-nao-enviar";
+            explicacao = "O item está em queda no curto prazo e o estoque atual do Full ainda sustenta a demanda até a reposição ficar apta.";
+        } else if (estoqueEmpresa < necessidade30Dias){
+            sugestao = 0;
+            statusIA = "REPOR ESTOQUE EMPRESA";
+            detalhe = `Base ${origemBase} | precisa ${necessidade30Dias}`;
+            classe = "ia-repor";
+            explicacao = "Mesmo usando uma base mais conservadora por conta da queda, ainda falta estoque na empresa para repor o ideal.";
+        } else {
+            sugestao = necessidade30Dias;
+            statusIA = `ENVIAR ${sugestao} UN.`;
+            detalhe = `Base ${origemBase} | Queda recente`;
+            classe = "ia-enviar";
+            explicacao = "A IA reduziu a agressividade da sugestão porque o curto prazo está em queda, usando uma base mais conservadora para envio.";
+        }
     }
     else if (necessidade30Dias <= 0){
         sugestao = 0;
         statusIA = "NÃO ENVIAR";
         detalhe = "Full ainda cobre o prazo + 30 dias";
         classe = "ia-nao-enviar";
-        explicacao = "Mesmo considerando 2 dias para criar lote, 4 dias de operação e 3 dias até ficar apto, o estoque atual do Full ainda sustenta a demanda projetada.";
+        explicacao = "Mesmo considerando o lead time do tipo de lote, o estoque atual do Full ainda sustenta a demanda projetada.";
     }
     else if (estoqueEmpresa < necessidade30Dias){
         sugestao = 0;
         statusIA = "REPOR ESTOQUE EMPRESA";
-        detalhe = `Precisa ${necessidade30Dias} e empresa tem ${estoqueEmpresa}`;
+        detalhe = `Base ${origemBase} | precisa ${necessidade30Dias} e empresa tem ${estoqueEmpresa}`;
         classe = "ia-repor";
-        explicacao = "Há necessidade de envio considerando o tempo até o produto ficar apto, mas o estoque da empresa não é suficiente para repor o ideal projetado.";
+        explicacao = "Há necessidade de envio considerando histórico, curto prazo e lead time, mas o estoque da empresa não é suficiente.";
     }
     else{
         sugestao = necessidade30Dias;
         statusIA = `ENVIAR ${sugestao} UN.`;
-        detalhe = `Reposição considerando ${diasReposicao} dias de prazo operacional`;
+        detalhe = `Base ${origemBase} | Lead time ${diasReposicao} dias`;
         classe = "ia-enviar";
-        explicacao = "O MLB tem bom potencial, o giro recente ajuda a decisão e a sugestão já considera o tempo até o item ficar apto para venda novamente no Full.";
+        explicacao = "O MLB tem potencial e a sugestão já considera histórico mensal, curto prazo e o lead time do tipo de lote.";
     }
 
     const motivosHtml = `
         <div><strong>Motivo principal:</strong> ${explicacao}</div>
         <div class="ia-score"><strong>Score:</strong> ${score}</div>
+        <div><strong>Histórico 3 meses:</strong> ${leitura.historico.status}</div>
+        <div><strong>Leitura histórico:</strong> ${leitura.historico.texto}</div>
+        <div><strong>Curto prazo:</strong> ${leitura.curtoPrazo.status}</div>
+        <div><strong>Leitura curto prazo:</strong> ${leitura.curtoPrazo.texto}</div>
+        <div><strong>Leitura final:</strong> ${leitura.final}</div>
+        <div><strong>Base usada na IA:</strong> ${origemBase}</div>
         <div><strong>Venda 7 dias:</strong> ${vendas7}</div>
+        <div><strong>Venda 15 dias:</strong> ${vendas15}</div>
         <div><strong>Venda 30 dias:</strong> ${vendas30}</div>
         <div><strong>Média diária considerada:</strong> ${mediaDiaConsiderada.toFixed(2)}</div>
+        <div><strong>Tipo de lote:</strong> ${leadTimeTipo}</div>
         <div><strong>Prazo até apto:</strong> ${diasReposicao} dias</div>
         <div><strong>Consumo até ficar apto:</strong> ${consumoAteApto}</div>
         <div><strong>Estoque Full atual:</strong> ${estoqueFull}</div>
@@ -1711,12 +2196,32 @@ function montarTooltipSaldoSku(item){
     `;
 }
 
+function estrategiaVaiParaEcommerce(estrategia){
+    const valor = String(estrategia || "").trim().toUpperCase();
+    return ["ARTHUR", "MATHEUS", "ANGELA"].includes(valor);
+}
+
+function estrategiaVaiParaCompras(estrategia){
+    const valor = String(estrategia || "").trim().toUpperCase();
+    return [
+        "MATHEUS COMPRAS",
+        "VITOR COMPRAS",
+        "BALCAO",
+        "COMPRAS (MATHEUS)",
+        "COMPRAS (VICTOR)",
+        "COMPRAS (VITOR)"
+    ].includes(valor);
+}
+
 function obterDestino(item){
     const codigo = String(item["Código do Anúncio"]);
     const registro = statusSalvos[codigo] || {};
     const status = registro.status || "principal";
 
     if (status === "enviando") return "enviando";
+    if (status === "ecommerce") return "ecommerce";
+    if (status === "compras") return "compras";
+    if (status === "acompanhamento") return "acompanhamento";
     if (status === "homologar") return "homologar";
     if (status === "nao_enviar" || status === "naoEnviar") return "naoEnviar";
 
@@ -1726,10 +2231,16 @@ function obterDestino(item){
 function atualizarContadores(){
     const totalPrincipal = dadosFiltradosBase.filter(item => obterDestino(item) === "principal").length;
     const totalEnviando = dadosFiltradosBase.filter(item => obterDestino(item) === "enviando").length;
+    const totalEcommerce = dadosFiltradosBase.filter(item => obterDestino(item) === "ecommerce").length;
+    const totalCompras = dadosFiltradosBase.filter(item => obterDestino(item) === "compras").length;
+    const totalAcompanhamento = dadosFiltradosBase.filter(item => obterDestino(item) === "acompanhamento").length;
     const totalHomologar = dadosFiltradosBase.filter(item => obterDestino(item) === "homologar").length;
     const totalNao = dadosFiltradosBase.filter(item => obterDestino(item) === "naoEnviar").length;
     if (contPrincipalSidebar) contPrincipalSidebar.innerText = totalPrincipal;
     if (contEnv) contEnv.innerText = totalEnviando;
+    if (contEcom) contEcom.innerText = totalEcommerce;
+    if (contCompras) contCompras.innerText = totalCompras;
+    if (contAcompanhamento) contAcompanhamento.innerText = totalAcompanhamento;
     if (contHom) contHom.innerText = totalHomologar;
     if (contNao) contNao.innerText = totalNao;
 
@@ -1740,6 +2251,15 @@ function atualizarContadores(){
         contadorPrincipal.innerText = textoContador;
     } else if (telaAtual === "enviando"){
         textoContador = `${totalEnviando} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    } else if (telaAtual === "ecommerce"){
+        textoContador = `${totalEcommerce} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    } else if (telaAtual === "compras"){
+        textoContador = `${totalCompras} MLBs`;
+        contadorPrincipal.innerText = textoContador;
+    } else if (telaAtual === "acompanhamento"){
+        textoContador = `${totalAcompanhamento} MLBs`;
         contadorPrincipal.innerText = textoContador;
     } else if (telaAtual === "homologar"){
         textoContador = `${totalHomologar} MLBs`;
@@ -1776,6 +2296,9 @@ function mostrarTela(tela){
 
     principal.classList.add("hidden");
     enviando.classList.add("hidden");
+    ecommerce.classList.add("hidden");
+    compras.classList.add("hidden");
+    acompanhamento.classList.add("hidden");
     homologar.classList.add("hidden");
     naoEnviar.classList.add("hidden");
 
@@ -1794,6 +2317,18 @@ function setFiltro(tipo){
 
 function setFiltroStatusFull(tipo){
     filtroUrlStatusFull = (filtroUrlStatusFull === tipo) ? "" : tipo;
+    salvarFiltrosNaSessao();
+    renderCards();
+}
+
+function setFiltroMagic(tipo){
+    filtroUrlMagic = (filtroUrlMagic === tipo) ? "" : tipo;
+    salvarFiltrosNaSessao();
+    renderCards();
+}
+
+function setFiltroSaudeFull(tipo){
+    filtroUrlSaudeFull = (filtroUrlSaudeFull === tipo) ? "" : tipo;
     salvarFiltrosNaSessao();
     renderCards();
 }
@@ -1827,6 +2362,43 @@ function limparFiltros(){
     renderCards();
 }
 
+function resetarCardsTelaAtual(){
+    if (telaAtual === "principal") return;
+
+    const codigosTelaAtual = dadosFiltradosBase
+        .filter(item => obterDestino(item) === telaAtual)
+        .map(item => String(item["Código do Anúncio"] || ""))
+        .filter(Boolean);
+
+    if (!codigosTelaAtual.length){
+        return;
+    }
+
+    Promise.all(codigosTelaAtual.map(codigo => {
+        const registroAtual = statusSalvos[String(codigo)] || {};
+        return fetch("/salvar-status", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+                codigo: codigo,
+                status: "principal",
+                quantidade: registroAtual.quantidade || 0,
+                estrategia: registroAtual.estrategia || "",
+                motivo_envio: registroAtual.motivo_envio || "",
+                prioridade: registroAtual.prioridade || ""
+            })
+        }).then(() => {
+            statusSalvos[String(codigo)] = {
+                ...registroAtual,
+                status: "principal"
+            };
+        });
+    })).then(() => {
+        renderCards();
+    });
+}
+
+
 function popularFiltros(){
     function unique(col){
         return [...new Set(dadosOriginais.map(d => d[col]).filter(v => v))];
@@ -1836,7 +2408,20 @@ function popularFiltros(){
     filtroLogica.innerHTML = '<option value="">Toda lógica</option>';
     filtroSaude.innerHTML = '<option value="">Toda saúde</option>';
     filtroCondicao.innerHTML = '<option value="">Toda condição</option>';
+    filtroInfoMeli.innerHTML = '<option value="">Todo INFO MELI</option>';
+    filtroEstoqueMeli.innerHTML = '<option value="">Todo ESTOQUE MELI</option>';
+    filtroUltimos.innerHTML = '<option value="">Todos ULTIMOS</option>';
     filtroLote.innerHTML = '<option value="">Todos os lotes</option>';
+    filtroTipoMlb.innerHTML = `
+        <option value="">Todo tipo MLB</option>
+        <option value="MLB EM TESTE">MLB EM TESTE</option>
+        <option value="MLB DE GIRO">MLB DE GIRO</option>
+    `;
+    filtroPrioridade.innerHTML = `
+        <option value="">Toda prioridade</option>
+        <option value="ALTA">ALTA</option>
+        <option value="URGENTE">URGENTE</option>
+    `;
 
     unique("SELO").forEach(v => filtroSelo.innerHTML += `<option value="${v}">${v}</option>`);
     unique("ANALISE").forEach(v => filtroLogica.innerHTML += `<option value="${v}">${v}</option>`);
@@ -1848,6 +2433,9 @@ function popularFiltros(){
         )
     ];
     listaCondicao.forEach(v => filtroCondicao.innerHTML += `<option value="${v}">${v}</option>`);
+    unique("INFO MELI").forEach(v => filtroInfoMeli.innerHTML += `<option value="${v}">${v}</option>`);
+    unique("ESTOQUE MELI").forEach(v => filtroEstoqueMeli.innerHTML += `<option value="${v}">${v}</option>`);
+    unique("ULTIMOS").forEach(v => filtroUltimos.innerHTML += `<option value="${v}">${v}</option>`);
 
     unique("LOTE").forEach(v => filtroLote.innerHTML += `<option value="${v}">${v}</option>`);
 }
@@ -1859,7 +2447,12 @@ function aplicarFiltrosBase(){
     const logica = filtroLogica.value;
     const saude = filtroSaude.value;
     const condicao = filtroCondicao.value;
+    const infoMeli = filtroInfoMeli.value;
+    const estoqueMeli = filtroEstoqueMeli.value;
+    const ultimos = filtroUltimos.value;
     const lote = filtroLote.value;
+    const tipoMlb = filtroTipoMlb.value;
+    const prioridade = filtroPrioridade.value;
 
     return dadosOriginais.filter(item => {
         if (conta && String(item["Nickname"] || "").toLowerCase() !== conta.toLowerCase()) return false;
@@ -1882,8 +2475,13 @@ function aplicarFiltrosBase(){
 
         const valorCondicaoItem = String(item["CONDIÇÃO"] || item["CONDIÇAO"] || "").trim();
         if (condicao && valorCondicaoItem !== String(condicao).trim()) return false;
+        if (infoMeli && String(item["INFO MELI"] || "").trim() !== String(infoMeli).trim()) return false;
+        if (estoqueMeli && String(item["ESTOQUE MELI"] || "").trim() !== String(estoqueMeli).trim()) return false;
+        if (ultimos && String(item["ULTIMOS"] || "").trim() !== String(ultimos).trim()) return false;
 
         if (lote && String(item["LOTE"] || "").trim() !== String(lote).trim()) return false;
+        if (tipoMlb && obterTipoMlbSalvo(item["Código do Anúncio"]) !== String(tipoMlb).trim()) return false;
+        if (prioridade && obterPrioridadeSalva(item["Código do Anúncio"]) !== String(prioridade).trim()) return false;
 
         if (
             filtroUrlMagic &&
@@ -1939,9 +2537,10 @@ function aplicarFiltrosBase(){
         let unidades = Number(item["30 DIAS"] || 0);
         let valor = valorParaNumero(item["Total de Vendas 30 DIAS"]);
 
-        if (filtroEspecial === "valor500" && valor <= 500) return false;
+        if (filtroEspecial === "valor400" && valor <= 400) return false;
         if (filtroEspecial === "unidades10" && unidades <= 10) return false;
-        if (filtroEspecial === "critico" && !(unidades < 10 && valor > 500)) return false;
+        if (filtroEspecial === "critico" && !(unidades < 10 && valor > 400)) return false;
+        if (filtroEspecial === "vendas3" && unidades <= 3) return false;
 
         return true;
     });
@@ -2013,11 +2612,25 @@ function montarHTMLCard(item){
     return `
     <div class="linha-topo">
         <div class="mlb-area">
-            <div class="mlb">${item["Código do Anúncio"]}</div>
-           <div class="badges">
-    <span class="badge badge-green">${item["SELO"] || ""}</span>
-    <span class="badge badge-blue">${item["OBSERVAÇÃO MELI"] || ""}</span>
-    </div>
+            <div class="mlb-topo-coluna">
+                <div class="mlb">${item["Código do Anúncio"]}</div>
+                <div class="tipo-mlb-box">
+                    <div class="tipo-mlb-titulo">TIPO:</div>
+                    <select class="select-tipo-mlb" onchange="salvarTipoMlb('${codigo}', this.value)">
+                        <option value="">Selecionar</option>
+                        <option value="MLB EM TESTE" ${valorSelecionadoTipoMlb(codigo, "MLB EM TESTE")}>MLB EM TESTE</option>
+                        <option value="MLB DE GIRO" ${valorSelecionadoTipoMlb(codigo, "MLB DE GIRO")}>MLB DE GIRO</option>
+                    </select>
+                </div>
+                <div class="tipo-mlb-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">
+                    <div class="tipo-mlb-titulo">PRIORIDADE:</div>
+                    <select class="select-tipo-mlb" style="color:#9a3412;" onchange="salvarPrioridade('${codigo}', this.value)">
+                        <option value="">Selecionar</option>
+                        <option value="ALTA" ${valorSelecionadoPrioridade(codigo, "ALTA")}>ALTA</option>
+                        <option value="URGENTE" ${valorSelecionadoPrioridade(codigo, "URGENTE")}>URGENTE</option>
+                    </select>
+                </div>
+            </div>
 
 <div class="topo-direita">
     <div class="ia-box ${sugestoes.classe}">
@@ -2043,7 +2656,7 @@ function montarHTMLCard(item){
             ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
         </div>
 
-        <div><strong>SKU:</strong> <span class="sku-info-wrap"><span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span><span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span></span></div>
+        <div><strong>SKU:</strong> <span class="sku-info-wrap"><span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span><span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span></span>${String(item["ATENÇÃO"] || item["ATENCAO"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#b45309;">${item["ATENÇÃO"] || item["ATENCAO"]}</span>` : ""}${String(item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#1d4ed8;">${item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"]}</span>` : ""}</div>
         <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
         <div><strong>Full:</strong> ${item["Full"] || ""}</div>
         <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
@@ -2059,19 +2672,26 @@ function montarHTMLCard(item){
 
         <div class="linha-acao-final">
 
-    <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
-        Saldo 4i após envio: ${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo))}
-        ${montarTooltipSaldoSku(item)}
-    </div>
-
     <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
     ${
-        (statusSalvos[String(codigo)]?.estrategia || statusSalvos[String(codigo)]?.motivo_envio)
+        statusSalvos[String(codigo)]?.estrategia
         ? `
-        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia || statusSalvos[String(codigo)]?.motivo_envio}</div>
+        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
         `
         : `
         <div class="estrategia-titulo">Estratégia</div>
+        `
+    }
+</div>
+
+    <div class="motivo-meio" onclick="abrirModalMotivo('${codigo}')">
+    ${
+        statusSalvos[String(codigo)]?.motivo_envio
+        ? `
+        <div class="estrategia-titulo">Motivo → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
+        `
+        : `
+        <div class="estrategia-titulo">Motivo</div>
         `
     }
 </div>
@@ -2084,6 +2704,9 @@ function montarHTMLCard(item){
             oninput="atualizarSaldoCard('${codigo}', ${numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0)}, '${item["SKU"]}')"
         >
         <button onclick="moverCard('${codigo}')">Enviar</button>
+<button onclick="enviarParaEcommerce('${codigo}')" style="background:#fd7e14;">E-commerce</button>
+<button onclick="enviarParaCompras('${codigo}')" style="background:#6f42c1;">Compras</button>
+<button onclick="enviarParaAcompanhamento('${codigo}')" style="background:#20c997;">Acompanhamento</button>
 <button onclick="homologarCard('${codigo}')" style="background:#0d6efd;">Homologar</button>
 <button onclick="voltarPrincipal('${codigo}')" style="background:#6c757d; color:white;">
     ↩ Voltar
@@ -2093,6 +2716,10 @@ function montarHTMLCard(item){
 </div>
 
         <hr style="margin:4px 0 0 0">
+
+        <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final saldo-final-abaixo" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
+            ${montarTextoSaldoFinal(item, calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)))}
+        </div>
 
         <div class="linha-quatro">
             <div class="duplo-bloco">
@@ -2109,7 +2736,7 @@ function montarHTMLCard(item){
                 </div>
 
                 <div class="bloco">
-                    <h3>📅 HISTÓRICO MENSAL</h3>
+                    <h3>📅 HISTÓRICO MENSAL MELI</h3>
                     <div class="metric">AGOSTO: ${item["AGOSTO"] || 0}</div>
                     <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0}</div>
                     <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0}</div>
@@ -2118,16 +2745,27 @@ function montarHTMLCard(item){
                     <div class="metric">JANEIRO: ${item["JANEIRO"] || 0}</div>
                     <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0}</div>
                     <div class="metric">MARÇO: ${item["MARÇO"] || 0}</div>
+                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
                 </div>
             </div>
 
             <div class="duplo-bloco">
                 <div class="bloco">
                     <h3>📊 VENDAS</h3>
-                    <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
-                    <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
-                    <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
-                    <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+                    <div style="display:flex; gap:30px; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
+                            <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
+                            <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
+                            <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+                        </div>
+                        <div style="min-width:120px;">
+                            <div class="metric">30+7: ${(Number(item["30 DIAS"] || 0) + Number(item["7 DIAS"] || 0))}</div>
+                            <div class="metric">30+15: ${(Number(item["30 DIAS"] || 0) + Number(item["15 DIAS"] || 0))}</div>
+                        </div>
+                    </div>
+                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
+                    <div class="metric" style="font-weight:bold; color:#1b5e20;">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
                 </div>
 
                 <div class="bloco">
@@ -2136,6 +2774,7 @@ function montarHTMLCard(item){
                     <div class="metric">A Caminho: ${item["A CAMINHO DO FULL"] || 0}</div>
                     <div class="metric">Full: ${item["ESTOQUE FULL"] || 0}</div>
                     <div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</div>
+                    <div class="metric">Média mensal SKU: ${item["MEDIA_SIGNUS"] || 0}</div>
                 </div>
             </div>
         </div>
@@ -2183,7 +2822,12 @@ function atualizarLinkExportacao(){
     if (filtroLogica.value) params.set("logica", filtroLogica.value);
     if (filtroSaude.value) params.set("saude", filtroSaude.value);
     if (filtroCondicao.value) params.set("condicao", filtroCondicao.value);
+    if (filtroInfoMeli.value) params.set("infoMeli", filtroInfoMeli.value);
+    if (filtroEstoqueMeli.value) params.set("estoqueMeli", filtroEstoqueMeli.value);
+    if (filtroUltimos.value) params.set("ultimos", filtroUltimos.value);
     if (filtroLote.value) params.set("lote", filtroLote.value);
+    if (filtroTipoMlb.value) params.set("tipoMlb", filtroTipoMlb.value);
+    if (filtroPrioridade.value) params.set("prioridade", filtroPrioridade.value);
 
     if (filtroUrlMagic) params.set("magic", filtroUrlMagic);
     if (filtroUrlCobertura) params.set("cobertura", filtroUrlCobertura);
@@ -2204,6 +2848,9 @@ function renderCards(){
 
     principal.innerHTML = "";
     enviando.innerHTML = "";
+    ecommerce.innerHTML = "";
+    compras.innerHTML = "";
+    acompanhamento.innerHTML = "";
     homologar.innerHTML = "";
     naoEnviar.innerHTML = "";
 
@@ -2229,10 +2876,8 @@ function atualizarSaldoCard(codigo, estoqueEmpresa, sku){
     const saldo = numeroInteiro(estoqueEmpresa) - numeroInteiro(somaSku);
 
     document.querySelectorAll(`[data-sku='${sku}']`).forEach(campoSaldo => {
-        campoSaldo.innerHTML = `
-            Saldo 4i após envio: ${saldo}${saldo < 0 ? " | Estoque insuficiente" : ""}
-            ${montarTooltipSaldoSku({ "SKU": sku })}
-        `;
+        const itemReferencia = (itensPorSku[String(sku) || ""] || [])[0] || {"SKU": sku};
+        campoSaldo.innerHTML = montarTextoSaldoFinal(itemReferencia, saldo) + `${saldo < 0 ? ' | Estoque insuficiente' : ''}`;
         campoSaldo.style.color = saldo < 0 ? "#c62828" : "#1b5e20";
     });
 }
@@ -2272,15 +2917,104 @@ function moverCard(codigo){
             quantidade: quantidade
         })
     }).then(() => {
-        const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+        const estrategiaSalva = statusSalvos[String(codigo)]?.estrategia || "";
         const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+const prioridadeAtual = statusSalvos[String(codigo)]?.prioridade || "";
 
 statusSalvos[String(codigo)] = {
     status: status,
     quantidade: quantidade,
-    estrategia: estrategiaAtual,
-    motivo_envio: motivoAtual
+    estrategia: estrategiaSalva,
+    motivo_envio: motivoAtual,
+    prioridade: prioridadeAtual
 };
+        renderCards();
+    });
+}
+
+function enviarParaEcommerce(codigo){
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "ecommerce",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            status: "ecommerce",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        };
+
+        renderCards();
+    });
+}
+
+function enviarParaCompras(codigo){
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "compras",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            status: "compras",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual
+        };
+
+        renderCards();
+    });
+}
+
+function enviarParaAcompanhamento(codigo){
+    const input = document.getElementById("qtd-" + codigo);
+    const quantidadeAtual = Number(input ? input.value : (statusSalvos[String(codigo)]?.quantidade || 0));
+    const estrategiaAtual = statusSalvos[String(codigo)]?.estrategia || "";
+    const motivoAtual = statusSalvos[String(codigo)]?.motivo_envio || "";
+    const prioridadeAtual = statusSalvos[String(codigo)]?.prioridade || "";
+
+    fetch("/salvar-status", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            codigo: codigo,
+            status: "acompanhamento",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual,
+            prioridade: prioridadeAtual
+        })
+    }).then(() => {
+        statusSalvos[String(codigo)] = {
+            status: "acompanhamento",
+            quantidade: quantidadeAtual,
+            estrategia: estrategiaAtual,
+            motivo_envio: motivoAtual,
+            prioridade: prioridadeAtual
+        };
+
         renderCards();
     });
 }
@@ -2382,7 +3116,7 @@ function salvarEstrategia(){
             : (statusSalvos[String(codigoEstrategiaAtual)]?.quantidade || 0)
     );
 
-    const motivoAtual = estrategia;
+    const motivoAtual = statusSalvos[String(codigoEstrategiaAtual)]?.motivo_envio || "";
 
     fetch("/salvar-status", {
         method: "POST",
@@ -2778,6 +3512,21 @@ filtroCondicao.addEventListener("change", () => {
     renderCards();
 });
 
+filtroInfoMeli.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroEstoqueMeli.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
+filtroUltimos.addEventListener("change", () => {
+    salvarFiltrosNaSessao();
+    renderCards();
+});
+
 filtroLote.addEventListener("change", () => {
     salvarFiltrosNaSessao();
     renderCards();
@@ -2849,8 +3598,28 @@ Promise.all([
         filtroCondicao.value = urlParams.get("condicao");
     }
 
+    if(urlParams.get("infoMeli")){
+        filtroInfoMeli.value = urlParams.get("infoMeli");
+    }
+
+    if(urlParams.get("estoqueMeli")){
+        filtroEstoqueMeli.value = urlParams.get("estoqueMeli");
+    }
+
+    if(urlParams.get("ultimos")){
+        filtroUltimos.value = urlParams.get("ultimos");
+    }
+
     if(urlParams.get("lote")){
         filtroLote.value = urlParams.get("lote");
+    }
+
+    if(urlParams.get("tipoMlb")){
+        filtroTipoMlb.value = urlParams.get("tipoMlb");
+    }
+
+    if(urlParams.get("prioridade")){
+        filtroPrioridade.value = urlParams.get("prioridade");
     }
 
     if(urlParams.get("filtroEspecial")){
@@ -2860,6 +3629,9 @@ Promise.all([
     const telaUrl = urlParams.get("tela");
 if (
     telaUrl === "enviando" ||
+    telaUrl === "ecommerce" ||
+    telaUrl === "compras" ||
+    telaUrl === "acompanhamento" ||
     telaUrl === "homologar" ||
     telaUrl === "naoEnviar" ||
     telaUrl === "principal"
@@ -2869,6 +3641,9 @@ if (
 
     principal.classList.add("hidden");
     enviando.classList.add("hidden");
+    ecommerce.classList.add("hidden");
+    compras.classList.add("hidden");
+    acompanhamento.classList.add("hidden");
     homologar.classList.add("hidden");
     naoEnviar.classList.add("hidden"); 
 
@@ -2926,6 +3701,21 @@ if (
         <div class="modal-botoes">
             <button onclick="salvarEstrategia()">Salvar</button>
             <button onclick="fecharModalEstrategia()" class="btn-fechar">Cancelar</button>
+        </div>
+
+    </div>
+</div>
+
+<div id="modalMotivoEnvio" class="modal-filete">
+    <div class="modal-conteudo">
+
+        <h3>Definir Motivo</h3>
+
+        <select id="selectMotivoEnvio"></select>
+
+        <div class="modal-botoes">
+            <button type="button" onclick="salvarMotivo()">Salvar</button>
+            <button type="button" onclick="fecharModalMotivo()" class="btn-fechar">Cancelar</button>
         </div>
 
     </div>

@@ -12,6 +12,7 @@ from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 import os
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 from calendar import month_name
 
@@ -209,10 +210,6 @@ def agora_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def agora_iso():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
 def parse_data_hora(valor):
     texto = str(valor or "").strip()
     if not texto:
@@ -248,6 +245,90 @@ def formatar_data_br(valor, vazio="-"):
     if not dt:
         return vazio
     return dt.strftime("%d/%m/%Y")
+
+
+def agora_brasilia():
+    try:
+        return datetime.now(ZoneInfo("America/Sao_Paulo"))
+    except:
+        return datetime.now()
+
+
+def agora_str_brasilia():
+    return agora_brasilia().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def montar_historico_comentarios_mlb(cursor, codigo):
+    codigo = str(codigo or "").strip()
+    if not codigo:
+        return []
+
+    try:
+        cursor.execute("""
+            SELECT id, mensagem, data_hora
+            FROM comentarios_mlb_chat
+            WHERE codigo = ?
+            ORDER BY COALESCE(data_hora, ''), id
+        """, (codigo,))
+        rows = cursor.fetchall()
+    except:
+        rows = []
+
+    historico = []
+    for row in rows:
+        if isinstance(row, sqlite3.Row):
+            mensagem = row["mensagem"]
+            data_hora = row["data_hora"]
+        else:
+            mensagem = row[1] if len(row) > 1 else ""
+            data_hora = row[2] if len(row) > 2 else ""
+
+        mensagem = str(mensagem or "").strip()
+        data_hora = str(data_hora or "").strip()
+        if not mensagem:
+            continue
+
+        historico.append({
+            "mensagem": mensagem,
+            "data_hora": data_hora,
+            "data_hora_br": formatar_data_hora_br(data_hora, "")
+        })
+
+    if historico:
+        return historico
+
+    try:
+        cursor.execute("SELECT comentario FROM comentarios_mlb WHERE codigo = ?", (codigo,))
+        row_legado = cursor.fetchone()
+    except:
+        row_legado = None
+
+    comentario_legado = ""
+    if row_legado is not None:
+        if isinstance(row_legado, sqlite3.Row):
+            comentario_legado = str(row_legado["comentario"] or "").strip()
+        elif isinstance(row_legado, (list, tuple)) and len(row_legado) > 0:
+            comentario_legado = str(row_legado[0] or "").strip()
+        else:
+            comentario_legado = str(row_legado or "").strip()
+
+    if comentario_legado:
+        data_hora_legado = agora_str_brasilia()
+        try:
+            cursor.execute("""
+                INSERT INTO comentarios_mlb_chat (codigo, mensagem, data_hora)
+                VALUES (?, ?, ?)
+            """, (codigo, comentario_legado, data_hora_legado))
+        except:
+            pass
+
+        historico.append({
+            "mensagem": comentario_legado,
+            "data_hora": data_hora_legado,
+            "data_hora_br": formatar_data_hora_br(data_hora_legado, "")
+        })
+
+    return historico
 
 
 def timeline_vazio():
@@ -462,7 +543,6 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         sku = str(item.get("SKU", "") or item.get("sku", "") or "")
         endereco = str(item.get("ENDEREÇO", "") or item.get("endereco", "") or "")
         titulo = str(item.get("Título", "") or item.get("titulo", "") or "")
-        produto = str(item.get("PRODUTO", "") or item.get("produto", "") or titulo or "")
         conta = str(item.get("Nickname", "") or item.get("nickname", "") or "")
         selo = str(item.get("SELO", "") or item.get("selo", "") or "")
         quantidade_base = item.get("Enviar", item.get("quantidade", 0))
@@ -478,14 +558,13 @@ def sincronizar_picking_itens(numero_lote, df_lote):
         cursor.execute(
             """
             INSERT INTO lotes_picking_itens (
-                numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em
+                numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(numero_lote, codigo) DO UPDATE SET
                 sku = excluded.sku,
                 endereco = excluded.endereco,
                 titulo = excluded.titulo,
-                produto = excluded.produto,
                 conta = excluded.conta,
                 selo = excluded.selo,
                 quantidade = excluded.quantidade,
@@ -493,7 +572,7 @@ def sincronizar_picking_itens(numero_lote, df_lote):
                 coletado = ?,
                 coletado_em = ?
             """,
-            (numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
+            (numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, observacao, coletado, coletado_em)
         )
 
     conn.commit()
@@ -855,7 +934,8 @@ def init_db():
             codigo TEXT PRIMARY KEY,
             status TEXT,
             quantidade INTEGER DEFAULT 0,
-            estrategia TEXT DEFAULT ''
+            estrategia TEXT DEFAULT '',
+            prioridade TEXT DEFAULT ''
         )
     """)
 
@@ -876,18 +956,8 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comentarios_mlb_chat (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            codigo TEXT,
-            mensagem TEXT,
-            data_hora TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS lote_comentarios_chat (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            numero_lote TEXT,
-            codigo TEXT,
-            mensagem TEXT,
+            codigo TEXT NOT NULL,
+            mensagem TEXT NOT NULL,
             data_hora TEXT
         )
     """)
@@ -994,7 +1064,6 @@ def init_db():
             sku TEXT,
             endereco TEXT,
             titulo TEXT DEFAULT '',
-            produto TEXT DEFAULT '',
             conta TEXT DEFAULT '',
             selo TEXT DEFAULT '',
             quantidade INTEGER DEFAULT 0,
@@ -1020,6 +1089,9 @@ def init_db():
     if "estrategia" not in colunas_status:
         cursor.execute("ALTER TABLE status_cards ADD COLUMN estrategia TEXT DEFAULT ''")
 
+    if "prioridade" not in colunas_status:
+        cursor.execute("ALTER TABLE status_cards ADD COLUMN prioridade TEXT DEFAULT ''")
+
     cursor.execute("PRAGMA table_info(lotes_envio)")
     colunas_lotes_envio = [col[1] for col in cursor.fetchall()]
 
@@ -1028,9 +1100,6 @@ def init_db():
 
     if "titulo" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN titulo TEXT DEFAULT ''")
-
-    if "produto" not in colunas_picking:
-        cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN produto TEXT DEFAULT ''")
 
     if "conta" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN conta TEXT DEFAULT ''")
@@ -1046,25 +1115,6 @@ def init_db():
 
     if "divergencia" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia INTEGER DEFAULT 0")
-
-
-    cursor.execute("PRAGMA table_info(lotes_envio_itens_snapshot)")
-    colunas_snapshot = [col[1] for col in cursor.fetchall()]
-
-    if "sku_info" not in colunas_snapshot:
-        cursor.execute("ALTER TABLE lotes_envio_itens_snapshot ADD COLUMN sku_info TEXT DEFAULT ''")
-
-    cursor.execute("PRAGMA table_info(historico_filetes)")
-    colunas_historico = [col[1] for col in cursor.fetchall()]
-
-    if "sku_info" not in colunas_historico:
-        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN sku_info TEXT DEFAULT ''")
-
-    if "comentario_mlb" not in colunas_historico:
-        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN comentario_mlb TEXT DEFAULT ''")
-
-    if "estrategia" not in colunas_historico:
-        cursor.execute("ALTER TABLE historico_filetes ADD COLUMN estrategia TEXT DEFAULT ''")
 
     if "divergencia_em" not in colunas_picking:
         cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia_em TEXT DEFAULT ''")
@@ -1156,6 +1206,231 @@ def garantir_tabela_lotes_envio_snapshot():
 
     conn.commit()
     conn.close()
+
+
+def montar_mapa_lotes_exportacao(cursor):
+    mapa = {}
+
+    consultas = [
+        """
+        SELECT
+            s.codigo,
+            s.numero_lote,
+            s.lote_filete,
+            COALESCE(le.data_coleta_agendada, '') AS data_coleta_agendada
+        FROM lotes_envio_itens_snapshot s
+        INNER JOIN (
+            SELECT codigo, MAX(id) AS max_id
+            FROM lotes_envio_itens_snapshot
+            GROUP BY codigo
+        ) ult
+            ON ult.codigo = s.codigo
+           AND ult.max_id = s.id
+        LEFT JOIN lotes_envio le
+            ON le.numero_lote = s.numero_lote
+        """,
+        """
+        SELECT
+            hf.codigo,
+            hf.numero_lote,
+            hf.lote_filete,
+            COALESCE(le.data_coleta_agendada, '') AS data_coleta_agendada
+        FROM historico_filetes hf
+        INNER JOIN (
+            SELECT codigo, MAX(id) AS max_id
+            FROM historico_filetes
+            GROUP BY codigo
+        ) ult
+            ON ult.codigo = hf.codigo
+           AND ult.max_id = hf.id
+        LEFT JOIN lotes_envio le
+            ON le.numero_lote = hf.numero_lote
+        """
+    ]
+
+    for consulta in consultas:
+        try:
+            cursor.execute(consulta)
+            for codigo, numero_lote, lote_filete, data_coleta_agendada in cursor.fetchall():
+                codigo = str(codigo or "").strip()
+                if not codigo or codigo in mapa:
+                    continue
+                mapa[codigo] = {
+                    "numero_lote": str(numero_lote or "").strip(),
+                    "lote": str(lote_filete or "").strip(),
+                    "data_coleta": str(data_coleta_agendada or "").strip()
+                }
+        except:
+            pass
+
+        if mapa:
+            break
+
+    return mapa
+
+
+def preparar_dataframe_exportacao(df, mapa_lotes=None, numero_lote_fixo="", data_coleta_fixa=""):
+    df = df.copy().fillna("")
+
+    if "Código do Anúncio" not in df.columns:
+        df["Código do Anúncio"] = ""
+
+    codigo_series = df["Código do Anúncio"].astype(str).str.strip()
+
+    if mapa_lotes is None:
+        mapa_lotes = {}
+
+    mapa_numero_lote = {str(codigo): str((dados or {}).get("numero_lote", "") or "").strip() for codigo, dados in mapa_lotes.items()}
+    mapa_nome_lote = {str(codigo): str((dados or {}).get("lote", "") or "").strip() for codigo, dados in mapa_lotes.items()}
+    mapa_data_coleta = {str(codigo): str((dados or {}).get("data_coleta", "") or "").strip() for codigo, dados in mapa_lotes.items()}
+
+    if "Nickname" not in df.columns:
+        df["Nickname"] = ""
+
+    if "SKU" not in df.columns:
+        df["SKU"] = ""
+
+    if "Quantidade para Enviar" not in df.columns:
+        df["Quantidade para Enviar"] = 0
+    df["Quantidade para Enviar"] = pd.to_numeric(df["Quantidade para Enviar"], errors="coerce").fillna(0).astype(int)
+
+    if "ESTOQUE TOTAL SIGNUS" not in df.columns:
+        df["ESTOQUE TOTAL SIGNUS"] = ""
+
+    estoque_numerico = df["ESTOQUE TOTAL SIGNUS"].apply(numero_float)
+    quantidade_numerica = pd.to_numeric(df["Quantidade para Enviar"], errors="coerce").fillna(0)
+    df["APÓS ENVIO"] = (estoque_numerico - quantidade_numerica).astype(int)
+
+    if "RETORNO" not in df.columns:
+        df["RETORNO"] = ""
+
+    if "ENDEREÇO" not in df.columns:
+        df["ENDEREÇO"] = ""
+
+    if "LOTE" not in df.columns:
+        df["LOTE"] = ""
+    df["LOTE"] = df["LOTE"].where(df["LOTE"].astype(str).str.strip() != "", codigo_series.map(mapa_nome_lote).fillna(""))
+
+    if "NUMERO DO LOTE" not in df.columns:
+        df["NUMERO DO LOTE"] = ""
+    if numero_lote_fixo:
+        df["NUMERO DO LOTE"] = str(numero_lote_fixo)
+    else:
+        df["NUMERO DO LOTE"] = df["NUMERO DO LOTE"].where(
+            df["NUMERO DO LOTE"].astype(str).str.strip() != "",
+            codigo_series.map(mapa_numero_lote).fillna("")
+        )
+
+    if "DATA DA COLETA" not in df.columns:
+        df["DATA DA COLETA"] = ""
+    if data_coleta_fixa:
+        df["DATA DA COLETA"] = str(data_coleta_fixa)
+    else:
+        df["DATA DA COLETA"] = df["DATA DA COLETA"].where(
+            df["DATA DA COLETA"].astype(str).str.strip() != "",
+            codigo_series.map(mapa_data_coleta).fillna("")
+        )
+
+    if "PRODUTO" not in df.columns:
+        df["PRODUTO"] = ""
+    if "Título" in df.columns:
+        df["PRODUTO"] = df["PRODUTO"].where(df["PRODUTO"].astype(str).str.strip() != "", df["Título"].astype(str))
+
+    if "Motivo" not in df.columns:
+        df["Motivo"] = ""
+    if "Motivo do Envio" in df.columns:
+        df["Motivo"] = df["Motivo"].where(df["Motivo"].astype(str).str.strip() != "", df["Motivo do Envio"].astype(str))
+
+    colunas_exportar = [
+        "Nickname",
+        "Código do Anúncio",
+        "SKU",
+        "Quantidade para Enviar",
+        "ESTOQUE TOTAL SIGNUS",
+        "APÓS ENVIO",
+        "ENDEREÇO",
+        "LOTE",
+        "PRODUTO",
+        "Motivo",
+        "RETORNO",
+        "NUMERO DO LOTE",
+        "DATA DA COLETA"
+    ]
+
+    for col in colunas_exportar:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[colunas_exportar].copy()
+
+
+def obter_ultimo_lote_por_codigo(cursor):
+    mapa = {}
+
+    try:
+        cursor.execute("""
+            SELECT
+                s.codigo,
+                s.numero_lote,
+                s.quantidade,
+                s.data_geracao,
+                COALESCE(le.status, '') AS status_lote
+            FROM lotes_envio_itens_snapshot s
+            INNER JOIN (
+                SELECT codigo, MAX(id) AS max_id
+                FROM lotes_envio_itens_snapshot
+                GROUP BY codigo
+            ) ult
+                ON ult.codigo = s.codigo
+               AND ult.max_id = s.id
+            LEFT JOIN lotes_envio le
+                ON le.numero_lote = s.numero_lote
+        """)
+
+        for codigo, numero_lote, quantidade, data_geracao, status_lote in cursor.fetchall():
+            mapa[str(codigo)] = {
+                "numero_lote": str(numero_lote or ""),
+                "quantidade": int(quantidade or 0),
+                "data_geracao": str(data_geracao or ""),
+                "status_lote": str(status_lote or "")
+            }
+    except:
+        pass
+
+    if mapa:
+        return mapa
+
+    try:
+        cursor.execute("""
+            SELECT
+                hf.codigo,
+                hf.numero_lote,
+                hf.quantidade,
+                hf.data_geracao,
+                COALESCE(le.status, '') AS status_lote
+            FROM historico_filetes hf
+            INNER JOIN (
+                SELECT codigo, MAX(id) AS max_id
+                FROM historico_filetes
+                GROUP BY codigo
+            ) ult
+                ON ult.codigo = hf.codigo
+               AND ult.max_id = hf.id
+            LEFT JOIN lotes_envio le
+                ON le.numero_lote = hf.numero_lote
+        """)
+
+        for codigo, numero_lote, quantidade, data_geracao, status_lote in cursor.fetchall():
+            mapa[str(codigo)] = {
+                "numero_lote": str(numero_lote or ""),
+                "quantidade": int(quantidade or 0),
+                "data_geracao": str(data_geracao or ""),
+                "status_lote": str(status_lote or "")
+            }
+    except:
+        pass
+
+    return mapa
 
 @app.route("/metricas-full")
 def metricas_full():
@@ -1368,7 +1643,7 @@ def picking_lote(numero_lote):
             sincronizar_picking_itens(numero_lote, df_boot)
 
     cursor.execute("""
-        SELECT numero_lote, codigo, sku, endereco, titulo, produto, conta, selo, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
+        SELECT numero_lote, codigo, sku, endereco, titulo, conta, selo, quantidade, observacao, coletado, coletado_em, quantidade_informada, divergencia, divergencia_em
         FROM lotes_picking_itens
         WHERE numero_lote = ?
         ORDER BY coletado ASC, endereco ASC, sku ASC, codigo ASC
@@ -1521,6 +1796,139 @@ def dados_dashboard():
     df = carregar_dados_base()
     return jsonify(df.to_dict(orient="records"))
 
+@app.route("/api/coletas-calendario")
+def api_coletas_calendario():
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                numero_lote,
+                COALESCE(total_mlbs, 0) AS total_mlbs,
+                COALESCE(total_pecas, 0) AS total_pecas,
+                COALESCE(data_coleta_agendada, '') AS data_coleta_agendada,
+                COALESCE(observacao, '') AS observacao,
+                COALESCE(status_expedicao, '') AS status_expedicao,
+                COALESCE(etapa_atual, '') AS etapa_atual,
+                COALESCE(status, '') AS status
+            FROM lotes_envio
+            WHERE COALESCE(TRIM(data_coleta_agendada), '') <> ''
+            ORDER BY data_coleta_agendada, numero_lote
+        """)
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    eventos = []
+    for row in rows:
+        row = dict(row)
+        status_texto = normalizar_texto(row.get("status_expedicao") or row.get("etapa_atual") or row.get("status"))
+        status_coleta = "COLETADO" if "COLETADO" in status_texto else "NAO_COLETADO"
+        eventos.append({
+            "numero_lote": str(row.get("numero_lote") or "").strip(),
+            "total_mlbs": int(row.get("total_mlbs") or 0),
+            "total_pecas": int(row.get("total_pecas") or 0),
+            "data_coleta_agendada": str(row.get("data_coleta_agendada") or "").strip(),
+            "observacao": str(row.get("observacao") or "").strip(),
+            "status_coleta": status_coleta
+        })
+
+    return jsonify(eventos)
+
+
+@app.route("/api/coletas-calendario/salvar", methods=["POST"])
+def api_salvar_coleta_calendario():
+    data = request.json if request.is_json else request.form
+
+    numero_lote = str(data.get("numero_lote", "") or "").strip()
+    data_coleta_agendada = str(data.get("data_coleta_agendada", "") or "").strip()
+    total_mlbs = int(float(data.get("total_mlbs", 0) or 0))
+    total_pecas = int(float(data.get("total_pecas", 0) or 0))
+    observacao = str(data.get("observacao", "") or "").strip()
+    status_coleta = normalizar_texto(data.get("status_coleta", "NAO_COLETADO"))
+
+    if not numero_lote:
+        return jsonify({"ok": False, "erro": "Número do lote é obrigatório."}), 400
+
+    if not parse_data_hora(data_coleta_agendada):
+        return jsonify({"ok": False, "erro": "Data da coleta inválida."}), 400
+
+    etapa_destino = "COLETADO" if status_coleta == "COLETADO" else "AGUARDANDO COLETA"
+    agora = agora_str()
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    existente = cursor.fetchone()
+
+    if existente:
+        timeline = carregar_timeline_json(existente["timeline_json"])
+        timeline = sincronizar_timeline_ate_etapa(timeline, etapa_destino, agora)
+        cursor.execute(
+            """
+            UPDATE lotes_envio
+            SET total_mlbs = ?,
+                total_pecas = ?,
+                observacao = ?,
+                data_coleta_agendada = ?,
+                etapa_atual = ?,
+                timeline_json = ?
+            WHERE numero_lote = ?
+            """,
+            (
+                total_mlbs,
+                total_pecas,
+                observacao,
+                data_coleta_agendada,
+                etapa_destino,
+                timeline_para_json(timeline),
+                numero_lote
+            )
+        )
+    else:
+        timeline = timeline_vazio()
+        timeline = sincronizar_timeline_ate_etapa(timeline, etapa_destino, agora)
+        cursor.execute(
+            """
+            INSERT INTO lotes_envio (
+                numero_lote, tipo_lote, total_mlbs, total_pecas,
+                status, responsavel, transportadora, observacao,
+                prioridade, data_envio, status_expedicao, status_ecommerce,
+                origem, data_criacao, timeline_json, etapa_atual, data_coleta_agendada
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                numero_lote,
+                "Diversos",
+                total_mlbs,
+                total_pecas,
+                obter_status_abertura_por_etapa(etapa_destino),
+                "",
+                "",
+                observacao,
+                "",
+                "",
+                "AGUARDANDO",
+                "AGUARDANDO",
+                "MANUAL",
+                agora,
+                timeline_para_json(timeline),
+                etapa_destino,
+                data_coleta_agendada
+            )
+        )
+
+    atualizar_statuss_por_etapa(cursor, numero_lote, etapa_destino)
+    conn.commit()
+    conn.close()
+
+    return jsonify({"ok": True, "numero_lote": numero_lote})
+
 
 @app.route("/exportar-excel")
 def exportar_excel():
@@ -1530,18 +1938,23 @@ def exportar_excel():
     cursor = conn.cursor()
 
     try:
-        cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio FROM status_cards")
+        cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio, prioridade FROM status_cards")
         rows = cursor.fetchall()
 
-        mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade, estrategia, motivo_envio in rows}
-        mapa_status = {str(codigo): status or "" for codigo, status, quantidade, estrategia, motivo_envio in rows}
-        mapa_estrategia = {str(codigo): estrategia or "" for codigo, status, quantidade, estrategia, motivo_envio in rows}
-        mapa_motivo_envio = {str(codigo): motivo_envio or "" for codigo, status, quantidade, estrategia, motivo_envio in rows}
+        mapa_quantidade = {str(row[0]): row[2] or 0 for row in rows}
+        mapa_status = {str(row[0]): row[1] or "" for row in rows}
+        mapa_estrategia = {str(row[0]): row[3] or "" for row in rows}
+        mapa_motivo_envio = {str(row[0]): row[4] or "" for row in rows}
     except:
         mapa_quantidade = {}
         mapa_status = {}
         mapa_estrategia = {}
         mapa_motivo_envio = {}
+
+    try:
+        mapa_lotes_exportacao = montar_mapa_lotes_exportacao(cursor)
+    except:
+        mapa_lotes_exportacao = {}
 
     try:
         cursor.execute("SELECT sku, comentario FROM comentarios")
@@ -1562,12 +1975,13 @@ def exportar_excel():
     if "Código do Anúncio" not in df.columns:
         df["Código do Anúncio"] = ""
 
-    df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+    df["Quantidade para Enviar"] = pd.to_numeric(
+        df["Código do Anúncio"].astype(str).map(mapa_quantidade), errors="coerce"
+    ).fillna(0).astype(int)
     df["Estratégia"] = df["Código do Anúncio"].astype(str).map(mapa_estrategia).fillna("")
     df["Motivo do Envio"] = df["Código do Anúncio"].astype(str).map(mapa_motivo_envio).fillna("")
     df["Motivo do Envio"] = df["Motivo do Envio"].where(df["Motivo do Envio"].astype(str).str.strip() != "", df["Estratégia"])
-    df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
-    df["LETICIA"] = ""
+    df["Motivo"] = df["Motivo do Envio"]
 
     tela = request.args.get("tela", "").strip()
     conta = request.args.get("conta", "").strip()
@@ -1576,6 +1990,7 @@ def exportar_excel():
     logica = request.args.get("logica", "").strip()
     saude = request.args.get("saude", "").strip()
     condicao = request.args.get("condicao", "").strip()
+    ultimos = request.args.get("ultimos", "").strip()
     lote = request.args.get("lote", "").strip()
     magic = request.args.get("magic", "").strip()
     cobertura = request.args.get("cobertura", "").strip()
@@ -1596,6 +2011,12 @@ def exportar_excel():
         status = mapa_status.get(str(codigo), "")
         if status == "enviando":
             return "enviando"
+        if status == "ecommerce":
+            return "ecommerce"
+        if status == "compras":
+            return "compras"
+        if status == "acompanhamento":
+            return "acompanhamento"
         if status == "homologar":
             return "homologar"
         if status in ["nao_enviar", "naoEnviar"]:
@@ -1604,8 +2025,9 @@ def exportar_excel():
             return "historico"
         return "principal"
 
-    if tela:
-        df = df[df["Código do Anúncio"].apply(destino) == tela]
+    # Para a exportação completa em múltiplas abas, o filtro de tela não é aplicado aqui.
+    # Assim, o mesmo arquivo leva todas as telas, cada uma em sua própria aba,
+    # mantendo apenas os demais filtros compartilhados.
 
     if conta:
         df = df[df["Nickname"].astype(str).str.strip().str.upper() == conta.upper()]
@@ -1632,6 +2054,11 @@ def exportar_excel():
         if coluna_condicao not in df.columns:
             df[coluna_condicao] = ""
         df = df[df[coluna_condicao].astype(str).str.strip() == condicao]
+
+    if ultimos:
+        if "ULTIMOS" not in df.columns:
+            df["ULTIMOS"] = ""
+        df = df[df["ULTIMOS"].astype(str).str.strip() == ultimos]
 
     if lote:
         if "LOTE" not in df.columns:
@@ -1690,29 +2117,32 @@ def exportar_excel():
         elif filtro_especial == "critico":
             df = df[(unidades < 10) & (valores > 500)]
 
-    colunas_exportar = [
-        "Nickname",
-        "Código do Anúncio",
-        "SKU",
-        "Título",
-        "LOTE",
-        "Quantidade para Enviar",
-        "Estratégia",
-        "Motivo do Envio",
-        "Comentário",
-        "LETICIA"
-    ]
-
-    for col in colunas_exportar:
-        if col not in df.columns:
-            df[col] = ""
-
-    df_export = df[colunas_exportar].copy()
-
     output = BytesIO()
 
+    abas = [
+        ("principal", "Principal"),
+        ("enviando", "Enviando"),
+        ("ecommerce", "Ecommerce"),
+        ("compras", "Compras"),
+        ("acompanhamento", "Acompanhamento"),
+        ("homologar", "Homologar"),
+        ("naoEnviar", "Nao Enviar")
+    ]
+
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_export.to_excel(writer, index=False, sheet_name="Relatorio")
+        for chave_tela, nome_aba in abas:
+            df_aba = df[df["Código do Anúncio"].apply(destino) == chave_tela].copy()
+            df_export = preparar_dataframe_exportacao(df_aba, mapa_lotes_exportacao)
+            df_export.to_excel(writer, index=False, sheet_name=nome_aba)
+
+            worksheet = writer.sheets[nome_aba]
+            for idx, coluna in enumerate(df_export.columns, start=1):
+                largura = max(len(str(coluna)), 14)
+                if not df_export.empty:
+                    maior_valor = df_export[coluna].astype(str).map(len).max()
+                    if pd.notna(maior_valor):
+                        largura = max(largura, min(int(maior_valor) + 2, 40))
+                worksheet.column_dimensions[chr(64 + idx)].width = largura
 
     output.seek(0)
 
@@ -1720,100 +2150,6 @@ def exportar_excel():
         output,
         as_attachment=True,
         download_name="relatorio_envio.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-
-@app.route("/exportar-excel-estrategia")
-def exportar_excel_estrategia():
-    estrategia = str(request.args.get("estrategia", "") or "").strip()
-
-    if not estrategia:
-        return redirect("/home")
-
-    df = carregar_dados_base()
-
-    conn = sqlite3.connect("status.db")
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("SELECT codigo, quantidade, estrategia, motivo_envio FROM status_cards")
-        rows = cursor.fetchall()
-        mapa_status = {
-            str(codigo): {
-                "quantidade": quantidade or 0,
-                "estrategia": estrategia_salva or "",
-                "motivo_envio": motivo_envio or ""
-            }
-            for codigo, quantidade, estrategia_salva, motivo_envio in rows
-        }
-    except:
-        mapa_status = {}
-
-    try:
-        cursor.execute("SELECT codigo, comentario FROM comentarios_mlb")
-        rows_comentarios_mlb = cursor.fetchall()
-        mapa_comentarios_mlb = {str(codigo): comentario or "" for codigo, comentario in rows_comentarios_mlb}
-    except:
-        mapa_comentarios_mlb = {}
-
-    conn.close()
-
-    if "Código do Anúncio" not in df.columns:
-        df["Código do Anúncio"] = ""
-
-    df["Quantidade para Enviar"] = df["Código do Anúncio"].astype(str).map(
-        lambda codigo: mapa_status.get(str(codigo), {}).get("quantidade", 0)
-    ).fillna(0)
-
-    df["Estratégia"] = df["Código do Anúncio"].astype(str).map(
-        lambda codigo: mapa_status.get(str(codigo), {}).get("estrategia", "")
-    ).fillna("")
-
-    df["Motivo do Envio"] = df["Código do Anúncio"].astype(str).map(
-        lambda codigo: mapa_status.get(str(codigo), {}).get("motivo_envio", "")
-    ).fillna("")
-
-    df["Motivo do Envio"] = df["Motivo do Envio"].where(
-        df["Motivo do Envio"].astype(str).str.strip() != "",
-        df["Estratégia"]
-    )
-
-    df["Comentário"] = df["Código do Anúncio"].astype(str).map(mapa_comentarios_mlb).fillna("")
-    df["LETICIA"] = ""
-
-    df = df[df["Estratégia"].astype(str).str.strip().str.casefold() == estrategia.casefold()].copy()
-
-    colunas_exportar = [
-        "Nickname",
-        "Código do Anúncio",
-        "SKU",
-        "Título",
-        "LOTE",
-        "Quantidade para Enviar",
-        "Estratégia",
-        "Motivo do Envio",
-        "Comentário",
-        "LETICIA"
-    ]
-
-    for col in colunas_exportar:
-        if col not in df.columns:
-            df[col] = ""
-
-    output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df[colunas_exportar].to_excel(writer, index=False, sheet_name="Relatorio")
-
-    output.seek(0)
-
-    nome_arquivo = f"relatorio_estrategia_{secure_filename(estrategia) or 'estrategia'}.xlsx"
-
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name=nome_arquivo,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -1973,34 +2309,6 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
     }
 
     cursor.execute("""
-        SELECT sku, comentario
-        FROM comentarios
-    """)
-    rows_comentarios_sku = cursor.fetchall()
-    mapa_comentarios_sku = {
-        str(row["sku"]): row["comentario"] or ""
-        for row in rows_comentarios_sku
-    }
-
-    cursor.execute("""
-        SELECT codigo, mensagem, data_hora
-        FROM comentarios_mlb_chat
-        ORDER BY id ASC
-    """)
-    rows_chat = cursor.fetchall()
-    mapa_chat_codigo = {}
-    for row in rows_chat:
-        mapa_chat_codigo.setdefault(str(row["codigo"]), []).append({
-            "mensagem": row["mensagem"] or "",
-            "data_hora": row["data_hora"] or ""
-        })
-
-    cursor.execute("""
-        DELETE FROM lote_comentarios_chat
-        WHERE numero_lote = ?
-    """, (numero_lote,))
-
-    cursor.execute("""
         DELETE FROM lotes_envio_itens_snapshot
         WHERE numero_lote = ?
     """, (numero_lote,))
@@ -2029,13 +2337,6 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
         estrategia = mapa_status.get(codigo, {}).get("estrategia", "")
         motivo_envio = mapa_status.get(codigo, {}).get("motivo_envio", "") or estrategia
         comentario_mlb = mapa_comentarios_mlb.get(codigo, "")
-        sku_info = mapa_comentarios_sku.get(sku, "")
-
-        for msg in mapa_chat_codigo.get(codigo, []):
-            cursor.execute("""
-                INSERT INTO lote_comentarios_chat (numero_lote, codigo, mensagem, data_hora)
-                VALUES (?, ?, ?, ?)
-            """, (numero_lote, codigo, msg.get("mensagem", ""), msg.get("data_hora", "")))
 
         dados_item = {coluna: valor_json(valor) for coluna, valor in item.to_dict().items()}
 
@@ -2043,10 +2344,10 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             INSERT INTO lotes_envio_itens_snapshot (
                 numero_lote, tipo_lote, codigo, sku, titulo,
                 nickname, quantidade, endereco, lote_filete,
-                estrategia, motivo_envio, comentario_mlb, sku_info,
+                estrategia, motivo_envio, comentario_mlb,
                 dados_json, data_geracao
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             numero_lote,
             tipo_lote,
@@ -2060,19 +2361,15 @@ def salvar_historico_e_finalizar_envio(numero_lote, tipo_lote, df_lote):
             estrategia,
             motivo_envio,
             comentario_mlb,
-            sku_info,
             json.dumps(dados_item, ensure_ascii=False),
             agora
         ))
 
         cursor.execute("""
             UPDATE status_cards
-            SET status = ?, quantidade = ?, estrategia = ?, motivo_envio = ?
+            SET status = ?, quantidade = ?
             WHERE codigo = ?
-        """, ("principal", 0, "", "", codigo))
-
-        cursor.execute("DELETE FROM comentarios_mlb WHERE codigo = ?", (codigo,))
-        cursor.execute("DELETE FROM comentarios_mlb_chat WHERE codigo = ?", (codigo,))
+        """, ("principal", 0, codigo))
 
     conn.commit()
     conn.close()
@@ -2378,10 +2675,303 @@ def carregar_itens_snapshot_lote(numero_lote):
         item["dados_json"] = item.get("dados_json") or "{}"
 
     itens = enriquecer_itens_lote_com_base(itens)
+
+    return itens
     return itens
 
 def montar_excel_filete_lote(df, numero_lote, tipo_lote):
     return montar_excel_filete_antigo(df, numero_lote, tipo_lote)
+
+
+
+
+def obter_dados_base_para_lote(codigo="", sku=""):
+    codigo = str(codigo or "").strip()
+    sku = str(sku or "").strip()
+
+    try:
+        df_base = carregar_dados_base().fillna("")
+    except:
+        return {}
+
+    if codigo and "Código do Anúncio" in df_base.columns:
+        df_codigo = df_base[df_base["Código do Anúncio"].astype(str).str.strip() == codigo]
+        if not df_codigo.empty:
+            return {str(col): df_codigo.iloc[0][col] for col in df_base.columns}
+
+    if sku and "SKU" in df_base.columns:
+        df_sku = df_base[df_base["SKU"].astype(str).str.strip() == sku]
+        if not df_sku.empty:
+            return {str(col): df_sku.iloc[0][col] for col in df_base.columns}
+
+    return {}
+
+
+def recalcular_totais_lote(cursor, numero_lote):
+    cursor.execute("""
+        SELECT COUNT(*), COALESCE(SUM(COALESCE(quantidade, 0)), 0)
+        FROM lotes_envio_itens_snapshot
+        WHERE numero_lote = ?
+    """, (numero_lote,))
+    row = cursor.fetchone()
+
+    total_mlbs = int((row[0] if row else 0) or 0)
+    total_pecas = int((row[1] if row else 0) or 0)
+
+    cursor.execute("""
+        UPDATE lotes_envio
+        SET total_mlbs = ?, total_pecas = ?
+        WHERE numero_lote = ?
+    """, (total_mlbs, total_pecas, numero_lote))
+
+    return total_mlbs, total_pecas
+
+
+def montar_dataframe_snapshot_lote(numero_lote):
+    itens = carregar_itens_snapshot_lote(numero_lote)
+    registros = []
+
+    for item in itens:
+        dados_item = {}
+        try:
+            dados_item = json.loads(item.get("dados_json") or "{}")
+            if not isinstance(dados_item, dict):
+                dados_item = {}
+        except:
+            dados_item = {}
+
+        dados_item["Código do Anúncio"] = item.get("codigo", "")
+        dados_item["SKU"] = item.get("sku", "")
+        dados_item["Título"] = item.get("titulo", "")
+        dados_item["Nickname"] = item.get("nickname", "")
+        dados_item["ENDEREÇO"] = item.get("endereco", "")
+        dados_item["Lote"] = item.get("lote_filete", "")
+        dados_item["Enviar"] = int(item.get("quantidade") or 0)
+        registros.append(dados_item)
+
+    return pd.DataFrame(registros)
+
+
+@app.route("/api/lote-envio/<numero_lote>/item", methods=["POST"])
+def api_adicionar_item_lote(numero_lote):
+    data = request.get_json(silent=True) or {}
+
+    numero_lote = str(numero_lote or "").strip()
+    codigo = str(data.get("codigo", "") or "").strip()
+    sku = str(data.get("sku", "") or "").strip()
+    titulo_manual = str(data.get("titulo", "") or "").strip()
+    nickname_manual = str(data.get("nickname", "") or "").strip()
+    endereco_manual = str(data.get("endereco", "") or "").strip()
+    estrategia_manual = str(data.get("estrategia", "") or "").strip()
+    motivo_manual = str(data.get("motivo_envio", "") or "").strip()
+
+    try:
+        quantidade = int(float(str(data.get("quantidade", 0) or 0).replace(",", ".")))
+    except:
+        quantidade = 0
+
+    if not numero_lote:
+        return jsonify({"ok": False, "erro": "Número do lote não informado."}), 400
+
+    if not codigo:
+        return jsonify({"ok": False, "erro": "Informe o MLB."}), 400
+
+    if quantidade <= 0:
+        return jsonify({"ok": False, "erro": "Informe uma quantidade válida."}), 400
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT numero_lote, tipo_lote FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote = cursor.fetchone()
+    if not lote:
+        conn.close()
+        return jsonify({"ok": False, "erro": "Lote não encontrado."}), 404
+
+    cursor.execute("SELECT 1 FROM lotes_envio_itens_snapshot WHERE numero_lote = ? AND codigo = ?", (numero_lote, codigo))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"ok": False, "erro": "Este MLB já existe dentro deste lote."}), 400
+
+    base_item = obter_dados_base_para_lote(codigo, sku)
+
+    if not sku:
+        sku = str(base_item.get("SKU", "") or "").strip()
+
+    titulo = titulo_manual or str(base_item.get("Título", "") or "").strip()
+    nickname = nickname_manual or str(base_item.get("Nickname", "") or "").strip()
+    endereco = endereco_manual or str(base_item.get("ENDEREÇO", "") or "").strip()
+    lote_filete = str(base_item.get("LOTE", "") or "").strip()
+
+    cursor.execute("SELECT estrategia, motivo_envio FROM status_cards WHERE codigo = ?", (codigo,))
+    row_status = cursor.fetchone()
+    estrategia = estrategia_manual or (str(row_status["estrategia"] or "").strip() if row_status else "")
+    motivo_envio = motivo_manual or (str(row_status["motivo_envio"] or "").strip() if row_status else "") or estrategia
+
+    comentario_mlb = ""
+    try:
+        cursor.execute("SELECT comentario FROM comentarios_mlb WHERE codigo = ?", (codigo,))
+        row_coment = cursor.fetchone()
+        comentario_mlb = str((row_coment["comentario"] if row_coment else "") or "").strip()
+    except:
+        comentario_mlb = ""
+
+    dados_item = {}
+    for k, v in (base_item or {}).items():
+        dados_item[str(k)] = v
+    dados_item["Código do Anúncio"] = codigo
+    dados_item["SKU"] = sku
+    dados_item["Título"] = titulo
+    dados_item["Nickname"] = nickname
+    dados_item["ENDEREÇO"] = endereco
+    dados_item["LOTE"] = lote_filete
+    dados_item["Enviar"] = quantidade
+
+    agora = agora_str()
+    tipo_lote = str(lote["tipo_lote"] or "Diversos").strip() or "Diversos"
+
+    cursor.execute("""
+        INSERT INTO lotes_envio_itens_snapshot (
+            numero_lote, tipo_lote, codigo, sku, titulo,
+            nickname, quantidade, endereco, lote_filete,
+            estrategia, motivo_envio, comentario_mlb,
+            dados_json, data_geracao
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        numero_lote, tipo_lote, codigo, sku, titulo,
+        nickname, quantidade, endereco, lote_filete,
+        estrategia, motivo_envio, comentario_mlb,
+        json.dumps(dados_item, ensure_ascii=False), agora
+    ))
+
+    try:
+        cursor.execute("""
+            INSERT INTO lotes_itens (numero_lote, codigo, sku, titulo, quantidade_esperada, endereco, lote_filete)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(numero_lote, codigo) DO UPDATE SET
+                sku = excluded.sku,
+                titulo = excluded.titulo,
+                quantidade_esperada = excluded.quantidade_esperada,
+                endereco = excluded.endereco,
+                lote_filete = excluded.lote_filete
+        """, (numero_lote, codigo, sku, titulo, quantidade, endereco, lote_filete))
+    except:
+        pass
+
+    try:
+        cursor.execute("""
+            INSERT INTO lotes_conferencia (numero_lote, tipo_lote, status, data_criacao)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(numero_lote) DO UPDATE SET tipo_lote = excluded.tipo_lote
+        """, (numero_lote, tipo_lote, "PENDENTE", agora))
+    except:
+        pass
+
+    recalcular_totais_lote(cursor, numero_lote)
+
+    conn.commit()
+    conn.close()
+
+    try:
+        sincronizar_picking_itens(numero_lote, montar_dataframe_snapshot_lote(numero_lote))
+    except:
+        pass
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/lote-envio/<numero_lote>/item/<int:item_id>/quantidade", methods=["POST"])
+def api_atualizar_quantidade_item_lote(numero_lote, item_id):
+    data = request.get_json(silent=True) or {}
+
+    try:
+        quantidade = int(float(str(data.get("quantidade", 0) or 0).replace(",", ".")))
+    except:
+        quantidade = 0
+
+    if quantidade <= 0:
+        return jsonify({"ok": False, "erro": "Informe uma quantidade válida."}), 400
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM lotes_envio_itens_snapshot WHERE id = ? AND numero_lote = ?", (item_id, numero_lote))
+    item = cursor.fetchone()
+    if not item:
+        conn.close()
+        return jsonify({"ok": False, "erro": "Item do lote não encontrado."}), 404
+
+    dados_item = {}
+    try:
+        dados_item = json.loads(item["dados_json"] or "{}")
+        if not isinstance(dados_item, dict):
+            dados_item = {}
+    except:
+        dados_item = {}
+    dados_item["Enviar"] = quantidade
+
+    cursor.execute("""
+        UPDATE lotes_envio_itens_snapshot
+        SET quantidade = ?, dados_json = ?
+        WHERE id = ? AND numero_lote = ?
+    """, (quantidade, json.dumps(dados_item, ensure_ascii=False), item_id, numero_lote))
+
+    try:
+        cursor.execute("UPDATE lotes_itens SET quantidade_esperada = ? WHERE numero_lote = ? AND codigo = ?", (quantidade, numero_lote, item["codigo"]))
+    except:
+        pass
+
+    recalcular_totais_lote(cursor, numero_lote)
+
+    conn.commit()
+    conn.close()
+
+    try:
+        sincronizar_picking_itens(numero_lote, montar_dataframe_snapshot_lote(numero_lote))
+    except:
+        pass
+
+    return jsonify({"ok": True})
+
+
+@app.route("/api/lote-envio/<numero_lote>/item/<int:item_id>", methods=["POST"])
+def api_remover_item_lote(numero_lote, item_id):
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT codigo FROM lotes_envio_itens_snapshot WHERE id = ? AND numero_lote = ?", (item_id, numero_lote))
+    item = cursor.fetchone()
+    if not item:
+        conn.close()
+        return jsonify({"ok": False, "erro": "Item do lote não encontrado."}), 404
+
+    codigo = str(item["codigo"] or "").strip()
+
+    cursor.execute("DELETE FROM lotes_envio_itens_snapshot WHERE id = ? AND numero_lote = ?", (item_id, numero_lote))
+    try:
+        cursor.execute("DELETE FROM lotes_itens WHERE numero_lote = ? AND codigo = ?", (numero_lote, codigo))
+    except:
+        pass
+    try:
+        cursor.execute("DELETE FROM lotes_picking_itens WHERE numero_lote = ? AND codigo = ?", (numero_lote, codigo))
+    except:
+        pass
+
+    recalcular_totais_lote(cursor, numero_lote)
+
+    conn.commit()
+    conn.close()
+
+    try:
+        sincronizar_picking_itens(numero_lote, montar_dataframe_snapshot_lote(numero_lote))
+    except:
+        pass
+
+    return jsonify({"ok": True})
+
 
 
 @app.route("/lote-envio/<numero_lote>/pdf")
@@ -2390,6 +2980,19 @@ def lote_envio_pdf(numero_lote):
 
     if not itens:
         return "Nenhum item encontrado para este lote.", 404
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT data_criacao
+        FROM lotes_envio
+        WHERE numero_lote = ?
+    """, (numero_lote,))
+    lote = cursor.fetchone()
+    conn.close()
+
+    data_lote = lote["data_criacao"] if lote else ""
 
     dados_pdf = []
     for item in itens:
@@ -2406,10 +3009,14 @@ def lote_envio_pdf(numero_lote):
             "vendas7": dados_item.get("7 DIAS", 0) or 0,
             "vendas15": dados_item.get("15 DIAS", 0) or 0,
             "vendas30": dados_item.get("30 DIAS", 0) or 0,
+            "total_signus": dados_item.get("ESTOQUE TOTAL SIGNUS", 0) or 0,
+            "a_caminho": dados_item.get("A CAMINHO DO FULL", 0) or 0,
+            "full": dados_item.get("ESTOQUE FULL", 0) or 0,
+            "vai_ficar": dados_item.get("ESTOQUE QUE VAI FICAR NO FULL", 0) or 0,
             "comentario": item["comentario_mlb"] or ""
         })
 
-    pdf = gerar_pdf_filete(dados_pdf)
+    pdf = gerar_pdf_filete(dados_pdf, data_lote=data_lote)
 
     return send_file(
         pdf,
@@ -2465,36 +3072,29 @@ def lote_envio_exportar_excel(numero_lote):
     if not itens:
         return "Nenhum item encontrado para este lote.", 404
 
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT data_coleta_agendada FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote = cursor.fetchone()
+    conn.close()
+
+    data_coleta_lote = ""
+    if lote:
+        data_coleta_lote = str(lote["data_coleta_agendada"] or "").strip()
+
     registros = []
     for item in itens:
         dados_item = json.loads(item["dados_json"] or "{}")
         dados_item["Quantidade para Enviar"] = item["quantidade"] or 0
         dados_item["Estratégia"] = item["estrategia"] or ""
         dados_item["Motivo do Envio"] = item["motivo_envio"] or ""
-        dados_item["Comentário"] = item["comentario_mlb"] or ""
-        dados_item["LETICIA"] = ""
+        dados_item["NUMERO DO LOTE"] = numero_lote
+        dados_item["DATA DA COLETA"] = data_coleta_lote
         registros.append(dados_item)
 
     df = pd.DataFrame(registros)
-
-    colunas_exportar = [
-        "Nickname",
-        "Código do Anúncio",
-        "SKU",
-        "Título",
-        "LOTE",
-        "Quantidade para Enviar",
-        "Estratégia",
-        "Motivo do Envio",
-        "Comentário",
-        "LETICIA"
-    ]
-
-    for col in colunas_exportar:
-        if col not in df.columns:
-            df[col] = ""
-
-    df_export = df[colunas_exportar].copy()
+    df_export = preparar_dataframe_exportacao(df, numero_lote_fixo=numero_lote, data_coleta_fixa=data_coleta_lote)
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -2525,7 +3125,7 @@ def salvar_status():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT status, quantidade, estrategia, motivo_envio
+        SELECT status, quantidade, estrategia, motivo_envio, prioridade
         FROM status_cards
         WHERE codigo = ?
     """, (codigo,))
@@ -2535,17 +3135,20 @@ def salvar_status():
     quantidade_atual = 0
     estrategia_atual = ""
     motivo_atual = ""
+    prioridade_atual = ""
 
     if existente:
         status_atual = existente[0] or "principal"
         quantidade_atual = existente[1] or 0
         estrategia_atual = existente[2] or ""
         motivo_atual = existente[3] or ""
+        prioridade_atual = existente[4] or ""
 
     status = data.get("status", status_atual)
     quantidade = data.get("quantidade", quantidade_atual)
     estrategia = data.get("estrategia", estrategia_atual)
     motivo_envio = data.get("motivo_envio", motivo_atual)
+    prioridade = data.get("prioridade", prioridade_atual)
     if (not str(motivo_envio).strip()) and str(estrategia).strip():
         motivo_envio = estrategia
 
@@ -2555,14 +3158,15 @@ def salvar_status():
         quantidade = 0
 
     cursor.execute("""
-        INSERT INTO status_cards (codigo, status, quantidade, estrategia, motivo_envio)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO status_cards (codigo, status, quantidade, estrategia, motivo_envio, prioridade)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(codigo) DO UPDATE SET
             status=excluded.status,
             quantidade=excluded.quantidade,
             estrategia=excluded.estrategia,
-            motivo_envio=excluded.motivo_envio
-    """, (codigo, status, quantidade, estrategia, motivo_envio))
+            motivo_envio=excluded.motivo_envio,
+            prioridade=excluded.prioridade
+    """, (codigo, status, quantidade, estrategia, motivo_envio, prioridade))
 
     conn.commit()
     conn.close()
@@ -2576,19 +3180,38 @@ def get_status():
         conn = sqlite3.connect("status.db")
         cursor = conn.cursor()
 
-        cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio FROM status_cards")
+        cursor.execute("SELECT codigo, status, quantidade, estrategia, motivo_envio, prioridade FROM status_cards")
         rows = cursor.fetchall()
+        mapa_ultimo_lote = obter_ultimo_lote_por_codigo(cursor)
 
         conn.close()
 
         status_dict = {}
-        for codigo, status, quantidade, estrategia, motivo_envio in rows:
+        for codigo, status, quantidade, estrategia, motivo_envio, prioridade in rows:
             status_dict[str(codigo)] = {
                 "status": status,
                 "quantidade": quantidade or 0,
                 "estrategia": estrategia or "",
-                "motivo_envio": motivo_envio or ""
+                "motivo_envio": motivo_envio or "",
+                "prioridade": prioridade or "",
+                "ultimo_lote": mapa_ultimo_lote.get(str(codigo), {
+                    "numero_lote": "",
+                    "quantidade": 0,
+                    "data_geracao": "",
+                    "status_lote": ""
+                })
             }
+
+        for codigo, ultimo_lote in mapa_ultimo_lote.items():
+            if codigo not in status_dict:
+                status_dict[codigo] = {
+                    "status": "principal",
+                    "quantidade": 0,
+                    "estrategia": "",
+                    "motivo_envio": "",
+                    "prioridade": "",
+                    "ultimo_lote": ultimo_lote
+                }
 
         return jsonify(status_dict)
     except Exception:
@@ -2633,27 +3256,20 @@ def get_comentarios_mlb():
 def get_comentarios_mlb_chat():
     codigo = str(request.args.get("codigo", "") or "").strip()
 
+    if not codigo:
+        return jsonify([])
+
     try:
         conn = sqlite3.connect("status.db")
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT id, codigo, mensagem, data_hora
-            FROM comentarios_mlb_chat
-            WHERE codigo = ?
-            ORDER BY id ASC
-        """, (codigo,))
-        rows = cursor.fetchall()
+        historico = montar_historico_comentarios_mlb(cursor, codigo)
+
+        conn.commit()
         conn.close()
 
-        return jsonify([{
-            "id": row["id"],
-            "codigo": row["codigo"],
-            "mensagem": row["mensagem"] or "",
-            "data_hora": row["data_hora"] or "",
-            "data_hora_br": formatar_data_hora_br(row["data_hora"], vazio="")
-        } for row in rows])
+        return jsonify(historico)
     except Exception:
         return jsonify([])
 
@@ -2684,30 +3300,26 @@ def salvar_comentario_mlb():
     data = request.json or {}
     codigo = str(data.get("codigo", "") or "").strip()
     comentario = str(data.get("comentario", "") or "").strip()
-    modo = str(data.get("modo", "resumo") or "resumo").strip()
+
+    if not codigo or not comentario:
+        return jsonify({"success": False, "erro": "Código e comentário são obrigatórios."}), 400
 
     conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    if modo == "chat":
-        data_hora = agora_iso()
+    historico_existente = montar_historico_comentarios_mlb(cursor, codigo)
+    ultimo_texto = ""
+    if historico_existente:
+        ultimo_texto = str(historico_existente[-1].get("mensagem", "") or "").strip()
 
-        if comentario:
-            cursor.execute("""
-                INSERT INTO comentarios_mlb_chat (codigo, mensagem, data_hora)
-                VALUES (?, ?, ?)
-            """, (codigo, comentario, data_hora))
+    data_hora = agora_str_brasilia()
 
-            cursor.execute("""
-                INSERT INTO comentarios_mlb (codigo, comentario)
-                VALUES (?, ?)
-                ON CONFLICT(codigo) DO UPDATE SET comentario=excluded.comentario
-            """, (codigo, comentario))
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({"success": True, "data_hora": data_hora, "data_hora_br": formatar_data_hora_br(data_hora)})
+    if comentario != ultimo_texto:
+        cursor.execute("""
+            INSERT INTO comentarios_mlb_chat (codigo, mensagem, data_hora)
+            VALUES (?, ?, ?)
+        """, (codigo, comentario, data_hora))
 
     cursor.execute("""
         INSERT INTO comentarios_mlb (codigo, comentario)
@@ -2718,7 +3330,11 @@ def salvar_comentario_mlb():
     conn.commit()
     conn.close()
 
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "data_hora": data_hora,
+        "data_hora_br": formatar_data_hora_br(data_hora, "")
+    })
 
 
 @app.route("/salvar-lote-envio", methods=["POST"])
@@ -2841,7 +3457,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 
-def gerar_pdf_filete(dados):
+def gerar_pdf_filete(dados, data_lote=""):
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(
@@ -2887,7 +3503,7 @@ def gerar_pdf_filete(dados):
 
     elementos = []
 
-    data_pdf = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    data_pdf = formatar_data_hora_br(data_lote, vazio="-")
 
     elementos.append(Paragraph("FILETE DE ENVIO", estilo_titulo))
     elementos.append(Spacer(1, 8))
@@ -2902,6 +3518,10 @@ def gerar_pdf_filete(dados):
         vendas7 = str(item.get("vendas7", "") or "")
         vendas15 = str(item.get("vendas15", "") or "")
         vendas30 = str(item.get("vendas30", "") or "")
+        total_signus = str(item.get("total_signus", "") or "0")
+        a_caminho = str(item.get("a_caminho", "") or "0")
+        full = str(item.get("full", "") or "0")
+        vai_ficar = str(item.get("vai_ficar", "") or "0")
         comentario = str(item.get("comentario", "") or "-")
 
         linha_item = [
@@ -2930,8 +3550,13 @@ def gerar_pdf_filete(dados):
                 Paragraph(f"<b>30 DIAS:</b> {vendas30}", estilo_valor),
             ],
             [
-                Paragraph(f"<b>DATA PDF:</b> {data_pdf}", estilo_valor),
-                "",
+                Paragraph(f"<b>TOTAL SIGNUS:</b> {total_signus}", estilo_valor),
+                Paragraph(f"<b>A CAMINHO:</b> {a_caminho}", estilo_valor),
+                Paragraph(f"<b>FULL:</b> {full}", estilo_valor),
+            ],
+            [
+                Paragraph(f"<b>VAI FICAR:</b> {vai_ficar}", estilo_valor),
+                Paragraph(f"<b>DATA LOTE:</b> {data_pdf}", estilo_valor),
                 "",
             ]
         ], colWidths=[185, 185, 185])
@@ -3223,709 +3848,7 @@ def api_full_distribuicao_detalhe():
             "erro": f"Erro ao carregar detalhes da métrica Full: {str(e)}"
         }), 500
     
-import unicodedata
-import re
-
-UPLOAD_FOLDER_RELATORIOS = os.path.join("static", "uploads_relatorios")
-os.makedirs(UPLOAD_FOLDER_RELATORIOS, exist_ok=True)
-
-
-def init_uploads_db():
-    conn = sqlite3.connect("status.db")
-    c = conn.cursor()
-    c.execute(
-        """
-        CREATE TABLE IF NOT EXISTS uploads_arquivos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome_arquivo TEXT,
-            conta TEXT,
-            sistema TEXT,
-            tipo_relatorio TEXT,
-            caminho TEXT,
-            data_upload TEXT,
-            status TEXT
-        )
-        """
-    )
-    conn.commit()
-    conn.close()
-
-
-def normalizar_mlb_teste(valor):
-    texto = str(valor or "").strip().upper()
-    numeros = "".join(ch for ch in texto if ch.isdigit())
-    if not numeros:
-        return texto
-    return f"MLB{numeros}"
-
-
-def normalizar_texto_coluna(valor):
-    texto = str(valor or "").strip().lower()
-    texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
-    texto = re.sub(r"\s+", " ", texto)
-    return texto
-
-
-def encontrar_coluna(df, candidatos, obrigatoria=False):
-    if df is None or df.empty:
-        return None
-
-    mapa = {normalizar_texto_coluna(col): col for col in df.columns}
-    candidatos_norm = [normalizar_texto_coluna(c) for c in candidatos if str(c).strip()]
-
-    for cand in candidatos_norm:
-        if cand in mapa:
-            return mapa[cand]
-
-    for col in df.columns:
-        col_norm = normalizar_texto_coluna(col)
-        for cand in candidatos_norm:
-            if cand and cand in col_norm:
-                return col
-            if cand and col_norm in cand:
-                return col
-
-    if obrigatoria:
-        raise KeyError(f"Coluna não encontrada. Esperado um destes nomes: {', '.join(candidatos)}")
-    return None
-
-
-def garantir_colunas_unicas(colunas):
-    contador = {}
-    resultado = []
-
-    for idx, col in enumerate(list(colunas)):
-        nome = str(col or "").strip()
-        if not nome or nome.lower().startswith("unnamed:"):
-            nome = f"coluna_{idx}"
-
-        base = nome
-        if base in contador:
-            contador[base] += 1
-            nome = f"{base}__{contador[base]}"
-        else:
-            contador[base] = 0
-
-        resultado.append(nome)
-
-    return resultado
-
-
-def ler_planilha_com_cabecalho_inteligente(caminho, candidatos_coluna_chave=None):
-    caminho = str(caminho or "").strip()
-    if not caminho or not os.path.exists(caminho):
-        return pd.DataFrame()
-
-    ext = os.path.splitext(caminho)[1].lower()
-
-    def _ler_sem_header(header=None):
-        if ext in [".csv", ".txt"]:
-            return pd.read_csv(caminho, header=header, dtype=str)
-        return pd.read_excel(caminho, header=header, dtype=str)
-
-    bruto = _ler_sem_header(header=None).fillna("")
-    candidatos_norm = [normalizar_texto_coluna(c) for c in (candidatos_coluna_chave or []) if str(c).strip()]
-
-    melhor_idx = None
-    melhor_score = -1
-    limite = min(len(bruto), 30)
-
-    for idx in range(limite):
-        linha = [str(v or "").strip() for v in bruto.iloc[idx].tolist()]
-        valores_norm = [normalizar_texto_coluna(v) for v in linha]
-        score = sum(1 for c in candidatos_norm if c and c in valores_norm)
-        nao_vazios = sum(1 for v in linha if str(v).strip())
-
-        if score > melhor_score and nao_vazios > 0:
-            melhor_score = score
-            melhor_idx = idx
-
-    if melhor_idx is None:
-        df = _ler_sem_header(header=0).fillna("")
-        df.columns = garantir_colunas_unicas(df.columns)
-        return df
-
-    header_bruto = [str(v or "").strip() for v in bruto.iloc[melhor_idx].tolist()]
-    dados = bruto.iloc[melhor_idx + 1 :].copy().reset_index(drop=True).fillna("")
-    dados.columns = garantir_colunas_unicas(header_bruto)
-
-    # remove linhas que repetem o cabeçalho do arquivo TESTE ou vêm vazias
-    if len(dados):
-        linha_header_norm = [normalizar_texto_coluna(v) for v in header_bruto]
-        mascara_validas = []
-        for _, row in dados.iterrows():
-            valores = [str(v or "").strip() for v in row.tolist()]
-            valores_norm = [normalizar_texto_coluna(v) for v in valores]
-            eh_vazia = not any(valores)
-            eh_repeticao_header = valores_norm == linha_header_norm
-            mascara_validas.append(not eh_vazia and not eh_repeticao_header)
-        dados = dados[pd.Series(mascara_validas, index=dados.index)].reset_index(drop=True)
-
-    return dados
-
-
-def to_num(valor):
-    if valor is None:
-        return 0.0
-    if isinstance(valor, (int, float)):
-        return float(valor)
-    texto = str(valor).strip()
-    if not texto:
-        return 0.0
-    texto = texto.replace("R$", "").replace(" ", "")
-    if "," in texto and "." in texto:
-        texto = texto.replace(".", "").replace(",", ".")
-    elif "," in texto:
-        texto = texto.replace(",", ".")
-    try:
-        return float(texto)
-    except Exception:
-        return 0.0
-
-
-def inteiro_ou_zero(valor):
-    numero = to_num(valor)
-    return int(numero) if float(numero).is_integer() else round(numero, 2)
-
-
-def formatar_moeda_br(valor):
-    valor = float(valor or 0)
-    txt = f"{valor:,.2f}"
-    return txt.replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-def obter_valor_por_nome_ou_indice(linha, candidatos=None, indice=None, default="-"):
-    candidatos = candidatos or []
-    if isinstance(linha, pd.Series):
-        for cand in candidatos:
-            for col in linha.index:
-                if normalizar_texto_coluna(col) == normalizar_texto_coluna(cand):
-                    valor = linha[col]
-                    return valor if str(valor).strip() != "" else default
-        if indice is not None and 0 <= indice < len(linha.index):
-            valor = linha.iloc[indice]
-            return valor if str(valor).strip() != "" else default
-    return default
-
-
-def buscar_upload(cursor, tipos, conta=""):
-    tipos = [t for t in tipos if str(t).strip()]
-    if not tipos:
-        return None
-
-    placeholders = ",".join(["?"] * len(tipos))
-    sql = f"SELECT caminho, nome_arquivo, conta, tipo_relatorio FROM uploads_arquivos WHERE tipo_relatorio IN ({placeholders})"
-    params = list(tipos)
-
-    if conta:
-        sql += " AND (conta = ? OR conta IN ('BASE', 'AMBAS', 'TODAS'))"
-        params.append(conta)
-
-    sql += " ORDER BY id DESC LIMIT 1"
-    cursor.execute(sql, params)
-    row = cursor.fetchone()
-    return dict(row) if row else None
-
-
-def montar_historico_mensal(df_vendas, mlb_norm, col_mlb, col_data, col_qtd):
-    meses_ordem = ["AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO", "JANEIRO", "FEVEREIRO", "MARÇO"]
-    resultado = {mes: 0 for mes in meses_ordem}
-    if df_vendas is None or df_vendas.empty:
-        return resultado
-
-    df = df_vendas.copy()
-    df["MLB_FIXO"] = df[col_mlb].apply(normalizar_mlb_teste)
-    df = df[df["MLB_FIXO"] == mlb_norm].copy()
-    if df.empty:
-        return resultado
-
-    df["DATA_FIXA"] = pd.to_datetime(df[col_data], errors="coerce", dayfirst=True)
-    df["QTD_FIXA"] = df[col_qtd].apply(to_num)
-    nomes = {1: "JANEIRO", 2: "FEVEREIRO", 3: "MARÇO", 4: "ABRIL", 5: "MAIO", 6: "JUNHO", 7: "JULHO", 8: "AGOSTO", 9: "SETEMBRO", 10: "OUTUBRO", 11: "NOVEMBRO", 12: "DEZEMBRO"}
-    grupos = df.groupby(df["DATA_FIXA"].dt.month)["QTD_FIXA"].sum().to_dict()
-    for mes_num, soma in grupos.items():
-        try:
-            nome = nomes.get(int(mes_num))
-        except Exception:
-            nome = None
-        if nome in resultado:
-            resultado[nome] = int(soma)
-    return resultado
-
-
-def montar_ultimas_vendas(df_vendas, mlb_norm, col_mlb, col_data, col_qtd, col_valor=None):
-    janelas = [7, 15, 30, 45, 60]
-    resultado = {dias: {"qtd": 0, "valor": 0.0} for dias in janelas}
-    if df_vendas is None or df_vendas.empty:
-        return resultado
-
-    df = df_vendas.copy()
-    df["MLB_FIXO"] = df[col_mlb].apply(normalizar_mlb_teste)
-    df = df[df["MLB_FIXO"] == mlb_norm].copy()
-    if df.empty:
-        return resultado
-
-    df["DATA_FIXA"] = pd.to_datetime(df[col_data], errors="coerce", dayfirst=True)
-    df["QTD_FIXA"] = df[col_qtd].apply(to_num)
-    if col_valor:
-        df["VALOR_FIXO"] = df[col_valor].apply(to_num)
-    else:
-        df["VALOR_FIXO"] = 0.0
-
-    hoje = pd.Timestamp(datetime.now().date())
-    for dias in janelas:
-        inicio = hoje - pd.Timedelta(days=dias)
-        janela = df[(df["DATA_FIXA"] >= inicio) & (df["DATA_FIXA"] <= hoje)]
-        resultado[dias]["qtd"] = int(janela["QTD_FIXA"].sum())
-        resultado[dias]["valor"] = float(janela["VALOR_FIXO"].sum())
-    return resultado
-
-
-def carregar_linha_por_mlb_robusta(arquivo, candidatos_coluna_mlb, mlb_norm):
-    if not arquivo:
-        return None, None
-    df = ler_planilha_com_cabecalho_inteligente(arquivo, candidatos_coluna_mlb)
-    if df.empty:
-        return None, None
-    col = encontrar_coluna(df, candidatos_coluna_mlb, obrigatoria=True)
-    df["MLB_FIXO"] = df[col].apply(normalizar_mlb_teste)
-    linha = df[df["MLB_FIXO"] == mlb_norm]
-    if linha.empty:
-        return None, df
-    return linha.iloc[0], df
-
-
-def obter_status_ia_teste(card):
-    sugestao = to_num(card.get("sugestao_meli", 0))
-    cobertura = to_num(card.get("cobertura", 0))
-    curva = str(card.get("curva", "") or "").upper()
-    estoque_meli = str(card.get("estoque_meli", "") or "").upper()
-    if sugestao > 0 and (("BAIXO" in estoque_meli) or curva in ["A", "B"]):
-        return {"titulo": f"IA → ENVIAR {int(sugestao)}", "detalhe": "Baseado nos uploads", "classe": "ia-enviar"}
-    if cobertura <= 0 and sugestao <= 0:
-        return {"titulo": "IA → NÃO ENVIAR", "detalhe": "Métricas insuficientes", "classe": "ia-nao-enviar"}
-    return {"titulo": "IA → ACOMPANHAR", "detalhe": "Validação em teste", "classe": "ia-repor"}
-
-
-@app.route("/uploads")
-def tela_uploads():
-    init_uploads_db()
-    conn = sqlite3.connect("status.db")
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT * FROM uploads_arquivos ORDER BY id DESC")
-    uploads = c.fetchall()
-    conn.close()
-    return render_template("uploads.html", uploads=uploads)
-
-
-@app.route("/uploads/enviar", methods=["POST"])
-def enviar_upload():
-    init_uploads_db()
-
-    sistema = str(request.form.get("sistema", "")).strip()
-    tipo = str(request.form.get("tipo", "")).strip()
-
-    arquivos_para_salvar = [
-        ("BASE", request.files.get("arquivo_base")),
-        ("RENAFCAR", request.files.get("arquivo_renafcar")),
-        ("4IDISTRIBUIDORA", request.files.get("arquivo_4i"))
-    ]
-
-    registros = []
-    timestamp_base = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    for indice, (conta, arquivo) in enumerate(arquivos_para_salvar, start=1):
-        if not arquivo or not arquivo.filename:
-            continue
-
-        nome_seguro = secure_filename(arquivo.filename)
-        nome_final = f"{timestamp_base}_{indice}_{nome_seguro}"
-        caminho = os.path.join(UPLOAD_FOLDER_RELATORIOS, nome_final)
-        arquivo.save(caminho)
-        registros.append((nome_final, conta, sistema, tipo, caminho, agora_str(), "ENVIADO"))
-
-    if not registros:
-        return redirect("/uploads")
-
-    conn = sqlite3.connect("status.db")
-    c = conn.cursor()
-    c.executemany(
-        "INSERT INTO uploads_arquivos (nome_arquivo, conta, sistema, tipo_relatorio, caminho, data_upload, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        registros
-    )
-    conn.commit()
-    conn.close()
-    return redirect("/uploads")
-
-
-@app.route("/teste-cards")
-def teste_cards():
-    return render_template("teste_cards.html")
-
-
-@app.route("/api/teste-card")
-def api_teste_card():
-    init_uploads_db()
-    mlb = normalizar_mlb_teste(request.args.get("mlb", ""))
-    conta = str(request.args.get("conta", "")).strip()
-    if not mlb:
-        return jsonify({"ok": False, "erro": "Informe um MLB válido."}), 400
-
-    conn = sqlite3.connect("status.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    arq_base = buscar_upload(cursor, ["Evolução de Vendas"], conta)
-    arq_vendas = buscar_upload(cursor, ["Vendas"], conta)
-    arq_estoque = buscar_upload(cursor, ["Relatório Geral de Estoque"], conta)
-    arq_planejamento = buscar_upload(cursor, ["Planejamento de Envio"], conta)
-    arq_curva = buscar_upload(cursor, ["Curva ABCD"], conta)
-    arq_cobertura = buscar_upload(cursor, ["Cobertura de Estoque"], conta)
-    arq_unitario = buscar_upload(cursor, ["Saldo Unitário", "Saldo Unitario"], conta)
-    arq_kit = buscar_upload(cursor, ["Saldo Kit", "Saldo Kit e Pares", "Saldo Kit/Pares", "Saldo Kit e pares"], conta)
-    conn.close()
-
-    card = {
-        "mlb": mlb, "sku": "", "titulo": "", "conta": conta or "", "full": "NO FULL", "condicao": "", "lote": "", "exposicao": "", "selo": "", "obs_meli": "", "saldo_apos_envio": 0, "qtd_envio": 0,
-        "outros_mlbs_mesmo_sku": 0, "titulos_iguais": 0, "info_meli": "-", "sugestao_meli": "-", "estoque_meli": "-", "ads": "SEM ADS", "curva": "-", "tendencia": "-", "cobertura": "-", "acao": "-",
-        "historico_mensal": {m: 0 for m in ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"]},
-        "ultimas_vendas": {7:{"qtd":0,"valor":0.0},15:{"qtd":0,"valor":0.0},30:{"qtd":0,"valor":0.0},45:{"qtd":0,"valor":0.0},60:{"qtd":0,"valor":0.0}},
-        "estoque_total_signus": 0, "a_caminho": 0, "estoque_full": 0, "vai_ficar": 0, "fontes": {}
-    }
-
-    try:
-        linha_base, df_base = carregar_linha_por_mlb_robusta(arq_base["caminho"] if arq_base else None, ["Código do Anúncio", "Codigo do Anuncio", "# de anúncio", "Anúncio"], mlb)
-        if linha_base is not None:
-            col_sku = encontrar_coluna(df_base, ["SKU"], obrigatoria=False)
-            col_titulo = encontrar_coluna(df_base, ["Título", "Titulo"], obrigatoria=False)
-            col_conta = encontrar_coluna(df_base, ["Nickname", "Conta"], obrigatoria=False)
-            col_expo = encontrar_coluna(df_base, ["Exposição", "Exposicao"], obrigatoria=False)
-            card["sku"] = str(linha_base.get(col_sku, "") or "") if col_sku else ""
-            card["titulo"] = str(linha_base.get(col_titulo, "") or "") if col_titulo else ""
-            card["conta"] = str(linha_base.get(col_conta, "") or card["conta"]) if col_conta else card["conta"]
-            card["exposicao"] = str(linha_base.get(col_expo, "") or "") if col_expo else ""
-            card["fontes"]["base"] = arq_base["nome_arquivo"]
-            if card["sku"] and col_sku:
-                df_tmp = df_base.copy()
-                df_tmp["SKU_FIXO"] = df_tmp[col_sku].astype(str).str.strip().str.upper()
-                card["outros_mlbs_mesmo_sku"] = max(int((df_tmp["SKU_FIXO"] == card["sku"].strip().upper()).sum()) - 1, 0)
-            if card["titulo"] and col_titulo:
-                df_tmp = df_base.copy()
-                df_tmp["TITULO_FIXO"] = df_tmp[col_titulo].astype(str).str.strip().str.upper()
-                card["titulos_iguais"] = max(int((df_tmp["TITULO_FIXO"] == card["titulo"].strip().upper()).sum()) - 1, 0)
-
-        linha, df = carregar_linha_por_mlb_robusta(arq_estoque["caminho"] if arq_estoque else None, ["# de anúncio", "Código do Anúncio", "Anúncio"], mlb)
-        if linha is not None:
-            card["info_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Info Meli", "INFO MELI"], 27, "-"))
-            col_entrada = encontrar_coluna(df, ["Entrada pendente"], obrigatoria=False)
-            col_transfer = encontrar_coluna(df, ["Em transferencia", "Em transferência"], obrigatoria=False)
-            col_full = encontrar_coluna(df, ["APTAS PRA VENDA", "Aptas pra venda"], obrigatoria=False)
-            card["a_caminho"] = int(to_num(linha.get(col_entrada, 0)) + to_num(linha.get(col_transfer, 0)))
-            card["estoque_full"] = int(to_num(linha.get(col_full, 0)))
-            card["vai_ficar"] = int(card["a_caminho"] + card["estoque_full"])
-            card["fontes"]["info_meli"] = arq_estoque["nome_arquivo"]
-            card["fontes"]["estoque_bloco"] = arq_estoque["nome_arquivo"]
-
-        linha, _ = carregar_linha_por_mlb_robusta(arq_planejamento["caminho"] if arq_planejamento else None, ["Anúncios com este produto", "Anuncios com este produto", "Anúncio"], mlb)
-        if linha is not None:
-            card["sugestao_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Sugestão Meli", "Sugestao Meli"], 17, "-"))
-            card["estoque_meli"] = str(obter_valor_por_nome_ou_indice(linha, ["Estoque Meli"], 18, "-"))
-            card["fontes"]["sugestao_meli"] = arq_planejamento["nome_arquivo"]
-            card["fontes"]["estoque_meli"] = arq_planejamento["nome_arquivo"]
-
-        linha, _ = carregar_linha_por_mlb_robusta(arq_curva["caminho"] if arq_curva else None, ["Anúncio", "Anuncio", "Código do Anúncio"], mlb)
-        if linha is not None:
-            card["curva"] = str(obter_valor_por_nome_ou_indice(linha, ["Curva 30d", "Curva 30D"], 14, "-"))
-            card["tendencia"] = str(obter_valor_por_nome_ou_indice(linha, ["Tendência 30-0", "Tendencia 30-0", "Tendência 30", "Tendencia 30"], 15, "-"))
-            card["fontes"]["curva"] = arq_curva["nome_arquivo"]
-            card["fontes"]["tendencia"] = arq_curva["nome_arquivo"]
-
-        linha, _ = carregar_linha_por_mlb_robusta(arq_cobertura["caminho"] if arq_cobertura else None, ["Anúncio", "Anuncio", "Código do Anúncio"], mlb)
-        if linha is not None:
-            card["cobertura"] = str(obter_valor_por_nome_ou_indice(linha, ["Cobertura"], 9, "-"))
-            card["acao"] = str(obter_valor_por_nome_ou_indice(linha, ["Ação Recomendada", "Acao Recomendada"], 10, "-"))
-            card["fontes"]["cobertura"] = arq_cobertura["nome_arquivo"]
-            card["fontes"]["acao"] = arq_cobertura["nome_arquivo"]
-
-        df_vendas = ler_planilha_com_cabecalho_inteligente(arq_vendas["caminho"] if arq_vendas else None, ["# de anúncio", "Código do Anúncio", "Anúncio"])
-        if not df_vendas.empty:
-            col_mlb_v = encontrar_coluna(df_vendas, ["# de anúncio", "Código do Anúncio", "Anúncio"], obrigatoria=True)
-            col_data_v = encontrar_coluna(df_vendas, ["DATA DA VENDA", "Data da venda", "Data"], obrigatoria=True)
-            col_qtd_v = encontrar_coluna(df_vendas, ["UNIDADE VENDIDA", "Unidade vendida", "Quantidade vendida", "Quantidade"], obrigatoria=True)
-            col_valor_v = encontrar_coluna(df_vendas, ["VALOR DA VENDA", "Valor da venda", "Total", "Valor total"], obrigatoria=False)
-            card["historico_mensal"] = montar_historico_mensal(df_vendas, mlb, col_mlb_v, col_data_v, col_qtd_v)
-            card["ultimas_vendas"] = montar_ultimas_vendas(df_vendas, mlb, col_mlb_v, col_data_v, col_qtd_v, col_valor_v)
-            card["fontes"]["vendas"] = arq_vendas["nome_arquivo"]
-
-        sku_norm = str(card["sku"] or "").strip().upper()
-        total_signus = 0
-        for arq, tipo_nome in [(arq_unitario, "unitario"), (arq_kit, "kit")]:
-            if not arq or not sku_norm:
-                continue
-            df_signus = ler_planilha_com_cabecalho_inteligente(arq["caminho"], ["SKU", "Quantidade disponível", "Quantidade disponivel"])
-            if df_signus.empty:
-                continue
-            col_sku = encontrar_coluna(df_signus, ["SKU"], obrigatoria=False)
-            col_qtd = encontrar_coluna(df_signus, ["Quantidade disponível", "Quantidade disponivel"], obrigatoria=False)
-            if not col_sku and len(df_signus.columns) > 0:
-                col_sku = df_signus.columns[0]
-            if not col_qtd:
-                idx = 6 if tipo_nome == "unitario" else 2
-                if len(df_signus.columns) > idx:
-                    col_qtd = df_signus.columns[idx]
-            if col_sku and col_qtd:
-                df_signus["SKU_FIXO"] = df_signus[col_sku].astype(str).str.strip().str.upper()
-                total_signus += df_signus.loc[df_signus["SKU_FIXO"] == sku_norm, col_qtd].apply(to_num).sum()
-        card["estoque_total_signus"] = int(total_signus)
-        card["saldo_apos_envio"] = int(total_signus)
-        if arq_unitario:
-            card["fontes"]["unitario"] = arq_unitario["nome_arquivo"]
-        if arq_kit:
-            card["fontes"]["kit"] = arq_kit["nome_arquivo"]
-
-        card["ia"] = obter_status_ia_teste(card)
-        return jsonify({"ok": True, "dados": card})
-    except Exception as e:
-        return jsonify({"ok": False, "erro": str(e)})
-
-
 init_db()
-init_uploads_db()
-
-
-
-# ===== INICIO AJUSTE BASE UNIFICADA TESTE =====
-
-def buscar_upload_like(cursor, termos=None, conta="", preferir_base=False):
-    termos = [str(t).strip() for t in (termos or []) if str(t).strip()]
-    sql = "SELECT caminho, nome_arquivo, conta, tipo_relatorio, sistema, data_upload, id FROM uploads_arquivos WHERE 1=1"
-    params = []
-    if termos:
-        partes = []
-        for termo in termos:
-            partes.append("(tipo_relatorio LIKE ? OR nome_arquivo LIKE ? OR sistema LIKE ?)")
-            like = f"%{termo}%"
-            params.extend([like, like, like])
-        sql += " AND (" + " OR ".join(partes) + ")"
-    if conta:
-        sql += " AND (conta = ? OR conta IN ('BASE', 'AMBAS', 'TODAS'))"
-        params.append(conta)
-    sql += " ORDER BY CASE WHEN conta='BASE' THEN 0 ELSE 1 END, id DESC"
-    cursor.execute(sql, params)
-    row = cursor.fetchone()
-    return dict(row) if row else None
-
-
-def escolher_arquivo_base_unificada(cursor, conta=""):
-    candidatos = [
-        buscar_upload_like(cursor, [], conta, preferir_base=True),
-        buscar_upload_like(cursor, ["base", "seconds", "evolucao de vendas", "evolução de vendas", "relatorio base"], conta, preferir_base=True),
-        buscar_upload(cursor, ["Evolução de Vendas"], conta),
-    ]
-    for cand in candidatos:
-        if cand and str(cand.get('caminho') or '').strip():
-            return cand
-    return None
-
-
-def montar_base_unificada_uploads(conta=""):
-    init_uploads_db()
-    conn = sqlite3.connect("status.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    arq_base = escolher_arquivo_base_unificada(cursor, conta)
-    arq_vendas = buscar_upload_like(cursor, ["vendas"], conta) or buscar_upload(cursor, ["Vendas"], conta)
-    arq_estoque = buscar_upload_like(cursor, ["relatorio geral de estoque", "relatório geral de estoque", "estoque full"], conta) or buscar_upload(cursor, ["Relatório Geral de Estoque"], conta)
-    arq_planejamento = buscar_upload_like(cursor, ["planejamento de envio", "planejamento"], conta) or buscar_upload(cursor, ["Planejamento de Envio"], conta)
-    arq_curva = buscar_upload_like(cursor, ["curva abcd", "curva"], conta) or buscar_upload(cursor, ["Curva ABCD"], conta)
-    arq_cobertura = buscar_upload_like(cursor, ["cobertura de estoque", "cobertura"], conta) or buscar_upload(cursor, ["Cobertura de Estoque"], conta)
-    arq_unitario = buscar_upload_like(cursor, ["saldo unitario", "saldo unitário", "signus"], conta) or buscar_upload(cursor, ["Saldo Unitário", "Saldo Unitario"], conta)
-    arq_kit = buscar_upload_like(cursor, ["saldo kit", "kit e pares", "pares"], conta) or buscar_upload(cursor, ["Saldo Kit", "Saldo Kit e Pares", "Saldo Kit/Pares", "Saldo Kit e pares"], conta)
-    conn.close()
-
-    if not arq_base:
-        raise RuntimeError("Nenhum arquivo base foi encontrado nos uploads. Envie primeiro o Arquivo Base.")
-
-    df_base = ler_planilha_com_cabecalho_inteligente(arq_base["caminho"], ["Código do Anúncio", "Codigo do Anuncio", "MLB", "SKU", "Título", "Titulo", "Nickname"])
-    if df_base is None or df_base.empty:
-        raise RuntimeError("O arquivo base foi encontrado, mas não foi possível ler os dados dele.")
-
-    col_mlb_base = encontrar_coluna(df_base, ["Código do Anúncio", "Codigo do Anuncio", "MLB", "# de anúncio", "Anúncio"], obrigatoria=True)
-    col_sku_base = encontrar_coluna(df_base, ["SKU"], obrigatoria=False)
-    col_titulo_base = encontrar_coluna(df_base, ["Título", "Titulo"], obrigatoria=False)
-    col_conta_base = encontrar_coluna(df_base, ["Nickname", "Conta"], obrigatoria=False)
-    col_expo_base = encontrar_coluna(df_base, ["Exposição", "Exposicao"], obrigatoria=False)
-
-    base = df_base.copy().fillna("")
-    base["MLB_FIXO"] = base[col_mlb_base].apply(normalizar_mlb_teste)
-    base = base[base["MLB_FIXO"].astype(str).str.startswith("MLB")].copy()
-    if col_conta_base and conta:
-        base = base[base[col_conta_base].astype(str).str.strip().str.upper() == conta.strip().upper()].copy()
-    base = base.drop_duplicates(subset=["MLB_FIXO"], keep="first").reset_index(drop=True)
-
-    mapas = {}
-    fontes = {
-        "base": arq_base.get("nome_arquivo") if arq_base else "",
-        "vendas": arq_vendas.get("nome_arquivo") if arq_vendas else "",
-        "estoque": arq_estoque.get("nome_arquivo") if arq_estoque else "",
-        "planejamento": arq_planejamento.get("nome_arquivo") if arq_planejamento else "",
-        "curva": arq_curva.get("nome_arquivo") if arq_curva else "",
-        "cobertura": arq_cobertura.get("nome_arquivo") if arq_cobertura else "",
-        "unitario": arq_unitario.get("nome_arquivo") if arq_unitario else "",
-        "kit": arq_kit.get("nome_arquivo") if arq_kit else "",
-    }
-
-    def _mapa_por(df, coluna_chave, chave='MLB'):
-        if df is None or df.empty or not coluna_chave:
-            return {}
-        tmp = df.copy().fillna("")
-        if chave == 'SKU':
-            tmp["CHAVE_FIXA"] = tmp[coluna_chave].astype(str).str.strip().str.upper()
-        else:
-            tmp["CHAVE_FIXA"] = tmp[coluna_chave].apply(normalizar_mlb_teste)
-        tmp = tmp[tmp["CHAVE_FIXA"].astype(str) != ""].drop_duplicates(subset=["CHAVE_FIXA"], keep="first")
-        return {str(row["CHAVE_FIXA"]): row for _, row in tmp.iterrows()}
-
-    df_unitario = ler_planilha_com_cabecalho_inteligente(arq_unitario["caminho"], ["SKU", "Produto", "Linha de produto"]) if arq_unitario else pd.DataFrame()
-    col_sku_unit = encontrar_coluna(df_unitario, ["SKU"], obrigatoria=False) if not df_unitario.empty else None
-    mapa_unitario = _mapa_por(df_unitario, col_sku_unit, 'SKU') if col_sku_unit else {}
-
-    df_kit = ler_planilha_com_cabecalho_inteligente(arq_kit["caminho"], ["SKU", "Produto"]) if arq_kit else pd.DataFrame()
-    col_sku_kit = encontrar_coluna(df_kit, ["SKU"], obrigatoria=False) if not df_kit.empty else None
-    mapa_kit = _mapa_por(df_kit, col_sku_kit, 'SKU') if col_sku_kit else {}
-
-    df_estoque = ler_planilha_com_cabecalho_inteligente(arq_estoque["caminho"], ["MLB", "Tempo até esgotar estoque", "Unidades que ocupan espacio en Full"]) if arq_estoque else pd.DataFrame()
-    col_mlb_estoque = encontrar_coluna(df_estoque, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_estoque.empty else None
-    mapa_estoque = _mapa_por(df_estoque, col_mlb_estoque, 'MLB') if col_mlb_estoque else {}
-
-    df_planejamento = ler_planilha_com_cabecalho_inteligente(arq_planejamento["caminho"], ["MLB", "Unidades sugeridas para enviar", "Nível de estoque", "Observações"]) if arq_planejamento else pd.DataFrame()
-    col_mlb_planej = encontrar_coluna(df_planejamento, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_planejamento.empty else None
-    mapa_planejamento = _mapa_por(df_planejamento, col_mlb_planej, 'MLB') if col_mlb_planej else {}
-
-    df_curva = ler_planilha_com_cabecalho_inteligente(arq_curva["caminho"], ["MLB", "Curva 30d", "Tendência 30-0", "Preço unitário de venda do anúncio (BRL)"]) if arq_curva else pd.DataFrame()
-    col_mlb_curva = encontrar_coluna(df_curva, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_curva.empty else None
-    mapa_curva = _mapa_por(df_curva, col_mlb_curva, 'MLB') if col_mlb_curva else {}
-
-    df_cobertura = ler_planilha_com_cabecalho_inteligente(arq_cobertura["caminho"], ["MLB", "Cobertura", "Ação Recomendada"]) if arq_cobertura else pd.DataFrame()
-    col_mlb_cob = encontrar_coluna(df_cobertura, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_cobertura.empty else None
-    mapa_cobertura = _mapa_por(df_cobertura, col_mlb_cob, 'MLB') if col_mlb_cob else {}
-
-    df_vendas = ler_planilha_com_cabecalho_inteligente(arq_vendas["caminho"], ["MLB", "Data", "Quantidade", "Unidades"]) if arq_vendas else pd.DataFrame()
-    col_mlb_vendas = encontrar_coluna(df_vendas, ["MLB", "Código do Anúncio", "Codigo do Anuncio"], obrigatoria=False) if not df_vendas.empty else None
-    col_data_vendas = encontrar_coluna(df_vendas, ["Data", "Data da venda", "Date", "Data do pedido"], obrigatoria=False) if not df_vendas.empty else None
-    col_qtd_vendas = encontrar_coluna(df_vendas, ["Quantidade", "Unidades", "Quantidade vendida", "Qtd", "Unidades vendidas"], obrigatoria=False) if not df_vendas.empty else None
-    col_valor_vendas = encontrar_coluna(df_vendas, ["Valor total", "Total", "Valor", "Preço unitário de venda do anúncio (BRL)", "Preco unitario de venda do anuncio (BRL)"], obrigatoria=False) if not df_vendas.empty else None
-
-    cards = []
-    for _, row in base.iterrows():
-        mlb = normalizar_mlb_teste(row.get(col_mlb_base, ""))
-        sku = str(row.get(col_sku_base, "") or "").strip() if col_sku_base else ""
-        conta_row = str(row.get(col_conta_base, "") or "").strip() if col_conta_base else ""
-        if not mlb:
-            continue
-        unit = mapa_unitario.get(sku.strip().upper(), pd.Series(dtype=object)) if sku else pd.Series(dtype=object)
-        kit = mapa_kit.get(sku.strip().upper(), pd.Series(dtype=object)) if sku else pd.Series(dtype=object)
-        estoque = mapa_estoque.get(mlb, pd.Series(dtype=object))
-        planej = mapa_planejamento.get(mlb, pd.Series(dtype=object))
-        curva = mapa_curva.get(mlb, pd.Series(dtype=object))
-        cobertura = mapa_cobertura.get(mlb, pd.Series(dtype=object))
-
-        hist = montar_historico_mensal(df_vendas, mlb, col_mlb_vendas, col_data_vendas, col_qtd_vendas) if (not df_vendas.empty and col_mlb_vendas and col_data_vendas and col_qtd_vendas) else {m:0 for m in ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"]}
-        ult = montar_ultimas_vendas(df_vendas, mlb, col_mlb_vendas, col_data_vendas, col_qtd_vendas, col_valor_vendas) if (not df_vendas.empty and col_mlb_vendas and col_data_vendas and col_qtd_vendas) else {7:{"qtd":0,"valor":0},15:{"qtd":0,"valor":0},30:{"qtd":0,"valor":0},45:{"qtd":0,"valor":0},60:{"qtd":0,"valor":0}}
-
-        qtd_signus = to_num(obter_valor_por_nome_ou_indice(unit, ["Quantidade disponível", "Saldo disponível", "Quantidade", "Estoque", "Saldo"], default=0))
-        if qtd_signus <= 0:
-            qtd_signus += to_num(obter_valor_por_nome_ou_indice(kit, ["Quantidade disponível", "Saldo disponível", "Quantidade", "Estoque", "Saldo"], default=0))
-        estoque_full = to_num(obter_valor_por_nome_ou_indice(estoque, ["Unidades que ocupan espacio en Full", "Unidades que ocupam espaço em Full", "Estoque Full", "Full"], default=0))
-        a_caminho = to_num(obter_valor_por_nome_ou_indice(estoque, ["Entrada pendente + Em transferência", "Entrada pendente + Em transferencia", "A caminho", "Em transferência"], default=0))
-        sugestao = to_num(obter_valor_por_nome_ou_indice(planej, ["Unidades sugeridas para enviar", "Sugestão de envio", "Sugestao de envio"], default=0))
-        vai_ficar = estoque_full + sugestao
-        info_meli = obter_valor_por_nome_ou_indice(estoque, ["Tempo até esgotar estoque", "Info Meli"], default="-")
-        nivel_estoque = obter_valor_por_nome_ou_indice(planej, ["Nível de estoque", "Nivel de estoque", "Estoque Meli"], default="-")
-        observacoes = obter_valor_por_nome_ou_indice(planej, ["Observações", "Observacoes", "Obs"], default="")
-        curva_30 = obter_valor_por_nome_ou_indice(curva, ["Curva 30d", "Curva"], default="-")
-        tendencia = obter_valor_por_nome_ou_indice(curva, ["Tendência 30-0", "Tendencia 30-0", "Tendência", "Tendencia"], default="-")
-        cobertura_txt = obter_valor_por_nome_ou_indice(cobertura, ["Cobertura", "Cobertura de Estoque"], default="-")
-        acao = obter_valor_por_nome_ou_indice(cobertura, ["Ação Recomendada", "Acao Recomendada"], default="-")
-        preco_unit = to_num(obter_valor_por_nome_ou_indice(curva, ["Preço unitário de venda do anúncio (BRL)", "Preco unitario de venda do anuncio (BRL)", "Preço unitário", "Preco unitario"], default=0))
-
-        vendas30 = ult[30]["qtd"]
-        valor30 = ult[30]["valor"] if ult[30]["valor"] else (vendas30 * preco_unit)
-        ads = "COM ADS" if to_num(valor30) > 0 else "SEM ADS"
-        qtd_envio = int(sugestao) if float(sugestao).is_integer() else round(sugestao,2)
-        saldo_apos = qtd_signus - sugestao
-
-        card = {
-            "Código do Anúncio": mlb,
-            "SKU": sku,
-            "Título": str(row.get(col_titulo_base, "") or "").strip() if col_titulo_base else "",
-            "Nickname": conta_row,
-            "Exposição": str(row.get(col_expo_base, "") or "").strip() if col_expo_base else "",
-            "SELO": str(obter_valor_por_nome_ou_indice(unit, ["Selo"], default="")).strip(),
-            "LINHA": str(obter_valor_por_nome_ou_indice(unit, ["Linha de produto"], default="")).strip(),
-            "PRODUTO": str(obter_valor_por_nome_ou_indice(unit, ["Produto"], default="")).strip(),
-            "LOCALIZAÇÃO": str(obter_valor_por_nome_ou_indice(unit, ["Localização no estoque", "Localizacao no estoque"], default="")).strip(),
-            "ADS": ads,
-            "INFO MELI": info_meli,
-            "SUGESTÃO MELI": qtd_envio,
-            "ESTOQUE MELI": nivel_estoque,
-            "OBSERVAÇÕES": observacoes,
-            "CURVA 30D": curva_30,
-            "TENDÊNCIA 30-0": tendencia,
-            "COBERTURA": cobertura_txt,
-            "AÇÃO RECOMENDADA": acao,
-            "ESTOQUE TOTAL SIGNUS": inteiro_ou_zero(qtd_signus),
-            "A CAMINHO DO FULL": inteiro_ou_zero(a_caminho),
-            "ESTOQUE FULL": inteiro_ou_zero(estoque_full),
-            "ESTOQUE QUE VAI FICAR NO FULL": inteiro_ou_zero(vai_ficar),
-            "Saldo após envio": inteiro_ou_zero(saldo_apos),
-            "Quantidade para Enviar": qtd_envio,
-            "SAUDE DO ESTOQUE 4i": str(obter_valor_por_nome_ou_indice(cobertura, ["Cobertura", "Cobertura de Estoque"], default="")).strip(),
-            "7 DIAS": inteiro_ou_zero(ult[7]["qtd"]),
-            "15 DIAS": inteiro_ou_zero(ult[15]["qtd"]),
-            "30 DIAS": inteiro_ou_zero(ult[30]["qtd"]),
-            "45 DIAS": inteiro_ou_zero(ult[45]["qtd"]),
-            "60 DIAS": inteiro_ou_zero(ult[60]["qtd"]),
-            "Total de Vendas 7 DIAS": formatar_moeda_br(ult[7]["valor"]),
-            "Total de Vendas 15 DIAS": formatar_moeda_br(ult[15]["valor"]),
-            "Total de Vendas 30 DIAS": formatar_moeda_br(ult[30]["valor"]),
-            "Total de Vendas 45 DIAS": formatar_moeda_br(ult[45]["valor"]),
-            "Total de Vendas 60 DIAS": formatar_moeda_br(ult[60]["valor"]),
-            **hist,
-            "fontes": fontes,
-        }
-        ia = obter_status_ia_teste({"sugestao_meli": sugestao, "cobertura": to_num(cobertura_txt), "curva": curva_30, "estoque_meli": nivel_estoque})
-        card["ia_status"] = ia
-        cards.append(card)
-
-    return cards, fontes
-
-
-@app.route('/api/teste-cards-list')
-def api_teste_cards_list_auto():
-    conta = str(request.args.get('conta', '')).strip()
-    try:
-        cards, fontes = montar_base_unificada_uploads(conta)
-        busca = normalizar_texto_coluna(request.args.get('busca', ''))
-        if busca:
-            filtrados = []
-            for item in cards:
-                alvo = ' '.join([
-                    str(item.get('Código do Anúncio','')),
-                    str(item.get('SKU','')),
-                    str(item.get('Título','')),
-                    str(item.get('Nickname','')),
-                ])
-                if busca in normalizar_texto_coluna(alvo):
-                    filtrados.append(item)
-            cards = filtrados
-        cards = sorted(cards, key=lambda x: (str(x.get('Nickname','')), str(x.get('Código do Anúncio',''))))
-        return jsonify({"ok": True, "total": len(cards), "dados": cards, "fontes": fontes})
-    except Exception as e:
-        return jsonify({"ok": False, "erro": str(e)}), 500
-
-# ===== FIM AJUSTE BASE UNIFICADA TESTE =====
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

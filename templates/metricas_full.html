@@ -305,8 +305,52 @@
     line-height:1.4;
 }
 
-.contas-lote{
+.lote-detalhes-box{
     margin-top:16px;
+    border-top:1px solid #e5e7eb;
+    padding-top:16px;
+}
+
+.lote-detalhes-box details{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:0;
+    overflow:hidden;
+}
+
+.lote-detalhes-box summary{
+    cursor:pointer;
+    font-weight:bold;
+    color:#111827;
+    padding:14px 16px;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.lote-detalhes-box summary::-webkit-details-marker{
+    display:none;
+}
+
+.lote-detalhes-box summary::before{
+    content:"▸";
+    font-size:16px;
+    color:#111827;
+    transition:transform .2s ease;
+}
+
+.lote-detalhes-box details[open] summary::before{
+    transform:rotate(90deg);
+}
+
+.lote-detalhes-conteudo{
+    padding:0 16px 16px 16px;
+}
+
+.contas-lote{
+    margin-top:0;
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:10px;
@@ -446,7 +490,7 @@
 }
 
 .lote-itens-box details{
-    background:#f8fafc;
+    background:#fff;
     border:1px solid #e5e7eb;
     border-radius:12px;
     padding:12px 14px;
@@ -662,100 +706,110 @@
                         </div>
                     </div>
 
-                    <div class="contas-lote">
-                        {% if lote['contas_resumo'] %}
-                            {% for conta in lote['contas_resumo'] %}
-                                <div class="conta-lote-item">
-                                    <strong>{{ conta['conta'] }}</strong><br>
-                                    MLBs: <strong>{{ conta['mlbs'] }}</strong> | Peças: <strong>{{ conta['pecas'] }}</strong>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="conta-lote-item">Nenhuma conta encontrada neste lote.</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="card-acoes">
-                        <button
-                            class="btn-card btn-editar"
-                            data-numero-lote="{{ lote['numero_lote'] }}"
-                            data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
-                            data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
-                            data-total-pecas="{{ lote['total_pecas'] or 0 }}"
-                            data-status="{{ lote['status'] or 'ABERTO' }}"
-                            data-observacao="{{ lote['observacao'] or '' }}"
-                            data-origem="{{ lote['origem'] or 'MANUAL' }}"
-                            data-etapa-atual="{{ lote['etapa_atual'] or 'MLBS EM ANÁLISE' }}"
-                            data-data-coleta-agendada="{{ lote['data_coleta_agendada'] or '' }}"
-                            onclick="abrirModalEditarPorBotao(this)"
-                            type="button"
-                        >
-                            ✏️ Editar
-                        </button>
-
-                        <a class="btn-card btn-picking" href="{{ url_for('picking_lote', numero_lote=lote['numero_lote']) }}">
-                            📲 Picking
-                        </a>
-
-                        <a class="btn-card btn-conferencia" href="{{ url_for('conferencia', numero_lote=lote['numero_lote']) }}">
-                            📋 Conferência
-                        </a>
-
-                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_pdf', numero_lote=lote['numero_lote']) }}">
-                            📄 PDF
-                        </a>
-
-                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_filete_excel', numero_lote=lote['numero_lote']) }}">
-                            🧾 Excel Filete
-                        </a>
-
-                        <a class="btn-card btn-editar" href="{{ url_for('lote_envio_exportar_excel', numero_lote=lote['numero_lote']) }}">
-                            ⬇️ Excel Detalhado
-                        </a>
-
-                        <a class="btn-card btn-editar" href="{{ url_for('excluir_lote', numero_lote=lote['numero_lote']) }}" onclick="return confirm('Tem certeza que deseja excluir este lote?')">
-                            🗑 Excluir Lote
-                        </a>
-                    </div>
-
-                    <div class="lote-itens-box">
+                    <div class="lote-detalhes-box">
                         <details>
-                            <summary>Ver itens do lote</summary>
+                            <summary>Ver detalhes do lote</summary>
 
-                            {% set itens_lote = lotes_itens_map.get(lote['numero_lote'], []) %}
-
-                            {% if itens_lote %}
-                                <table class="lote-itens-tabela">
-                                    <thead>
-                                        <tr>
-                                            <th>MLB</th>
-                                            <th>SKU</th>
-                                            <th>Título</th>
-                                            <th>Conta</th>
-                                            <th>Qtd enviada</th>
-                                            <th>Endereço</th>
-                                            <th>Estratégia</th>
-                                            <th>Motivo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for item in itens_lote %}
-                                            <tr>
-                                                <td>{{ item['codigo'] }}</td>
-                                                <td>{{ item['sku'] }}</td>
-                                                <td>{{ item['titulo'] }}</td>
-                                                <td>{{ item['nickname'] }}</td>
-                                                <td>{{ item['quantidade'] }}</td>
-                                                <td>{{ item['endereco'] }}</td>
-                                                <td>{{ item['estrategia'] or '-' }}</td>
-                                                <td>{{ item['motivo_envio'] or '-' }}</td>
-                                            </tr>
+                            <div class="lote-detalhes-conteudo">
+                                <div class="contas-lote">
+                                    {% if lote['contas_resumo'] %}
+                                        {% for conta in lote['contas_resumo'] %}
+                                            <div class="conta-lote-item">
+                                                <strong>{{ conta['conta'] }}</strong><br>
+                                                MLBs: <strong>{{ conta['mlbs'] }}</strong> | Peças: <strong>{{ conta['pecas'] }}</strong>
+                                            </div>
                                         {% endfor %}
-                                    </tbody>
-                                </table>
-                            {% else %}
-                                <div style="margin-top:12px; color:#666;">Nenhum item salvo neste lote.</div>
-                            {% endif %}
+                                    {% else %}
+                                        <div class="conta-lote-item">Nenhuma conta encontrada neste lote.</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="card-acoes">
+                                    <button
+                                        class="btn-card btn-editar"
+                                        data-numero-lote="{{ lote['numero_lote'] }}"
+                                        data-tipo-lote="{{ lote['tipo_lote'] or 'Diversos' }}"
+                                        data-total-mlbs="{{ lote['total_mlbs'] or 0 }}"
+                                        data-total-pecas="{{ lote['total_pecas'] or 0 }}"
+                                        data-status="{{ lote['status'] or 'ABERTO' }}"
+                                        data-observacao="{{ lote['observacao'] or '' }}"
+                                        data-origem="{{ lote['origem'] or 'MANUAL' }}"
+                                        data-etapa-atual="{{ lote['etapa_atual'] or 'MLBS EM ANÁLISE' }}"
+                                        data-data-coleta-agendada="{{ lote['data_coleta_agendada'] or '' }}"
+                                        onclick="abrirModalEditarPorBotao(this)"
+                                        type="button"
+                                    >
+                                        ✏️ Editar
+                                    </button>
+
+                                    <a class="btn-card btn-picking" href="/picking/{{ lote['numero_lote'] }}">
+                                        📲 Picking
+                                    </a>
+
+                                    <a class="btn-card btn-conferencia" href="/conferencia/{{ lote['numero_lote'] }}">
+                                        📋 Conferência
+                                    </a>
+
+                                    <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/pdf">
+                                        📄 PDF
+                                    </a>
+
+                                    <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/filete-excel">
+                                        🧾 Excel Filete
+                                    </a>
+
+                                    <a class="btn-card btn-editar" href="/lote-envio/{{ lote['numero_lote'] }}/exportar-excel">
+                                        ⬇️ Excel Detalhado
+                                    </a>
+
+                                    <a class="btn-card btn-editar"
+                                       href="/excluir-lote/{{ lote['numero_lote'] }}"
+                                       onclick="return confirm('Tem certeza que deseja excluir este lote?')">
+                                        🗑 Excluir Lote
+                                    </a>
+                                </div>
+
+                                <div class="lote-itens-box">
+                                    <details>
+                                        <summary>Ver itens do lote</summary>
+
+                                        {% set itens_lote = lotes_itens_map.get(lote['numero_lote'], []) %}
+
+                                        {% if itens_lote %}
+                                            <table class="lote-itens-tabela">
+                                                <thead>
+                                                    <tr>
+                                                        <th>MLB</th>
+                                                        <th>SKU</th>
+                                                        <th>Título</th>
+                                                        <th>Conta</th>
+                                                        <th>Qtd enviada</th>
+                                                        <th>Endereço</th>
+                                                        <th>Estratégia</th>
+                                                        <th>Motivo</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in itens_lote %}
+                                                        <tr>
+                                                            <td>{{ item['codigo'] }}</td>
+                                                            <td>{{ item['sku'] }}</td>
+                                                            <td>{{ item['titulo'] }}</td>
+                                                            <td>{{ item['nickname'] }}</td>
+                                                            <td>{{ item['quantidade'] }}</td>
+                                                            <td>{{ item['endereco'] }}</td>
+                                                            <td>{{ item['estrategia'] or '-' }}</td>
+                                                            <td>{{ item['motivo_envio'] or '-' }}</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        {% else %}
+                                            <div style="margin-top:12px; color:#666;">Nenhum item salvo neste lote.</div>
+                                        {% endif %}
+                                    </details>
+                                </div>
+                            </div>
                         </details>
                     </div>
                 </div>

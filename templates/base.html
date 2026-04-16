@@ -25,18 +25,20 @@ body { margin: 0; font-family: Arial; display: flex; background: #f3f4f6; }
 <body>
 <div class="sidebar" id="sidebar">
     <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
-    <h2>📊 Sistema</h2>
+    <h2>📊 Comand full</h2>
     <a href="/home">🏠 <span>Início</span></a>
-    <a href="/">📦 <span>Painel Estratégico</span></a>
+    <a href="/">📦 <span>MLBS Em Análise</span></a>
     <a href="/?tela=enviando">🚚 <span>Enviando (<span id="contEnvSidebar">0</span>)</span></a>
+    <a href="/?tela=ecommerce">🛒 <span>E-commerce (<span id="contEcomSidebar">0</span>)</span></a>
+    <a href="/?tela=compras">🛍️ <span>Compras (<span id="contComprasSidebar">0</span>)</span></a>
     <a href="/?tela=homologar">🧪 <span>Homologar (<span id="contHomSidebar">0</span>)</span></a>
     <a href="/?tela=naoEnviar">❌ <span>Não Enviar (<span id="contNaoSidebar">0</span>)</span></a>
+    <a href="/?tela=acompanhamento">📊 <span>Acompanhamento (<span id="contAcompanhamentoSidebar">0</span>)</span></a>
     <a href="/metricas-full">📦 <span>Lotes de Envio</span></a>
     <a href="/conferencia">📋 <span>Conferência</span></a>
     <a href="/picking">📲 <span>Picking</span></a>
-    <a href="/uploads">📤 <span>Uploads</span></a>
-    <a href="/teste-cards">🧪 <span>Teste Cards</span></a>
 </div>
+
 <div class="content" id="content">
     {% block content %}{% endblock %}
 </div>
@@ -51,25 +53,29 @@ function obterFiltrosSalvosSessao() {
     try { return JSON.parse(sessionStorage.getItem("painelFiltrosCompartilhados") || "{}"); } catch (e) { return {}; }
 }
 function montarLinkComFiltros(hrefBase) {
-    const CHAVES_PERMITIDAS = ["conta", "busca", "selo", "analise", "saude", "condicao", "lote", "filtroEspecial", "magic", "cobertura", "full", "saudeFull", "statusFullFiltro"];
+    const CHAVES_PERMITIDAS = ["conta", "busca", "selo", "analise", "saude", "condicao", "infoMeli", "estoqueMeli", "ultimos", "lote", "tipoMlb", "prioridade", "filtroEspecial", "magic", "cobertura", "full", "saudeFull", "statusFullFiltro"];
     const urlAtual = new URLSearchParams(window.location.search);
     const filtrosSessao = obterFiltrosSalvosSessao();
     const urlDestino = new URL(hrefBase, window.location.origin);
+
     CHAVES_PERMITIDAS.forEach(chave => {
         const valorSessao = filtrosSessao[chave];
         if (valorSessao !== null && valorSessao !== undefined && String(valorSessao).trim() !== "" && !urlDestino.searchParams.has(chave)) {
             urlDestino.searchParams.set(chave, valorSessao);
         }
     });
+
     CHAVES_PERMITIDAS.forEach(chave => {
         const valorAtual = urlAtual.get(chave);
         if (valorAtual !== null && valorAtual !== undefined && String(valorAtual).trim() !== "" && !urlDestino.searchParams.has(chave)) {
             urlDestino.searchParams.set(chave, valorAtual);
         }
     });
+
     const query = urlDestino.searchParams.toString();
     return urlDestino.pathname + (query ? "?" + query : "");
 }
+
 function atualizarLinksSidebarComFiltros() {
     document.querySelectorAll("#sidebar a").forEach(link => {
         const hrefOriginal = link.getAttribute("data-href-original") || link.getAttribute("href");
@@ -82,6 +88,7 @@ function atualizarLinksSidebarComFiltros() {
         link.setAttribute("href", montarLinkComFiltros(hrefOriginal));
     });
 }
+
 function marcarLinkAtivoSidebar() {
     const pathAtual = window.location.pathname;
     const paramsAtual = new URLSearchParams(window.location.search);
@@ -100,6 +107,7 @@ function marcarLinkAtivoSidebar() {
         }
     });
 }
+
 document.addEventListener("DOMContentLoaded", function () {
     atualizarLinksSidebarComFiltros();
     marcarLinkAtivoSidebar();
