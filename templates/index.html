@@ -283,7 +283,7 @@ h1{ margin-bottom:15px; }
 .grid{
     display:grid;
     grid-template-columns:1fr;
-    gap:70px;
+    gap:10px;
 }
 
 .card{
@@ -450,6 +450,43 @@ h1{ margin-bottom:15px; }
 .ia-score{
     margin-top:6px;
     font-weight:bold;
+}
+
+.acao-box{
+    margin-left:12px;
+    font-size:12px;
+    background:#eef4ff;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid #bfd3ff;
+    min-width:220px;
+    max-width:300px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.acao-titulo{
+    font-weight:bold;
+    color:#1c4fb8;
+}
+
+.acao-textarea{
+    width:100%;
+    min-height:58px;
+    resize:vertical;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-size:12px;
+    color:#1f2937;
+    font-family:Arial;
+    padding:0;
+    margin:0;
+}
+
+.acao-textarea::placeholder{
+    color:#6b7280;
 }
 
 .envio-area{
@@ -732,7 +769,7 @@ h1{ margin-bottom:15px; }
 }
 
 .bloco-titulo{
-    margin-top:18px;
+    margin-top:4px;
 }
 
 
@@ -1279,6 +1316,24 @@ let debounceTimer = null;
 let skuAtualComentario = null;
 let codigoAtualComentario = null;
 let tiposMlbSalvos = JSON.parse(localStorage.getItem("tiposMlbSalvos") || "{}");
+let acoesMlbSalvas = JSON.parse(localStorage.getItem("acoesMlbSalvas") || "{}");
+
+function salvarAcaoMlb(codigo, valor){
+    acoesMlbSalvas[String(codigo)] = valor || "";
+    localStorage.setItem("acoesMlbSalvas", JSON.stringify(acoesMlbSalvas));
+}
+
+function obterAcaoMlbSalva(codigo){
+    return acoesMlbSalvas[String(codigo)] || "";
+}
+
+function escaparHtmlAtributo(valor){
+    return String(valor || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
 
 function salvarTipoMlb(codigo, valor){
     tiposMlbSalvos[String(codigo)] = valor || "";
@@ -1627,11 +1682,22 @@ function obterHistoricoMensal3Meses(item){
     }));
 
     const ultimos3 = historico.slice(-3);
-    return ultimos3;
+
+    // NOVO: soma dos 2 últimos meses (60D)
+    const ultimos2 = historico.slice(-2);
+    const soma60D = ultimos2.reduce((acc, m) => acc + numeroInteiro(m.valor), 0);
+
+    return {
+        ultimos3,
+        soma60D
+    };
 }
 
 function classificarHistoricoMensal(item){
-    const ultimos3 = obterHistoricoMensal3Meses(item);
+    const dados = obterHistoricoMensal3Meses(item);
+    const ultimos3 = dados.ultimos3;
+    const soma60D = dados.soma60D;
+
     const [m1, m2, m3] = ultimos3.map(x => numeroInteiro(x.valor || 0));
 
     let status = "ESTÁVEL";
@@ -1654,7 +1720,7 @@ function classificarHistoricoMensal(item){
 
     return {
         status,
-        texto: `${ultimos3[0].nome}: ${m1} | ${ultimos3[1].nome}: ${m2} | ${ultimos3[2].nome}: ${m3}`
+        texto: `${ultimos3[0].nome}: ${m1} | ${ultimos3[1].nome}: ${m2} | ${ultimos3[2].nome}: ${m3} | 60D: ${soma60D}`
     };
 }
 
@@ -2641,6 +2707,11 @@ function montarHTMLCard(item){
         </div>
     </div>
 
+    <div class="acao-box">
+        <div class="acao-titulo">AÇÃO</div>
+        <textarea class="acao-textarea" placeholder="Digite a ação deste MLB..." oninput="salvarAcaoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterAcaoMlbSalva(codigo))}</textarea>
+    </div>
+
     <div class="comentario-topo"
         onclick="abrirComentarioMlb('${item["Código do Anúncio"]}', '${item["SKU"]}')">
         💬 ${montarBubbleResumoComentario(codigo)}
@@ -2649,7 +2720,7 @@ function montarHTMLCard(item){
         </div>
     </div>
 
-    <div>
+    <div style="margin-top:6px;">
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
             <strong>Título:</strong>
             <span class="titulo-carro-relacionado">${item["Título"] || ""}${montarTooltipTitulosMesmoCarro(item)}</span>
