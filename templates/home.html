@@ -21,8 +21,9 @@
 
     .full-dashboard{
         height:calc(100vh - 72px);
+        min-height:calc(100vh - 72px);
         display:grid;
-        grid-template-rows:1fr;
+        grid-template-rows:minmax(0,1fr);
         gap:6px;
         color:var(--text);
         overflow:hidden;
@@ -35,16 +36,16 @@
         padding:12px 14px;
         box-shadow:var(--shadow);
         display:grid;
-        grid-template-rows:auto auto 1fr;
-        gap:8px;
-        align-items:start;
+        grid-template-rows:auto auto minmax(0,1fr);
+        gap:10px;
+        align-items:stretch;
         min-height:0;
         height:100%;
         overflow:hidden;
     }
 
     .hero-title{
-        font-size:28px;
+        font-size:24px;
         font-weight:800;
         line-height:1.1;
         margin:0 0 8px 0;
@@ -92,9 +93,10 @@
 
     .hero-topbar{
         display:grid;
-        grid-template-columns:minmax(260px, 1fr) minmax(420px, 1.05fr) auto;
+        grid-template-columns:minmax(240px, 0.9fr) minmax(420px, 1.1fr);
         align-items:center;
         gap:12px;
+        min-height:0;
     }
 
     .hero-topbar-right{
@@ -107,11 +109,12 @@
 
     .hero-content-grid{
         display:grid;
-        grid-template-columns:minmax(0, 2.08fr) minmax(280px, 0.52fr);
+        grid-template-columns:minmax(0, 1fr);
         gap:10px;
         align-items:stretch;
         min-height:0;
         height:100%;
+        overflow:hidden;
     }
 
     .hero-left-column,
@@ -125,6 +128,74 @@
 
     .hero-right-column{
         grid-template-rows:1fr;
+    }
+
+    .hero-operacionais-grid{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:10px;
+    }
+
+    .hero-operacional-card{
+        background:rgba(255,255,255,0.10);
+        border:1px solid rgba(255,255,255,0.16);
+        border-radius:18px;
+        padding:14px;
+        min-height:118px;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+        cursor:pointer;
+        transition:0.2s ease;
+        backdrop-filter:blur(10px);
+    }
+
+    .hero-operacional-card:hover{
+        transform:translateY(-2px);
+        background:rgba(255,255,255,0.16);
+        border-color:rgba(255,255,255,0.24);
+    }
+
+    .hero-operacional-top{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:10px;
+    }
+
+    .hero-operacional-label{
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:0.06em;
+        color:rgba(255,255,255,0.72);
+        font-weight:800;
+        margin-bottom:8px;
+    }
+
+    .hero-operacional-value{
+        font-size:34px;
+        line-height:1;
+        font-weight:900;
+        color:#fff;
+    }
+
+    .hero-operacional-sub{
+        margin-top:10px;
+        font-size:12px;
+        color:rgba(255,255,255,0.82);
+        line-height:1.35;
+    }
+
+    .hero-operacional-icon{
+        width:38px;
+        height:38px;
+        border-radius:14px;
+        background:rgba(255,255,255,0.14);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:18px;
+        flex:0 0 auto;
     }
 
     .hero-full-toggle{
@@ -144,25 +215,64 @@
 
     .hero-top-metrics{
         display:grid;
-        grid-template-columns:repeat(6, minmax(0, 1fr));
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+        grid-auto-rows:minmax(0,1fr);
         gap:8px;
         margin-top:0;
+        min-height:0;
     }
 
     .hero-top-metric{
+        position:relative;
+        min-width:0;
         background:rgba(255,255,255,0.12);
         border:1px solid rgba(255,255,255,0.16);
         border-radius:18px;
-        padding:10px 12px;
+        padding:12px 14px;
         backdrop-filter:blur(10px);
-        min-height:74px;
+        min-height:76px;
         display:flex;
         flex-direction:column;
         justify-content:center;
+        overflow:hidden;
+        transition:0.22s ease;
     }
 
+    .hero-top-metric::after{
+        content:"";
+        position:absolute;
+        right:-18px;
+        bottom:-18px;
+        width:74px;
+        height:74px;
+        border-radius:999px;
+        background:rgba(255,255,255,0.06);
+    }
+
+    .hero-top-metric.is-clickable{
+        cursor:pointer;
+    }
+
+    .hero-top-metric.is-clickable:hover{
+        transform:translateY(-3px);
+        background:rgba(255,255,255,0.18);
+        border-color:rgba(255,255,255,0.24);
+        box-shadow:0 14px 28px rgba(15,23,42,0.18);
+    }
+
+    .hero-top-metric.metric-mlbs{border-top:3px solid rgba(255,255,255,0.55);}
+    .hero-top-metric.metric-sem-estoque{border-top:3px solid rgba(251,191,36,0.95);}
+    .hero-top-metric.metric-teste{border-top:3px solid rgba(167,139,250,0.95);}
+    .hero-top-metric.metric-prioridade{border-top:3px solid rgba(248,113,113,0.95);}
+    .hero-top-metric.metric-ruptura{border-top:3px solid rgba(251,113,133,0.95);}
+    .hero-top-metric.metric-critico{border-top:3px solid rgba(239,68,68,0.95);}
+    .hero-top-metric.metric-medio{border-top:3px solid rgba(96,165,250,0.95);}
+    .hero-top-metric.metric-baixo{border-top:3px solid rgba(34,197,94,0.95);}
+
     .hero-top-metric-label{
-        font-size:11px;
+        position:relative;
+        z-index:1;
+        font-size:10px;
         font-weight:800;
         text-transform:uppercase;
         letter-spacing:0.05em;
@@ -171,15 +281,20 @@
     }
 
     .hero-top-metric-value{
-        font-size:24px;
+        position:relative;
+        z-index:1;
+        font-size:22px;
         line-height:1;
         font-weight:900;
         color:#fff;
+        word-break:break-word;
     }
 
     .hero-top-metric-sub{
-        margin-top:6px;
-        font-size:11px;
+        position:relative;
+        z-index:1;
+        margin-top:4px;
+        font-size:10px;
         color:rgba(255,255,255,0.76);
     }
 
@@ -440,15 +555,15 @@
     }
 
     .hero-calendar-title-wrap h3{
-        margin:0 0 4px 0;
-        font-size:18px;
+        margin:0 0 2px 0;
+        font-size:16px;
         font-weight:800;
         color:#fff;
     }
 
     .hero-calendar-title-wrap p{
         margin:0;
-        font-size:12px;
+        font-size:11px;
         color:rgba(255,255,255,0.78);
     }
 
@@ -489,12 +604,12 @@
     .hero-calendar-grid{
         display:grid;
         grid-template-columns:repeat(7, minmax(0, 1fr));
-        gap:10px;
+        gap:8px;
     }
 
     .hero-calendar-weekday{
         text-align:center;
-        font-size:11px;
+        font-size:10px;
         font-weight:800;
         text-transform:uppercase;
         letter-spacing:0.08em;
@@ -509,7 +624,7 @@
     }
 
     .calendar-day{
-        min-height:74px;
+        min-height:58px;
         border-radius:18px;
         border:1px solid rgba(255,255,255,0.12);
         background:rgba(255,255,255,0.10);
@@ -562,15 +677,15 @@
     }
 
     .calendar-day-number{
-        font-size:18px;
+        font-size:16px;
         font-weight:900;
         color:#fff;
         line-height:1;
     }
 
     .calendar-day-badge{
-        min-width:28px;
-        height:28px;
+        min-width:24px;
+        height:24px;
         border-radius:999px;
         padding:0 8px;
         background:rgba(255,255,255,0.18);
@@ -598,7 +713,7 @@
     }
 
     .calendar-day-text{
-        font-size:11px;
+        font-size:10px;
         font-weight:700;
         color:rgba(255,255,255,0.86);
         white-space:nowrap;
@@ -607,7 +722,7 @@
     }
 
     .calendar-day-holiday{
-        font-size:10px;
+        font-size:9px;
         font-weight:700;
         color:#ffd5dc;
         white-space:nowrap;
@@ -618,14 +733,15 @@
     .calendar-legend{
         display:flex;
         flex-wrap:wrap;
-        gap:10px;
+        gap:8px;
+        justify-content:flex-end;
     }
 
     .calendar-legend-item{
         display:inline-flex;
         align-items:center;
         gap:8px;
-        font-size:11px;
+        font-size:10px;
         font-weight:800;
         color:rgba(255,255,255,0.86);
         background:rgba(255,255,255,0.10);
@@ -1267,6 +1383,12 @@
         .filters-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
         .kpis-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
     }
+    @media (max-width: 1400px){
+        .hero-topbar{grid-template-columns:minmax(220px, 0.9fr) minmax(380px, 1.1fr);}
+        .hero-top-metric{min-height:72px; padding:10px 12px;}
+        .calendar-day{min-height:54px; padding:8px;}
+    }
+
 
     @media (max-width: 1220px){
         .full-dashboard{height:auto; overflow:visible;}
@@ -1287,7 +1409,8 @@
         .kpis-grid,
         .panel-grid-2,
         .hero-account-list.topbar,
-        .hero-top-metrics{grid-template-columns:1fr;}
+        .hero-top-metrics,
+        .hero-operacionais-grid{grid-template-columns:1fr;}
         .toolbar-actions{justify-content:stretch;}
         .btn-dashboard{width:100%;}
         .hero-topbar,
@@ -1311,45 +1434,46 @@
                 <div class="hero-monitoradas-subtitle">Total MLBs e quantidade analisada por conta.</div>
                 <div class="hero-account-list topbar" id="listaContasResumo"></div>
             </div>
-
-            <div class="hero-topbar-right">
-                <div class="hero-full-toggle" aria-label="Filtro Full">
-                    <span class="hero-full-toggle-label">Recorte</span>
-                    <div class="hero-full-toggle-buttons">
-                        <button type="button" class="hero-full-chip active" id="btnModoSomenteFull" data-modo-full="somente_full">No Full</button>
-                        <button type="button" class="hero-full-chip" id="btnModoTodosRelacionados" data-modo-full="todos_relacionados">Não Full</button>
-                    </div>
-                </div>
-            </div>
         </div>
 
+
         <div class="hero-top-metrics">
-            <div class="hero-top-metric">
+            <div class="hero-top-metric is-clickable metric-mlbs" onclick="abrirTelaPrincipalComFiltro({ full: 'NO FULL' })">
                 <div class="hero-top-metric-label">MLBs no Full</div>
                 <div class="hero-top-metric-value" id="heroTotalMlbsFull">0</div>
                 <div class="hero-top-metric-sub">Ambas as contas</div>
             </div>
-            <div class="hero-top-metric">
-                <div class="hero-top-metric-label">Peças no Full</div>
-                <div class="hero-top-metric-value" id="heroTotalPecasFull">0</div>
-                <div class="hero-top-metric-sub">Soma geral</div>
+            <div class="hero-top-metric is-clickable metric-sem-estoque" onclick="abrirTelaPrincipalComFiltro({ estoqueMeli: 'SEM ESTOQUE' })">
+                <div class="hero-top-metric-label">Sem Estoque</div>
+                <div class="hero-top-metric-value" id="heroTotalSemEstoqueMeli">0</div>
+                <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
             </div>
-            <div class="hero-top-metric">
+            <div class="hero-top-metric is-clickable metric-teste" onclick="abrirTelaPrincipalComFiltro({ tipoMlb: 'MLB EM TESTE' })">
+                <div class="hero-top-metric-label">MLBs em Teste</div>
+                <div class="hero-top-metric-value" id="heroTotalMlbTeste">0</div>
+                <div class="hero-top-metric-sub">Tipo MLB salvo</div>
+            </div>
+            <div class="hero-top-metric is-clickable metric-prioridade" onclick="abrirTelaPrincipalComFiltro({ prioridade: 'ALTA' })">
+                <div class="hero-top-metric-label">Prioridade Alta</div>
+                <div class="hero-top-metric-value" id="heroTotalPrioridadeAlta">0</div>
+                <div class="hero-top-metric-sub">Prioridade salva</div>
+            </div>
+            <div class="hero-top-metric is-clickable metric-ruptura" onclick="abrirTelaPrincipalComFiltro({ saudeFull: 'RUPTURA' })">
                 <div class="hero-top-metric-label">Ruptura</div>
                 <div class="hero-top-metric-value" id="heroTotalRuptura">0</div>
                 <div class="hero-top-metric-sub">MLBs rupturados</div>
             </div>
-            <div class="hero-top-metric">
+            <div class="hero-top-metric is-clickable metric-critico" onclick="abrirTelaPrincipalComFiltro({ estoqueMeli: 'CRÍTICO' })">
                 <div class="hero-top-metric-label">Crítico</div>
                 <div class="hero-top-metric-value" id="heroTotalCriticoMeli">0</div>
                 <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
             </div>
-            <div class="hero-top-metric">
+            <div class="hero-top-metric is-clickable metric-medio" onclick="abrirTelaPrincipalComFiltro({ estoqueMeli: 'MÉDIO' })">
                 <div class="hero-top-metric-label">Médio</div>
                 <div class="hero-top-metric-value" id="heroTotalMedioMeli">0</div>
                 <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
             </div>
-            <div class="hero-top-metric">
+            <div class="hero-top-metric is-clickable metric-baixo" onclick="abrirTelaPrincipalComFiltro({ estoqueMeli: 'BAIXO' })">
                 <div class="hero-top-metric-label">Baixo</div>
                 <div class="hero-top-metric-value" id="heroTotalBaixoMeli">0</div>
                 <div class="hero-top-metric-sub">Coluna ESTOQUE MELI</div>
@@ -1385,14 +1509,6 @@
                         <span class="calendar-legend-item"><span class="calendar-legend-dot yellow"></span> Não coletado</span>
                         <span class="calendar-legend-item"><span class="calendar-legend-dot red"></span> Feriado</span>
                     </div>
-                </div>
-            </div>
-
-            <div class="hero-right-column">
-                <div class="hero-monitoradas-card">
-                    <h3>📍 Insights do Full</h3>
-                    <div class="hero-monitoradas-subtitle">Leituras rápidas para decisão operacional.</div>
-                    <div class="hero-account-list" id="listaInsights"></div>
                 </div>
             </div>
         </div>
@@ -1759,6 +1875,12 @@ function renderChart(id, config){
 function atualizarHeroEResumo(lista){
     const totalMlbsFull = lista.filter(item => item.fullAtivo).length;
     const totalPecasFull = lista.reduce((s, item) => s + item.estoqueFull, 0);
+    const totalSemEstoqueMeli = lista.filter(item => textoNormalizado(item.estoqueMeli).includes("SEM ESTOQUE")).length;
+    const totalMlbTeste = lista.filter(item => item.ehTeste).length;
+    const totalPrioridadeAlta = lista.filter(item => {
+        const prioridade = textoNormalizado((dashboardState.statusSalvos[item.codigo] || {}).prioridade || "");
+        return prioridade === "ALTA" || prioridade === "URGENTE";
+    }).length;
     const rupturas = lista.filter(item => item.sinalRuptura).length;
     const criticoMeli = lista.filter(item => {
         const valor = textoNormalizado(item.estoqueMeli);
@@ -1771,14 +1893,18 @@ function atualizarHeroEResumo(lista){
     const baixoMeli = lista.filter(item => textoNormalizado(item.estoqueMeli).includes("BAIXO")).length;
 
     const elTotalMlbs = document.getElementById("heroTotalMlbsFull");
-    const elTotalPecas = document.getElementById("heroTotalPecasFull");
+    const elTotalSemEstoqueMeli = document.getElementById("heroTotalSemEstoqueMeli");
+    const elTotalMlbTeste = document.getElementById("heroTotalMlbTeste");
+    const elTotalPrioridadeAlta = document.getElementById("heroTotalPrioridadeAlta");
     const elRuptura = document.getElementById("heroTotalRuptura");
     const elCritico = document.getElementById("heroTotalCriticoMeli");
     const elMedio = document.getElementById("heroTotalMedioMeli");
     const elBaixo = document.getElementById("heroTotalBaixoMeli");
 
     if (elTotalMlbs) elTotalMlbs.innerText = formatarInteiro(totalMlbsFull);
-    if (elTotalPecas) elTotalPecas.innerText = formatarInteiro(totalPecasFull);
+    if (elTotalSemEstoqueMeli) elTotalSemEstoqueMeli.innerText = formatarInteiro(totalSemEstoqueMeli);
+    if (elTotalMlbTeste) elTotalMlbTeste.innerText = formatarInteiro(totalMlbTeste);
+    if (elTotalPrioridadeAlta) elTotalPrioridadeAlta.innerText = formatarInteiro(totalPrioridadeAlta);
     if (elRuptura) elRuptura.innerText = formatarInteiro(rupturas);
     if (elCritico) elCritico.innerText = formatarInteiro(criticoMeli);
     if (elMedio) elMedio.innerText = formatarInteiro(medioMeli);
@@ -2129,53 +2255,100 @@ function renderResumoContas(lista){
     `).join("");
 }
 
-function renderInsights(lista){
-    const container = document.getElementById("listaInsights");
-    if (!container) return;
+function obterTiposMlbSalvos(){
+    try {
+        return JSON.parse(localStorage.getItem("tiposMlbSalvos") || "{}");
+    } catch (e) {
+        return {};
+    }
+}
 
-    const ruptura = lista.filter(item => item.sinalRuptura).length;
-    const topConta = agruparPorConta(lista)[0];
-    const topVenda = [...lista].sort((a,b) => b.vendas30 - a.vendas30)[0];
-    const totalNaoEnviar = lista.filter(item => item.status === "naoEnviar").reduce((s, item) => s + item.qtdStatus, 0);
-    const totalCompras = lista.filter(item => item.status === "compras").reduce((s, item) => s + item.qtdStatus, 0);
+function renderCardsOperacionais(lista){
+    const tiposMlbSalvos = obterTiposMlbSalvos();
 
-    const insights = [
-        {
-            titulo: ruptura > 0 ? "Ruptura pede ação imediata" : "Sem ruptura no recorte atual",
-            badge: ruptura > 0 ? `${formatarInteiro(ruptura)} críticos` : "Saudável",
-            meta: ruptura > 0 ? "Priorize envio, homologação ou compra para evitar ruptura." : "Nenhum item em ruptura dentro do filtro atual."
-        },
-        {
-            titulo: topConta ? `Maior peso no Full: ${topConta.conta}` : "Sem conta dominante",
-            badge: topConta ? `${formatarInteiro(topConta.pecas)} peças` : "-",
-            meta: topConta ? `${formatarInteiro(topConta.mlbs)} MLBs nesse recorte.` : "Aplique filtros para refinar a leitura."
-        },
-        {
-            titulo: topVenda ? `Maior vendedor: ${topVenda.codigo}` : "Sem top seller",
-            badge: topVenda ? `${formatarInteiro(topVenda.vendas30)} vendas` : "-",
-            meta: topVenda ? topVenda.titulo || topVenda.sku : "Sem histórico de vendas para exibir."
-        },
-        {
-            titulo: "Peças travadas em Não Enviar",
-            badge: formatarInteiro(totalNaoEnviar),
-            meta: "Volume somado das quantidades paradas na decisão de não envio."
-        },
-        {
-            titulo: "Peças puxadas para Compras",
-            badge: formatarInteiro(totalCompras),
-            meta: "Leitura operacional do que foi desviado para suprimento."
-        }
-    ];
+    const semEstoque = lista.filter(item => {
+        const obs = textoNormalizado(item.observacaoMeli);
+        const estoqueMeli = textoNormalizado(item.estoqueMeli);
+        return item.estoqueFull <= 0 || obs.includes("SEM ESTOQUE") || estoqueMeli.includes("SEM ESTOQUE");
+    }).length;
 
-    container.innerHTML = insights.map(item => `
-        <div class="insight-item">
-            <div class="insight-top">
-                <div class="insight-title">${escapeHtml(item.titulo)}</div>
-                <div class="insight-badge">${escapeHtml(item.badge)}</div>
-            </div>
-            <div class="insight-meta">${escapeHtml(item.meta)}</div>
-        </div>
-    `).join("");
+    const mlbTeste = lista.filter(item => {
+        const tipoSalvo = textoNormalizado(tiposMlbSalvos[item.codigo] || "");
+        return tipoSalvo === "MLB EM TESTE" || item.ehTeste;
+    }).length;
+
+    const prioridadeAlta = lista.filter(item => {
+        const prioridade = textoNormalizado((dashboardState.statusSalvos[item.codigo] || {}).prioridade || "");
+        return prioridade === "ALTA" || prioridade === "URGENTE";
+    }).length;
+
+    const ate5Semanas = lista.filter(item => item.coberturaDias !== null && item.coberturaDias <= 35).length;
+
+    const elSemEstoque = document.getElementById("cardSemEstoque");
+    const elMlbTeste = document.getElementById("cardMlbTeste");
+    const elPrioridadeAlta = document.getElementById("cardPrioridadeAlta");
+    const elAte5Semanas = document.getElementById("cardAte5Semanas");
+
+    if (elSemEstoque) elSemEstoque.innerText = formatarInteiro(semEstoque);
+    if (elMlbTeste) elMlbTeste.innerText = formatarInteiro(mlbTeste);
+    if (elPrioridadeAlta) elPrioridadeAlta.innerText = formatarInteiro(prioridadeAlta);
+    if (elAte5Semanas) elAte5Semanas.innerText = formatarInteiro(ate5Semanas);
+}
+
+function abrirCardsOperacionais(tipo){
+    let estado = {};
+    try {
+        estado = JSON.parse(sessionStorage.getItem("painelFiltrosCompartilhados") || "{}");
+    } catch (e) {
+        estado = {};
+    }
+
+    estado = {
+        conta: "",
+        busca: "",
+        selo: "",
+        analise: "",
+        saude: "",
+        condicao: "",
+        infoMeli: "",
+        estoqueMeli: "",
+        ultimos: "",
+        lote: "",
+        tipoMlb: "",
+        prioridade: "",
+        filtroEspecial: "",
+        magic: "",
+        cobertura: "",
+        full: "",
+        saudeFull: "",
+        statusFullFiltro: "",
+        tela: "principal"
+    };
+
+    let destino = "/?tela=principal";
+
+    if (tipo === "sem_estoque") {
+        estado.estoqueMeli = "SEM ESTOQUE";
+        destino = "/?tela=principal&estoqueMeli=" + encodeURIComponent("SEM ESTOQUE");
+    }
+
+    if (tipo === "mlb_teste") {
+        estado.tipoMlb = "MLB EM TESTE";
+        destino = "/?tela=principal&tipoMlb=" + encodeURIComponent("MLB EM TESTE");
+    }
+
+    if (tipo === "prioridade_alta") {
+        estado.prioridade = "ALTA";
+        destino = "/?tela=principal&prioridade=" + encodeURIComponent("ALTA");
+    }
+
+    if (tipo === "ate_5_semanas") {
+        estado.cobertura = "baixo35";
+        destino = "/?tela=principal&cobertura=" + encodeURIComponent("baixo35");
+    }
+
+    sessionStorage.setItem("painelFiltrosCompartilhados", JSON.stringify(estado));
+    window.location.href = destino;
 }
 
 function renderTabela(lista){
@@ -2274,7 +2447,7 @@ function renderDashboardFull(){
     atualizarUrlDashboard();
     atualizarHeroEResumo(lista);
     renderResumoContas(lista);
-    renderInsights(lista);
+    renderCardsOperacionais(lista);
     renderCalendarioColetas();
 }
 
@@ -2435,5 +2608,62 @@ iniciarDashboardFull().catch(() => {
         area.innerHTML = '<div class="empty-state">Erro ao carregar o dashboard Full. Verifique os dados e tente novamente.</div>';
     }
 });
+
+function abrirTelaPrincipalComFiltro(filtros){
+    const estado = {
+        conta: "",
+        busca: "",
+        selo: "",
+        analise: "",
+        saude: "",
+        condicao: "",
+        infoMeli: "",
+        estoqueMeli: "",
+        ultimos: "",
+        lote: "",
+        tipoMlb: "",
+        prioridade: "",
+        filtroEspecial: "",
+        magic: "",
+        cobertura: "",
+        full: "",
+        saudeFull: "",
+        statusFullFiltro: "",
+        tela: "principal"
+    };
+
+    const url = new URL("/?tela=principal", window.location.origin);
+
+    if (filtros.full) {
+        estado.full = filtros.full;
+        url.searchParams.set("full", filtros.full);
+    }
+    if (filtros.estoqueMeli) {
+        estado.estoqueMeli = filtros.estoqueMeli;
+        url.searchParams.set("estoqueMeli", filtros.estoqueMeli);
+    }
+    if (filtros.saudeFull) {
+        estado.saudeFull = filtros.saudeFull;
+        url.searchParams.set("saudeFull", filtros.saudeFull);
+    }
+    if (filtros.tipoMlb) {
+        estado.tipoMlb = filtros.tipoMlb;
+        url.searchParams.set("tipoMlb", filtros.tipoMlb);
+    }
+    if (filtros.prioridade) {
+        estado.prioridade = filtros.prioridade;
+        url.searchParams.set("prioridade", filtros.prioridade);
+    }
+
+    sessionStorage.setItem("painelFiltrosCompartilhados", JSON.stringify(estado));
+    window.location.href = url.pathname + "?" + url.searchParams.toString();
+}
+
 </script>
 {% endblock %}
+
+<style>
+@media (max-width: 640px){
+    .hero-top-metrics{grid-template-columns:1fr;}
+}
+</style>

@@ -452,15 +452,16 @@ h1{ margin-bottom:15px; }
     font-weight:bold;
 }
 
-.acao-box{
+.acao-box,
+.retorno-box{
     margin-left:12px;
     font-size:12px;
     background:#eef4ff;
     padding:8px 12px;
     border-radius:10px;
     border:1px solid #bfd3ff;
-    min-width:220px;
-    max-width:300px;
+    min-width:260px;
+    max-width:340px;
     display:flex;
     flex-direction:column;
     gap:6px;
@@ -473,7 +474,7 @@ h1{ margin-bottom:15px; }
 
 .acao-textarea{
     width:100%;
-    min-height:58px;
+    min-height:95px;
     resize:vertical;
     border:none;
     outline:none;
@@ -1063,6 +1064,292 @@ h1{ margin-bottom:15px; }
     to{ transform:scale(1); opacity:1; }
 }
 
+
+.card{
+    background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+    padding:22px;
+    border-radius:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+    border:1px solid #e5e7eb;
+    transition:all 0.2s ease;
+    position:relative;
+}
+.card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 18px 40px rgba(0,0,0,0.12);
+}
+
+.mlb{
+    font-size:22px;
+    font-weight:800;
+    color:#111827;
+    letter-spacing:0.3px;
+}
+
+.badge{
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+}
+
+.ia-box{
+    border-radius:12px;
+    font-size:12px;
+    padding:10px 14px;
+}
+
+.acao-box,
+.retorno-box{
+    border-radius:14px;
+    background:#f9fafb;
+    border:1px solid #e5e7eb;
+}
+
+.estrategia-meio,
+.motivo-meio{
+    border-radius:14px;
+    font-weight:600;
+}
+
+.saldo-final{
+    font-size:14px;
+    color:#111827;
+}
+
+
+/* FIX FINAL */
+.linha-topo{
+    display:flex;
+    flex-direction:column;
+}
+
+.mlb-area{
+    display:flex;
+    flex-direction:column;
+    width:100%;
+}
+
+.mlb-topo-coluna{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+}
+
+.linha-mlb-titulo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+}
+
+.titulo-inline{
+    flex:1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.topo-direita{
+    margin-top:10px;
+    width:100%;
+}
+
+
+/* AJUSTE: TITULO ANTES DO MLB, MESMO DESTAQUE VISUAL */
+.linha-mlb-titulo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    min-width:0;
+    flex-wrap:nowrap;
+}
+
+.titulo-inline{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:22px;
+    font-weight:800;
+    color:#111827;
+    letter-spacing:0.3px;
+    line-height:1.2;
+}
+
+.titulo-inline .titulo-carro-relacionado{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.linha-mlb-titulo .mlb{
+    flex-shrink:0;
+}
+
+@media (max-width: 900px){
+    .linha-mlb-titulo{
+        flex-wrap:wrap;
+    }
+
+    .titulo-inline,
+    .titulo-inline .titulo-carro-relacionado{
+        white-space:normal;
+        overflow:visible;
+        text-overflow:initial;
+    }
+}
+
+
+/* ===== AJUSTE DE ALINHAMENTO HEADER ===== */
+.linha-mlb-titulo{
+    display:flex !important;
+    align-items:center !important;
+    gap:14px !important;
+    width:100% !important;
+    min-width:0 !important;
+    flex-wrap:nowrap !important;
+    padding-bottom:12px !important;
+    margin-bottom:14px !important;
+    border-bottom:1px solid #e5e7eb !important;
+}
+
+.titulo-inline{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+    font-size:22px !important;
+    font-weight:800 !important;
+    color:#111827 !important;
+    letter-spacing:0.3px !important;
+    line-height:1.2 !important;
+}
+
+.titulo-inline .titulo-carro-relacionado{
+    display:block !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+}
+
+.linha-mlb-titulo .mlb{
+    flex:0 0 auto !important;
+    padding-left:14px !important;
+    border-left:1px solid #d1d5db !important;
+}
+
+.mlb-area{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    gap:0 !important;
+}
+
+.mlb-topo-coluna{
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:flex-start !important;
+    gap:20px !important;
+    width:100% !important;
+    flex-wrap:nowrap !important;
+}
+
+.topo-esquerda{
+    display:flex !important;
+    align-items:flex-start !important;
+    gap:12px !important;
+    flex-wrap:wrap !important;
+    min-width:260px !important;
+    max-width:42% !important;
+}
+
+.topo-direita{
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:flex-end !important;
+    gap:12px !important;
+    flex-wrap:wrap !important;
+    margin-left:auto !important;
+    width:auto !important;
+    flex:1 1 auto !important;
+}
+
+.tipo-mlb-box,
+.ia-box,
+.acao-box,
+.retorno-box,
+.comentario-topo{
+    align-self:flex-start !important;
+}
+
+.acao-box,
+.retorno-box{
+    margin-left:0 !important;
+}
+
+.ia-box{
+    margin-left:0 !important;
+}
+
+.comentario-topo{
+    margin-right:0 !important;
+    flex-shrink:0 !important;
+}
+
+@media (max-width: 1200px){
+    .mlb-topo-coluna{
+        flex-direction:column !important;
+        align-items:stretch !important;
+    }
+
+    .topo-esquerda{
+        max-width:100% !important;
+    }
+
+    .topo-direita{
+        justify-content:flex-start !important;
+        width:100% !important;
+        margin-left:0 !important;
+    }
+}
+
+@media (max-width: 900px){
+    .linha-mlb-titulo{
+        flex-wrap:wrap !important;
+    }
+
+    .titulo-inline,
+    .titulo-inline .titulo-carro-relacionado{
+        white-space:normal !important;
+        overflow:visible !important;
+        text-overflow:initial !important;
+    }
+
+    .linha-mlb-titulo .mlb{
+        border-left:none !important;
+        padding-left:0 !important;
+    }
+}
+
+
+.info-extra-sku{
+    margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+.info-extra-sku .metric{
+    margin-bottom:0;
+}
+
 </style>
 
 <div class="page-wrap">
@@ -1093,7 +1380,7 @@ h1{ margin-bottom:15px; }
             </div>
     
             <div class="acoes-direita">
-                <div id="contadorTopo" class="info-contador-topo">0 MLBs</div>
+                <div id="contadorTopo" class="info-contador-topo">0 MLBs | 0 Peças</div>
     
                 <a
                     id="btnExportarExcel"
@@ -1184,6 +1471,7 @@ h1{ margin-bottom:15px; }
                 <button type="button" id="btnFiltroEstaNoFull" onclick="setFiltroStatusFull('esta_no_full')">Está no Full</button>
                 <button type="button" id="btnFiltroNuncaFoiFull" onclick="setFiltroStatusFull('nunca_foi_full')">Nunca foi no Full</button>
                 <button type="button" id="btnFiltroSemVenda" onclick="setFiltroStatusFull('sem_venda')">Sem venda</button>
+                <button type="button" id="btnFiltroComVenda" onclick="setFiltro('com_venda')">Com venda</button>
                 <button type="button" id="btnFiltroRuptura" onclick="setFiltroSaudeFull('RUPTURA')">Ruptura</button>
                 <button type="button" id="btnFiltroSugEnvio" onclick="setFiltroMagic('SUG DE ENVIO MAGIC')">Sug de Envio</button>
                 <button type="button" onclick="limparFiltros()">Limpar</button>
@@ -1245,6 +1533,7 @@ const btnFiltroNaoOfereceMaisFull = document.getElementById("btnFiltroNaoOferece
 const btnFiltroEstaNoFull = document.getElementById("btnFiltroEstaNoFull");
 const btnFiltroNuncaFoiFull = document.getElementById("btnFiltroNuncaFoiFull");
 const btnFiltroSemVenda = document.getElementById("btnFiltroSemVenda");
+const btnFiltroComVenda = document.getElementById("btnFiltroComVenda");
 const btnFiltroRuptura = document.getElementById("btnFiltroRuptura");
 const btnFiltroSugEnvio = document.getElementById("btnFiltroSugEnvio");
 const btnResetTelaAtual = document.getElementById("btnResetTelaAtual");
@@ -1278,6 +1567,7 @@ const estrategiasNaoEnvio = [
 "SKU OU MLB DIVERGENTE",
 " - ",
 "REPOSIÇÃO",
+"REPOSIÇÃO + PROJEÇÃO",
 "POSSIVEL ESTOQUE ECESSIVO",
 "ESTOQUE 4i VAI FICAR BAIXO",
 "EM QUEDA",
@@ -1317,6 +1607,7 @@ let skuAtualComentario = null;
 let codigoAtualComentario = null;
 let tiposMlbSalvos = JSON.parse(localStorage.getItem("tiposMlbSalvos") || "{}");
 let acoesMlbSalvas = JSON.parse(localStorage.getItem("acoesMlbSalvas") || "{}");
+let retornosMlbSalvos = JSON.parse(localStorage.getItem("retornosMlbSalvos") || "{}");
 
 function salvarAcaoMlb(codigo, valor){
     acoesMlbSalvas[String(codigo)] = valor || "";
@@ -1325,6 +1616,15 @@ function salvarAcaoMlb(codigo, valor){
 
 function obterAcaoMlbSalva(codigo){
     return acoesMlbSalvas[String(codigo)] || "";
+}
+
+function salvarRetornoMlb(codigo, valor){
+    retornosMlbSalvos[String(codigo)] = valor || "";
+    localStorage.setItem("retornosMlbSalvos", JSON.stringify(retornosMlbSalvos));
+}
+
+function obterRetornoMlbSalvo(codigo){
+    return retornosMlbSalvos[String(codigo)] || "";
 }
 
 function escaparHtmlAtributo(valor){
@@ -1595,6 +1895,10 @@ function atualizarBotoesAtivos(){
 
     if (btnFiltroSemVenda){
         btnFiltroSemVenda.classList.toggle("ativo", filtroUrlStatusFull === "sem_venda");
+    }
+
+    if (btnFiltroComVenda){
+        btnFiltroComVenda.classList.toggle("ativo", filtroEspecial === "com_venda");
     }
 
     if (btnFiltroRuptura){
@@ -2310,33 +2614,31 @@ function atualizarContadores(){
     if (contHom) contHom.innerText = totalHomologar;
     if (contNao) contNao.innerText = totalNao;
 
-    let textoContador = "0 MLBs";
+    const totalPecasTela = dadosTelaAtual.reduce((acc, item) => {
+        const codigo = String(item["Código do Anúncio"] || "");
+        return acc + numeroInteiro(obterQuantidadeSalva(codigo));
+    }, 0);
 
-        if (telaAtual === "principal"){
-        textoContador = `${totalPrincipal} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+    let totalMlbsTela = dadosTelaAtual.length;
+
+    if (telaAtual === "principal"){
+        totalMlbsTela = totalPrincipal;
     } else if (telaAtual === "enviando"){
-        textoContador = `${totalEnviando} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalEnviando;
     } else if (telaAtual === "ecommerce"){
-        textoContador = `${totalEcommerce} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalEcommerce;
     } else if (telaAtual === "compras"){
-        textoContador = `${totalCompras} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalCompras;
     } else if (telaAtual === "acompanhamento"){
-        textoContador = `${totalAcompanhamento} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalAcompanhamento;
     } else if (telaAtual === "homologar"){
-        textoContador = `${totalHomologar} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalHomologar;
     } else if (telaAtual === "naoEnviar"){
-        textoContador = `${totalNao} MLBs`;
-        contadorPrincipal.innerText = textoContador;
-    } else {
-        textoContador = `${dadosTelaAtual.length} MLBs`;
-        contadorPrincipal.innerText = textoContador;
+        totalMlbsTela = totalNao;
     }
+
+    const textoContador = `${totalMlbsTela} MLBs | ${totalPecasTela} Peças`;
+    contadorPrincipal.innerText = textoContador;
 
     const contadorTopo = document.getElementById("contadorTopo");
     if (contadorTopo){
@@ -2602,11 +2904,24 @@ function aplicarFiltrosBase(){
 
         let unidades = Number(item["30 DIAS"] || 0);
         let valor = valorParaNumero(item["Total de Vendas 30 DIAS"]);
+        const texto30Dias = textoNormalizado(item["30 DIAS"]);
+        const textoUnidadesVendidas = textoNormalizado(
+            item["Unidades Vendidas"] ||
+            item["unidades vendidas"] ||
+            item["UNIDADES VENDIDAS"] ||
+            item["Unidades vendidas"] ||
+            item["UNIDADE VENDIDA"] ||
+            ""
+        );
+        const itemMarcadoSemVenda = texto30Dias === "SEM VENDA" || textoUnidadesVendidas === "SEM VENDA";
 
-        if (filtroEspecial === "valor400" && valor <= 400) return false;
+        if (filtroEspecial === "valor400" && (itemMarcadoSemVenda || valor <= 400)) return false;
         if (filtroEspecial === "unidades10" && unidades <= 10) return false;
         if (filtroEspecial === "critico" && !(unidades < 10 && valor > 400)) return false;
-        if (filtroEspecial === "vendas3" && unidades <= 3) return false;
+        if (filtroEspecial === "vendas3" && (itemMarcadoSemVenda || unidades <= 3)) return false;
+        if (filtroEspecial === "com_venda") {
+            if (texto30Dias === "SEM VENDA" || unidades <= 0) return false;
+        }
 
         return true;
     });
@@ -2678,56 +2993,73 @@ function montarHTMLCard(item){
     return `
     <div class="linha-topo">
         <div class="mlb-area">
-            <div class="mlb-topo-coluna">
-                <div class="mlb">${item["Código do Anúncio"]}</div>
-                <div class="tipo-mlb-box">
-                    <div class="tipo-mlb-titulo">TIPO:</div>
-                    <select class="select-tipo-mlb" onchange="salvarTipoMlb('${codigo}', this.value)">
-                        <option value="">Selecionar</option>
-                        <option value="MLB EM TESTE" ${valorSelecionadoTipoMlb(codigo, "MLB EM TESTE")}>MLB EM TESTE</option>
-                        <option value="MLB DE GIRO" ${valorSelecionadoTipoMlb(codigo, "MLB DE GIRO")}>MLB DE GIRO</option>
-                    </select>
+            
+            <div class="linha-mlb-titulo">
+                <div class="titulo-inline">
+                    <span class="titulo-carro-relacionado">${item["Título"] || ""}${montarTooltipTitulosMesmoCarro(item)}</span>
+                    ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
                 </div>
-                <div class="tipo-mlb-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">
-                    <div class="tipo-mlb-titulo">PRIORIDADE:</div>
-                    <select class="select-tipo-mlb" style="color:#9a3412;" onchange="salvarPrioridade('${codigo}', this.value)">
-                        <option value="">Selecionar</option>
-                        <option value="ALTA" ${valorSelecionadoPrioridade(codigo, "ALTA")}>ALTA</option>
-                        <option value="URGENTE" ${valorSelecionadoPrioridade(codigo, "URGENTE")}>URGENTE</option>
-                    </select>
+                <div class="mlb">${item["Código do Anúncio"]}</div>
+            </div>
+
+            <div class="mlb-topo-coluna">
+                <div class="topo-esquerda">
+                    <div class="tipo-mlb-box">
+                        <div class="tipo-mlb-titulo">TIPO:</div>
+                        <select class="select-tipo-mlb" onchange="salvarTipoMlb('${codigo}', this.value)">
+                            <option value="">Selecionar</option>
+                            <option value="MLB EM TESTE" ${valorSelecionadoTipoMlb(codigo, "MLB EM TESTE")}>MLB EM TESTE</option>
+                            <option value="MLB DE GIRO" ${valorSelecionadoTipoMlb(codigo, "MLB DE GIRO")}>MLB DE GIRO</option>
+                        </select>
+                    </div>
+                    <div class="tipo-mlb-box" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412;">
+                        <div class="tipo-mlb-titulo">PRIORIDADE:</div>
+                        <select class="select-tipo-mlb" style="color:#9a3412;" onchange="salvarPrioridade('${codigo}', this.value)">
+                            <option value="">Selecionar</option>
+                            <option value="ALTA" ${valorSelecionadoPrioridade(codigo, "ALTA")}>ALTA</option>
+                            <option value="URGENTE" ${valorSelecionadoPrioridade(codigo, "URGENTE")}>URGENTE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="topo-direita">
+                    <div class="ia-box ${sugestoes.classe}">
+                        <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
+                        <div>${sugestoes.detalhe}</div>
+                        <div class="ia-tooltip">
+                            ${sugestoes.tooltip}
+                        </div>
+                    </div>
+
+                    <div class="acao-box">
+                        <div class="acao-titulo">AÇÃO</div>
+                        <textarea class="acao-textarea" placeholder="Digite a ação deste MLB..." oninput="salvarAcaoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterAcaoMlbSalva(codigo))}</textarea>
+                    </div>
+
+                    <div class="retorno-box">
+                        <div class="acao-titulo">RETORNO</div>
+                        <textarea class="acao-textarea" placeholder="Digite o retorno deste MLB..." oninput="salvarRetornoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterRetornoMlbSalvo(codigo))}</textarea>
+                    </div>
+
+                    <div class="comentario-topo"
+                        onclick="abrirComentarioMlb('${item["Código do Anúncio"]}', '${item["SKU"]}')">
+                        💬 ${montarBubbleResumoComentario(codigo)}
+                    </div>
                 </div>
             </div>
 
-<div class="topo-direita">
-    <div class="ia-box ${sugestoes.classe}">
-        <div class="ia-titulo">IA → ${sugestoes.statusIA}</div>
-        <div>${sugestoes.detalhe}</div>
-        <div class="ia-tooltip">
-            ${sugestoes.tooltip}
-        </div>
-    </div>
-
-    <div class="acao-box">
-        <div class="acao-titulo">AÇÃO</div>
-        <textarea class="acao-textarea" placeholder="Digite a ação deste MLB..." oninput="salvarAcaoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterAcaoMlbSalva(codigo))}</textarea>
-    </div>
-
-    <div class="comentario-topo"
-        onclick="abrirComentarioMlb('${item["Código do Anúncio"]}', '${item["SKU"]}')">
-        💬 ${montarBubbleResumoComentario(codigo)}
-    </div>
-</div>
         </div>
     </div>
 
     <div style="margin-top:6px;">
-        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-            <strong>Título:</strong>
-            <span class="titulo-carro-relacionado">${item["Título"] || ""}${montarTooltipTitulosMesmoCarro(item)}</span>
-            ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
-        </div>
-
         <div><strong>SKU:</strong> <span class="sku-info-wrap"><span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span><span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span></span>${String(item["ATENÇÃO"] || item["ATENCAO"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#b45309;">${item["ATENÇÃO"] || item["ATENCAO"]}</span>` : ""}${String(item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#1d4ed8;">${item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"]}</span>` : ""}</div>
+        <div class="info-extra-sku">
+            <div class="metric">ADS: ${item["ADS"] || ""}</div>
+            <div class="metric">Curva 30d: ${item["Curva 30d"] || item["Curva 30D"] || ""}</div>
+            <div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || item["Tendência 30"] || ""}</div>
+            <div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
+            <div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
+        </div>
         <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
         <div><strong>Full:</strong> ${item["Full"] || ""}</div>
         <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
@@ -2794,17 +3126,7 @@ function montarHTMLCard(item){
 
         <div class="linha-quatro">
             <div class="duplo-bloco">
-                <div class="bloco">
-                    <h3>📈 MELI & PERFORMANCE</h3>
-                    <div class="metric">Info Meli: ${item["INFO MELI"] || ""}</div>
-                    <div class="metric">Sugestão Meli: ${item["SUGESTAO MELI"] || ""}</div>
-                    <div class="metric">Estoque Meli: ${item["ESTOQUE MELI"] || ""}</div>
-                    <div class="metric">ADS: ${item["ADS"] || ""}</div>
-                    <div class="metric">Curva 30d: ${item["Curva 30d"] || item["Curva 30D"] || ""}</div>
-                    <div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || item["Tendência 30"] || ""}</div>
-                    <div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
-                    <div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
-                </div>
+
 
                 <div class="bloco">
                     <h3>📅 HISTÓRICO MENSAL MELI</h3>
@@ -2816,7 +3138,8 @@ function montarHTMLCard(item){
                     <div class="metric">JANEIRO: ${item["JANEIRO"] || 0}</div>
                     <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0}</div>
                     <div class="metric">MARÇO: ${item["MARÇO"] || 0}</div>
-                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
+                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
+                    <div class="metric" style="font-weight:bold; color:#7a4100;">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
                 </div>
             </div>
 
@@ -2845,6 +3168,7 @@ function montarHTMLCard(item){
                     <div class="metric">A Caminho: ${item["A CAMINHO DO FULL"] || 0}</div>
                     <div class="metric">Full: ${item["ESTOQUE FULL"] || 0}</div>
                     <div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</div>
+                    <div class="metric" style="font-weight:bold; color:#1c4fb8;">15D - Full = ${numeroInteiro(item["15 DIAS"] || 0) - numeroInteiro(item["ESTOQUE FULL"] || 0)}</div>
                     <div class="metric">Média mensal SKU: ${item["MEDIA_SIGNUS"] || 0}</div>
                 </div>
             </div>
