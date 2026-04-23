@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login seguro</title>
+    <style>
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family:Arial, Helvetica, sans-serif;
+            background:linear-gradient(135deg,#0f172a,#1e293b 55%,#334155);
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+            color:#e2e8f0;
+        }
+        .login-wrap{
+            width:100%;
+            max-width:420px;
+            background:rgba(255,255,255,0.08);
+            border:1px solid rgba(255,255,255,0.14);
+            border-radius:22px;
+            backdrop-filter:blur(16px);
+            box-shadow:0 20px 50px rgba(0,0,0,0.30);
+            padding:28px;
+        }
+        .badge{
+            display:inline-block;
+            padding:8px 12px;
+            border-radius:999px;
+            background:#0f766e;
+            color:#ccfbf1;
+            font-size:12px;
+            font-weight:700;
+            margin-bottom:16px;
+        }
+        h1{margin:0 0 8px;font-size:30px;color:#fff}
+        p{margin:0 0 22px;color:#cbd5e1;line-height:1.5}
+        label{display:block;font-size:13px;font-weight:700;margin-bottom:8px;color:#e2e8f0}
+        input{
+            width:100%;
+            border:1px solid rgba(255,255,255,0.16);
+            border-radius:14px;
+            padding:14px 15px;
+            background:rgba(15,23,42,0.45);
+            color:#fff;
+            outline:none;
+            font-size:15px;
+            margin-bottom:16px;
+        }
+        input:focus{border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,0.18)}
+        button{
+            width:100%;
+            border:none;
+            border-radius:14px;
+            padding:15px 18px;
+            background:linear-gradient(135deg,#2563eb,#1d4ed8);
+            color:#fff;
+            font-size:15px;
+            font-weight:700;
+            cursor:pointer;
+            box-shadow:0 14px 30px rgba(37,99,235,0.30);
+        }
+        .box{
+            margin-top:16px;
+            padding:14px;
+            border-radius:14px;
+            font-size:13px;
+            line-height:1.5;
+        }
+        .danger{background:rgba(127,29,29,0.45); border:1px solid rgba(248,113,113,0.35)}
+        .success{background:rgba(20,83,45,0.45); border:1px solid rgba(74,222,128,0.35)}
+        .warning{background:rgba(120,53,15,0.45); border:1px solid rgba(251,191,36,0.35)}
+        .hint{
+            margin-top:16px;
+            font-size:12px;
+            color:#94a3b8;
+            line-height:1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="badge">ACESSO PROTEGIDO</div>
+        <h1>Entrar no sistema</h1>
+        <p>Use seu usuário ou login cadastrado e sua senha forte para acessar. Tentativas excessivas bloqueiam a conta temporariamente.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="box {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('auth_bp.login_post', next=request.args.get('next', '')) }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <label for="email">Usuário</label>
+            <input id="email" name="email" type="text" required maxlength="120" placeholder="Digite seu usuário">
+
+            <label for="password">Senha</label>
+            <input id="password" name="password" type="password" required maxlength="120" placeholder="Digite sua senha">
+
+            <button type="submit">Entrar com segurança</button>
+        </form>
+
+        <div class="hint">
+            Recomendado: subir com HTTPS, SECRET_KEY forte em variável de ambiente e banco fora da pasta pública.
+        </div>
+    </div>
+</body>
+</html>

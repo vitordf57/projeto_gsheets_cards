@@ -20,24 +20,207 @@ body { margin: 0; font-family: Arial; display: flex; background: #f3f4f6; }
 .content { margin-left: 220px; padding: 30px; width: calc(100vw - 220px); max-width: calc(100vw - 220px); min-width: 0; transition: margin-left 0.3s ease, width 0.3s ease; overflow-x: hidden; }
 .content.expanded { margin-left: 74px; width: calc(100vw - 74px); max-width: calc(100vw - 74px); }
 .sidebar a.ativo{ background: rgba(255,255,255,0.12); border-left: 4px solid #60a5fa; padding-left: 16px; font-weight: bold; }
+.sidebar-bottom{margin-top:22px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.10);display:flex;flex-direction:column;gap:10px;}
+.logout-mini-form{margin:0;}
+.logout-mini-btn{width:100%;display:flex;align-items:center;gap:10px;color:white;background:#1f2937;border:none;padding:10px 8px;border-radius:6px;cursor:pointer;font-size:15px;text-align:left;}
+.logout-mini-btn:hover{background:#374151;}
+.sidebar-user{font-size:12px;color:#cbd5e1;margin:6px 8px 0;}
+
+.loading-global{
+    position:fixed;
+    inset:0;
+    background:linear-gradient(135deg, rgba(15,23,42,0.86), rgba(30,41,59,0.82));
+    backdrop-filter:blur(6px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    z-index:99999;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .22s ease, visibility .22s ease;
+}
+.loading-global.ativo{
+    opacity:1;
+    visibility:visible;
+}
+.loading-card{
+    width:min(460px, 100%);
+    background:rgba(255,255,255,0.96);
+    border:1px solid rgba(226,232,240,0.95);
+    border-radius:24px;
+    box-shadow:0 24px 60px rgba(15,23,42,0.28);
+    padding:26px 24px 22px;
+}
+.loading-topo{
+    display:flex;
+    align-items:center;
+    gap:18px;
+}
+.loading-spinner{
+    width:58px;
+    height:58px;
+    border-radius:50%;
+    border:4px solid #dbeafe;
+    border-top-color:#2563eb;
+    animation:loadingGiro .9s linear infinite;
+    flex:0 0 auto;
+    position:relative;
+}
+.loading-spinner::after{
+    content:"";
+    position:absolute;
+    inset:9px;
+    border-radius:50%;
+    border:3px solid transparent;
+    border-top-color:#60a5fa;
+    animation:loadingGiro 1.4s linear infinite reverse;
+}
+.loading-textos{min-width:0;}
+.loading-titulo{
+    margin:0;
+    font-size:22px;
+    color:#0f172a;
+    font-weight:800;
+}
+.loading-subtitulo{
+    margin:6px 0 0;
+    font-size:14px;
+    color:#475569;
+    line-height:1.5;
+}
+.loading-barra{
+    margin-top:18px;
+    width:100%;
+    height:10px;
+    background:#e2e8f0;
+    border-radius:999px;
+    overflow:hidden;
+}
+.loading-barra-fill{
+    width:42%;
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg,#2563eb,#60a5fa,#93c5fd);
+    animation:loadingBarra 1.25s ease-in-out infinite;
+}
+.loading-etapa{
+    margin-top:14px;
+    font-size:13px;
+    color:#334155;
+    font-weight:700;
+}
+.loading-erro{
+    display:none;
+    margin-top:16px;
+    padding:14px 16px;
+    border-radius:16px;
+    background:#fef2f2;
+    border:1px solid #fecaca;
+    color:#b91c1c;
+}
+.loading-global.erro .loading-spinner{
+    animation:none;
+    border-color:#fecaca;
+    border-top-color:#dc2626;
+}
+.loading-global.erro .loading-barra-fill{
+    animation:none;
+    width:100%;
+    background:linear-gradient(90deg,#dc2626,#f87171);
+}
+.loading-global.erro .loading-erro{
+    display:block;
+}
+.loading-global.erro .loading-titulo{color:#991b1b;}
+.loading-global.erro .loading-subtitulo{color:#7f1d1d;}
+.loading-global.erro .loading-etapa{color:#991b1b;}
+.loading-toast-erro{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    max-width:min(420px, calc(100vw - 32px));
+    background:#fff;
+    border:1px solid #fecaca;
+    border-left:6px solid #dc2626;
+    color:#7f1d1d;
+    border-radius:18px;
+    padding:16px 18px;
+    box-shadow:0 18px 42px rgba(15,23,42,0.18);
+    z-index:100000;
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(14px);
+    transition:all .22s ease;
+}
+.loading-toast-erro.ativo{
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+}
+.loading-toast-erro strong{
+    display:block;
+    font-size:15px;
+    margin-bottom:4px;
+}
+.loading-toast-erro span{
+    display:block;
+    font-size:13px;
+    line-height:1.45;
+}
+@keyframes loadingGiro{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+@keyframes loadingBarra{ 0%{transform:translateX(-90%); width:35%;} 50%{transform:translateX(90%); width:55%;} 100%{transform:translateX(210%); width:35%;} }
+
 </style>
 </head>
 <body>
 <div class="sidebar" id="sidebar">
     <div class="toggle-btn" onclick="toggleSidebar()">☰</div>
     <h2>📊 Comand full</h2>
-    <a href="/home">🏠 <span>Início</span></a>
-    <a href="/">📦 <span>MLBS Em Análise</span></a>
-    <a href="/?tela=enviando">🚚 <span>Enviando (<span id="contEnvSidebar">0</span>)</span></a>
-    <a href="/?tela=ecommerce">🛒 <span>E-commerce (<span id="contEcomSidebar">0</span>)</span></a>
-    <a href="/?tela=compras">🛍️ <span>Compras (<span id="contComprasSidebar">0</span>)</span></a>
-    <a href="/?tela=homologar">🧪 <span>Homologar (<span id="contHomSidebar">0</span>)</span></a>
-    <a href="/?tela=naoEnviar">❌ <span>Não Enviar (<span id="contNaoSidebar">0</span>)</span></a>
-    <a href="/?tela=acompanhamento">📊 <span>Acompanhamento (<span id="contAcompanhamentoSidebar">0</span>)</span></a>
-    <a href="/metricas-full">📦 <span>Lotes de Envio</span></a>
-    <a href="/conferencia">📋 <span>Conferência</span></a>
-    <a href="/picking">📲 <span>Picking</span></a>
+    {% if usuario_pode('home') %}<a href="/home">🏠 <span>Início</span></a>{% endif %}
+    {% if usuario_pode('principal') %}<a href="/">📦 <span>MLBS Em Análise</span></a>{% endif %}
+    {% if usuario_pode('enviando') %}<a href="/?tela=enviando">🚚 <span>Enviando (<span id="contEnvSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('ecommerce') %}<a href="/?tela=ecommerce">🛒 <span>E-commerce (<span id="contEcomSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('compras') %}<a href="/?tela=compras">🛍️ <span>Compras (<span id="contComprasSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('homologar') %}<a href="/?tela=homologar">🧪 <span>Homologar (<span id="contHomSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('naoEnviar') %}<a href="/?tela=naoEnviar">❌ <span>Não Enviar (<span id="contNaoSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('acompanhamento') %}<a href="/?tela=acompanhamento">📊 <span>Acompanhamento (<span id="contAcompanhamentoSidebar">0</span>)</span></a>{% endif %}
+    {% if usuario_pode('metricas_full') %}<a href="/metricas-full">📦 <span>Lotes de Envio</span></a>{% endif %}
+    {% if usuario_pode('conferencia') %}<a href="/conferencia">📋 <span>Conferência</span></a>{% endif %}
+    {% if usuario_pode('picking') %}<a href="/picking">📲 <span>Picking</span></a>{% endif %}
+
+    {% if auth_user %}
+    <div class="sidebar-bottom">
+        {% if auth_user.is_admin %}<a href="/admin/usuarios">🛡️ <span>Administrador</span></a>{% endif %}
+        <div class="sidebar-user">👤 {{ auth_user.nome }}</div>
+        <form class="logout-mini-form" method="post" action="{{ url_for('auth_bp.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="logout-mini-btn">↩️ <span>Sair</span></button>
+        </form>
+    </div>
+    {% endif %}
 </div>
+
+
+<div id="loadingGlobal" class="loading-global ativo" aria-live="polite" aria-busy="true">
+    <div class="loading-card">
+        <div class="loading-topo">
+            <div class="loading-spinner"></div>
+            <div class="loading-textos">
+                <h3 id="loadingTitulo" class="loading-titulo">Carregando dados</h3>
+                <p id="loadingSubtitulo" class="loading-subtitulo">Estamos preparando as informações da tela para você.</p>
+            </div>
+        </div>
+        <div class="loading-barra"><div class="loading-barra-fill"></div></div>
+        <div id="loadingEtapa" class="loading-etapa">Aguarde enquanto os dados são processados...</div>
+        <div id="loadingErroBox" class="loading-erro">Erro ao carregar dados. Verifique a conexão e tente novamente.</div>
+    </div>
+</div>
+<div id="loadingToastErro" class="loading-toast-erro" role="alert" aria-live="assertive">
+    <strong>Erro ao carregar dados</strong>
+    <span id="loadingToastErroTexto">Não foi possível concluir o carregamento desta ação.</span>
+</div>
+
 
 <div class="content" id="content">
     {% block content %}{% endblock %}
@@ -115,6 +298,224 @@ document.addEventListener("DOMContentLoaded", function () {
         link.addEventListener("click", function () { atualizarLinksSidebarComFiltros(); });
     });
 });
+
+(function(){
+    const overlay = document.getElementById('loadingGlobal');
+    const titulo = document.getElementById('loadingTitulo');
+    const subtitulo = document.getElementById('loadingSubtitulo');
+    const etapa = document.getElementById('loadingEtapa');
+    const erroBox = document.getElementById('loadingErroBox');
+    const toast = document.getElementById('loadingToastErro');
+    const toastTexto = document.getElementById('loadingToastErroTexto');
+    let pendingRequests = 0;
+    let openTimer = null;
+    let closeTimer = null;
+    let initialLoadConcluido = false;
+    let pageStableTimer = null;
+    let minOverlayTimer = null;
+    let minOverlayElapsed = false;
+    let domMutationObserver = null;
+
+    function setTexto(t, s, e){
+        if (t) titulo.textContent = t;
+        if (s) subtitulo.textContent = s;
+        if (e) etapa.textContent = e;
+    }
+
+    window.mostrarLoadingGlobal = function(opcoes){
+        const cfg = opcoes || {};
+        clearTimeout(closeTimer);
+        setTexto(
+            cfg.titulo || 'Carregando dados',
+            cfg.subtitulo || 'Estamos preparando as informações da tela para você.',
+            cfg.etapa || 'Aguarde enquanto os dados são processados...'
+        );
+        overlay.classList.remove('erro');
+        erroBox.textContent = cfg.erro || 'Erro ao carregar dados. Verifique a conexão e tente novamente.';
+        overlay.classList.add('ativo');
+        document.body.style.cursor = 'progress';
+    };
+
+    window.esconderLoadingGlobal = function(){
+        clearTimeout(openTimer);
+        clearTimeout(pageStableTimer);
+        closeTimer = setTimeout(() => {
+            overlay.classList.remove('ativo');
+            overlay.classList.remove('erro');
+            document.body.style.cursor = '';
+        }, 120);
+    };
+
+    function tentarFecharLoadingInicial(){
+        if (!initialLoadConcluido) return;
+        if (!minOverlayElapsed) return;
+        if (pendingRequests > 0) return;
+        clearTimeout(pageStableTimer);
+        pageStableTimer = setTimeout(() => {
+            if (pendingRequests === 0 && minOverlayElapsed && !overlay.classList.contains('erro')) {
+                window.esconderLoadingGlobal();
+            }
+        }, 700);
+    }
+
+    function reiniciarJanelaDeEstabilidade(){
+        if (!initialLoadConcluido) return;
+        clearTimeout(pageStableTimer);
+        tentarFecharLoadingInicial();
+    }
+
+    window.mostrarErroLoadingGlobal = function(mensagem){
+        clearTimeout(openTimer);
+        clearTimeout(closeTimer);
+        setTexto('Erro ao carregar dados', 'Não foi possível concluir esta operação agora.', 'Tente novamente em instantes.');
+        erroBox.textContent = mensagem || 'Erro ao carregar dados. Verifique a conexão e tente novamente.';
+        overlay.classList.add('ativo');
+        overlay.classList.add('erro');
+        document.body.style.cursor = '';
+        if (toast && toastTexto){
+            toastTexto.textContent = mensagem || 'Não foi possível concluir o carregamento desta ação.';
+            toast.classList.add('ativo');
+            clearTimeout(window.__toastErroTimer);
+            window.__toastErroTimer = setTimeout(() => toast.classList.remove('ativo'), 5000);
+        }
+    };
+
+    minOverlayTimer = setTimeout(() => {
+        minOverlayElapsed = true;
+        tentarFecharLoadingInicial();
+    }, 900);
+
+    window.addEventListener('load', function(){
+        initialLoadConcluido = true;
+        setTexto('Carregando dados', 'Finalizando o carregamento das informações da tela.', 'Validando dados recebidos e montando os últimos componentes...');
+        tentarFecharLoadingInicial();
+
+        if ('MutationObserver' in window) {
+            domMutationObserver = new MutationObserver(function(){
+                reiniciarJanelaDeEstabilidade();
+            });
+            domMutationObserver.observe(document.getElementById('content') || document.body, {
+                childList:true,
+                subtree:true,
+                attributes:true,
+                characterData:false
+            });
+            setTimeout(function(){
+                if (domMutationObserver) {
+                    domMutationObserver.disconnect();
+                    domMutationObserver = null;
+                    tentarFecharLoadingInicial();
+                }
+            }, 6000);
+        }
+    });
+
+    document.addEventListener('readystatechange', function(){
+        if (document.readyState === 'interactive') {
+            setTexto('Carregando dados', 'Estamos preparando os componentes da tela.', 'Organizando informações e validando recursos...');
+        }
+    });
+
+    document.addEventListener('click', function(e){
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const href = link.getAttribute('href') || '';
+        const targetBlank = link.getAttribute('target') === '_blank';
+        const ignora = href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || link.hasAttribute('download') || targetBlank;
+        if (ignora) return;
+        window.mostrarLoadingGlobal({
+            titulo:'Carregando dados',
+            subtitulo:'Abrindo a próxima tela do sistema.',
+            etapa:'Buscando informações atualizadas...'
+        });
+    }, true);
+
+    document.addEventListener('submit', function(){
+        window.mostrarLoadingGlobal({
+            titulo:'Carregando dados',
+            subtitulo:'Estamos processando sua solicitação.',
+            etapa:'Enviando informações e aguardando resposta...'
+        });
+    }, true);
+
+    const fetchOriginal = window.fetch;
+    if (fetchOriginal) {
+        window.fetch = function(){
+            pendingRequests++;
+            clearTimeout(openTimer);
+            openTimer = setTimeout(() => {
+                if (pendingRequests > 0) {
+                    window.mostrarLoadingGlobal({
+                        titulo:'Carregando dados',
+                        subtitulo:'Estamos atualizando as informações da tela.',
+                        etapa:'Consultando dados do sistema...'
+                    });
+                }
+            }, 180);
+            return fetchOriginal.apply(this, arguments)
+                .then(function(response){
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar dados.');
+                    }
+                    return response;
+                })
+                .catch(function(error){
+                    window.mostrarErroLoadingGlobal((error && error.message) ? error.message : 'Erro ao carregar dados.');
+                    throw error;
+                })
+                .finally(function(){
+                    pendingRequests = Math.max(0, pendingRequests - 1);
+                    if (pendingRequests === 0 && !overlay.classList.contains('erro')) {
+                        tentarFecharLoadingInicial();
+                    }
+                });
+        };
+    }
+
+    const xhrOpen = XMLHttpRequest.prototype.open;
+    const xhrSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(){
+        this.__loadingTrack = true;
+        return xhrOpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function(){
+        if (this.__loadingTrack) {
+            pendingRequests++;
+            clearTimeout(openTimer);
+            openTimer = setTimeout(() => {
+                if (pendingRequests > 0) {
+                    window.mostrarLoadingGlobal({
+                        titulo:'Carregando dados',
+                        subtitulo:'Estamos atualizando as informações da tela.',
+                        etapa:'Consultando dados do sistema...'
+                    });
+                }
+            }, 180);
+            const finalizar = () => {
+                pendingRequests = Math.max(0, pendingRequests - 1);
+                if (this.status >= 400) {
+                    window.mostrarErroLoadingGlobal('Erro ao carregar dados.');
+                } else if (pendingRequests === 0 && !overlay.classList.contains('erro')) {
+                    tentarFecharLoadingInicial();
+                }
+            };
+            this.addEventListener('loadend', finalizar, { once:true });
+            this.addEventListener('error', function(){ window.mostrarErroLoadingGlobal('Erro ao carregar dados.'); }, { once:true });
+        }
+        return xhrSend.apply(this, arguments);
+    };
+
+    window.addEventListener('error', function(){
+        if (overlay.classList.contains('ativo')) {
+            window.mostrarErroLoadingGlobal('Erro ao carregar dados.');
+        }
+    });
+
+    window.addEventListener('unhandledrejection', function(){
+        window.mostrarErroLoadingGlobal('Erro ao carregar dados.');
+    });
+})();
+
 </script>
 </body>
 </html>

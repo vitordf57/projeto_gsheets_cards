@@ -15,8 +15,90 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 from calendar import month_name
+from auth_blueprint import configure_auth_app, get_current_user, usuario_pode
+from flask import abort
 
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "troque-esta-chave-em-producao")
+app.config["AUTH_DB_PATH"] = os.path.join(app.instance_path, "auth_users.db")
+os.makedirs(app.instance_path, exist_ok=True)
+os.environ.setdefault("ADMIN_EMAIL", "Vitordf57")
+os.environ.setdefault("ADMIN_PASSWORD", "Condornew25@")
+configure_auth_app(app)
+
+SCREEN_ENDPOINT_RULES = {
+    "/home": "home",
+    "/metricas-full": "metricas_full",
+    "/conferencia": "conferencia",
+    "/picking": "picking",
+    "/api/historico-mensal": "principal",
+    "/api/historico-mensal-resumo": "principal",
+    "/dados": "principal",
+    "/dados-dashboard": "principal",
+    "/exportar-excel": "principal",
+    "/criar-lote-enviando": "principal",
+    "/gerar-filete": "principal",
+    "/dados-full": "principal",
+    "/salvar-status": "principal",
+    "/status": "principal",
+    "/comentarios": "principal",
+    "/comentarios-mlb": "principal",
+    "/comentarios-mlb-chat": "principal",
+    "/salvar-comentario": "principal",
+    "/salvar-comentario-mlb": "principal",
+    "/debug-comentarios": "principal",
+    "/dashboard": "principal",
+    "/gerar-pdf-filete": "principal",
+    "/api/full-distribuicao": "principal",
+    "/api/full-distribuicao-detalhe": "principal",
+    "/salvar-conferencia-item": "conferencia",
+    "/api/picking/coletar": "picking",
+}
+
+SCREEN_PREFIX_RULES = [
+    ("/api/coletas-calendario", "metricas_full"),
+    ("/api/lote-envio/", "metricas_full"),
+    ("/lote-envio/", "metricas_full"),
+    ("/excluir-lote/", "metricas_full"),
+]
+
+
+def _resolver_tela_por_path(path: str):
+    if path == "/":
+        tela = request.args.get("tela", "principal") or "principal"
+        return tela
+
+    if path in SCREEN_ENDPOINT_RULES:
+        return SCREEN_ENDPOINT_RULES[path]
+
+    for prefix, screen_key in SCREEN_PREFIX_RULES:
+        if path.startswith(prefix):
+            return screen_key
+
+    return None
+
+
+@app.before_request
+def proteger_rotas_com_login_e_permissao():
+    endpoint = request.endpoint or ""
+    path = request.path or "/"
+
+    if endpoint.startswith("auth_bp.") or endpoint == "static":
+        return None
+
+    tela = _resolver_tela_por_path(path)
+    if tela is None:
+        return None
+
+    user = get_current_user()
+    if not user:
+        return redirect(f"/login?next={request.full_path.rstrip('?')}")
+
+    if not (user.is_admin or usuario_pode(tela)):
+        abort(403)
+
+    return None
+
 
 UPLOAD_FOLDER_CONFERENCIA = os.path.join("static", "uploads", "conferencia")
 os.makedirs(UPLOAD_FOLDER_CONFERENCIA, exist_ok=True)

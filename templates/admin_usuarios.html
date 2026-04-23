@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+html, body{
+    overflow-x:hidden;
+}
+
+.page-wrap{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:hidden;
+}
+
+.admin-wrap{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+}
+
+.topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+}
+
+.title h1{
+    margin:0 0 4px;
+    font-size:30px;
+    color:#0f172a;
+}
+
+.title p{
+    margin:0;
+    color:#475569;
+    line-height:1.5;
+}
+
+.logout-form{
+    flex-shrink:0;
+}
+
+.logout-form button{
+    border:none;
+    background:#0f172a;
+    color:#fff;
+    padding:12px 16px;
+    border-radius:12px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.msgs{
+    margin-bottom:18px;
+}
+
+.msg{
+    padding:14px 16px;
+    border-radius:14px;
+    margin-bottom:10px;
+    font-weight:700;
+}
+
+.success{background:#dcfce7;color:#166534}
+.danger{background:#fee2e2;color:#b91c1c}
+.warning{background:#fef3c7;color:#92400e}
+
+.grid{
+    display:grid;
+    grid-template-columns:360px minmax(0,1fr);
+    gap:20px;
+    align-items:start;
+    width:100%;
+    min-width:0;
+}
+
+.card{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 10px 28px rgba(15,23,42,0.06);
+    min-width:0;
+    overflow:hidden;
+}
+
+.card h2{
+    margin:0 0 18px 0;
+    font-size:20px;
+    color:#0f172a;
+}
+
+label{
+    display:block;
+    font-size:12px;
+    font-weight:800;
+    margin-bottom:8px;
+    color:#334155;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+}
+
+input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid #cbd5e1;
+    border-radius:12px;
+    margin-bottom:14px;
+    font-size:14px;
+    outline:none;
+    min-width:0;
+    box-sizing:border-box;
+}
+
+input:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.checks{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px 12px;
+    margin-bottom:14px;
+}
+
+.check{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 12px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
+    min-width:0;
+}
+
+.check input{
+    width:auto;
+    margin:0;
+    flex-shrink:0;
+}
+
+.check span{
+    display:block;
+    min-width:0;
+    word-break:break-word;
+    line-height:1.25;
+    font-size:13px;
+    font-weight:700;
+    color:#1e3a5f;
+}
+
+.switches{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+
+.switches label{
+    margin:0;
+    text-transform:none;
+    letter-spacing:0;
+    font-size:13px;
+    font-weight:700;
+}
+
+.switches .check{
+    padding:12px 14px;
+}
+
+.btn{
+    border:none;
+    border-radius:12px;
+    padding:13px 16px;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.btn-primary{
+    background:#2563eb;
+    color:#fff;
+    width:100%;
+}
+
+.btn-warning{
+    background:#f59e0b;
+    color:#fff;
+}
+
+.btn-acao-toggle{
+    background:#0f172a;
+    color:#fff;
+    width:auto;
+    min-width:130px;
+    padding:12px 14px;
+}
+
+.tabela-card{
+    min-width:0;
+}
+
+.tabela-wrap{
+    width:100%;
+    max-width:100%;
+    overflow:visible;
+}
+
+table{
+    width:100%;
+    min-width:0;
+    border-collapse:collapse;
+    table-layout:fixed;
+}
+
+th,td{
+    padding:14px 12px;
+    border-bottom:1px solid #e2e8f0;
+    text-align:left;
+    vertical-align:top;
+    word-break:break-word;
+}
+
+th{
+    font-size:12px;
+    color:#475569;
+    text-transform:uppercase;
+    letter-spacing:.45px;
+    white-space:normal;
+}
+
+td{
+    min-width:0;
+}
+
+.usuario-cell strong,
+.usuario-cell span{
+    word-break:break-word;
+}
+
+.perms{
+    min-width:0;
+}
+
+.pill{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:800;
+    margin:2px 6px 2px 0;
+}
+
+.pill-admin{background:#ede9fe;color:#5b21b6}
+.pill-user{background:#e0f2fe;color:#0369a1}
+.pill-ativo{background:#dcfce7;color:#166534}
+.pill-inativo{background:#fee2e2;color:#b91c1c}
+
+.linha-form{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+}
+
+.mini-form{
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    padding:14px;
+    min-width:0;
+    width:100%;
+    box-sizing:border-box;
+}
+
+.acoes{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.sem-permissoes{
+    color:#64748b;
+}
+
+.acoes-coluna{
+    min-width:0;
+}
+
+.acoes-linha{
+    display:none;
+}
+
+.acoes-linha.aberta{
+    display:table-row;
+}
+
+.acoes-celula{
+    padding-top:0;
+    background:#ffffff;
+}
+
+@media (max-width: 1280px){
+    .grid{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width: 980px){
+    .linha-form{
+        grid-template-columns:1fr;
+    }
+
+    .checks{
+        grid-template-columns:1fr 1fr;
+    }
+}
+
+@media (max-width: 720px){
+    .title h1{
+        font-size:24px;
+    }
+
+    .checks{
+        grid-template-columns:1fr;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td{
+        display:block;
+        width:100%;
+    }
+
+    thead{
+        display:none;
+    }
+
+    tr{
+        border-bottom:1px solid #e2e8f0;
+        padding:10px 0;
+    }
+
+    td{
+        border:none;
+        padding:8px 0;
+    }
+
+    .acoes-linha.aberta{
+        display:block;
+    }
+
+    .acoes-celula{
+        padding:8px 0 0 0;
+    }
+
+    .btn-acao-toggle{
+        width:100%;
+    }
+}
+</style>
+
+<div class="page-wrap">
+    <div class="admin-wrap">
+        <div class="topo">
+            <div class="title">
+                <h1>Painel do administrador</h1>
+                <p>Cadastre funcionários, ative ou desative usuários e escolha quais telas cada pessoa pode acessar.</p>
+            </div>
+
+            <form class="logout-form" method="post" action="{{ url_for('auth_bp.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit">Sair</button>
+            </form>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="msgs">
+                    {% for category, message in messages %}
+                        <div class="msg {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="grid">
+            <div class="card">
+                <h2>Novo funcionário</h2>
+
+                <form method="post" action="{{ url_for('auth_bp.admin_users_create') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <label>Nome</label>
+                    <input type="text" name="nome" required maxlength="120" placeholder="Nome do funcionário">
+
+                    <label>Usuário</label>
+                    <input type="email" name="email" required maxlength="120" placeholder="login do funcionário">
+
+                    <label>Senha inicial</label>
+                    <input type="password" name="senha" required maxlength="120" placeholder="Senha forte">
+
+                    <label>Telas permitidas</label>
+                    <div class="checks">
+                        {% for key, label in telas_disponiveis %}
+                            <label class="check">
+                                <input type="checkbox" name="screens" value="{{ key }}">
+                                <span>{{ label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+
+                    <div class="switches">
+                        <label class="check">
+                            <input type="checkbox" name="is_admin" value="1">
+                            <span>Administrador</span>
+                        </label>
+                        <label class="check">
+                            <input type="checkbox" name="ativo" value="1" checked>
+                            <span>Ativo</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit">Criar funcionário</button>
+                </form>
+            </div>
+
+            <div class="card tabela-card">
+                <h2>Usuários cadastrados</h2>
+
+                <div class="tabela-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Perfil</th>
+                                <th>Status</th>
+                                <th class="perms">Permissões</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in usuarios %}
+                            <tr>
+                                <td class="usuario-cell">
+                                    <strong>{{ user.nome }}</strong><br>
+                                    <span>{{ user.email }}</span>
+                                </td>
+                                <td>
+                                    {% if user.is_admin %}
+                                        <span class="pill pill-admin">Administrador</span>
+                                    {% else %}
+                                        <span class="pill pill-user">Funcionário</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.ativo %}
+                                        <span class="pill pill-ativo">Ativo</span>
+                                    {% else %}
+                                        <span class="pill pill-inativo">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="perms">
+                                    {% if user.permissoes %}
+                                        {% for perm in user.permissoes %}
+                                            <span class="pill pill-user">{{ perm }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="sem-permissoes">Sem telas liberadas</span>
+                                    {% endif %}
+                                </td>
+                                <td class="acoes-coluna">
+                                    <button class="btn btn-acao-toggle" type="button" onclick="toggleAcoes('{{ user.id }}')">Abrir ações</button>
+                                </td>
+                            </tr>
+                            <tr id="acoes-{{ user.id }}" class="acoes-linha">
+                                <td colspan="5" class="acoes-celula">
+                                    <div class="mini-form">
+                                        <form method="post" action="{{ url_for('auth_bp.admin_users_update', user_id=user.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                                            <div class="linha-form">
+                                                <div>
+                                                    <label>Nome</label>
+                                                    <input type="text" name="nome" value="{{ user.nome }}" required>
+                                                </div>
+                                                <div>
+                                                    <label>Usuário</label>
+                                                    <input type="email" name="email" value="{{ user.email }}" required>
+                                                </div>
+                                            </div>
+
+                                            <label>Nova senha (opcional)</label>
+                                            <input type="password" name="senha" placeholder="Preencha só se quiser trocar">
+
+                                            <label>Telas permitidas</label>
+                                            <div class="checks">
+                                                {% for key, label in telas_disponiveis %}
+                                                    <label class="check">
+                                                        <input type="checkbox" name="screens" value="{{ key }}" {% if key in user.permissoes %}checked{% endif %}>
+                                                        <span>{{ label }}</span>
+                                                    </label>
+                                                {% endfor %}
+                                            </div>
+
+                                            <div class="switches">
+                                                <label class="check">
+                                                    <input type="checkbox" name="is_admin" value="1" {% if user.is_admin %}checked{% endif %}>
+                                                    <span>Administrador</span>
+                                                </label>
+                                                <label class="check">
+                                                    <input type="checkbox" name="ativo" value="1" {% if user.ativo %}checked{% endif %}>
+                                                    <span>Ativo</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="acoes">
+                                                <button class="btn btn-primary" type="submit">Salvar</button>
+                                            </div>
+                                        </form>
+
+                                        <form method="post" action="{{ url_for('auth_bp.admin_users_unlock', user_id=user.id) }}" style="margin-top:8px;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                            <button class="btn btn-warning" type="submit">Limpar bloqueio</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAcoes(userId){
+    const linha = document.getElementById('acoes-' + userId);
+    if (!linha) return;
+    linha.classList.toggle('aberta');
+}
+</script>
+{% endblock %}

@@ -107,7 +107,7 @@ h1{ margin-bottom:15px; }
     background:#198754;
     color:white;
     text-decoration:none;
-    font-size:22px;
+    font-size:18px;
     font-weight:bold;
     box-shadow:0 6px 20px rgba(0,0,0,0.10);
     transition:0.2s ease;
@@ -842,40 +842,75 @@ h1{ margin-bottom:15px; }
     flex-wrap:wrap;
 }
 
-.mlb-info-mini{
-    width:22px;
-    height:22px;
-    border-radius:50%;
-    background:#7c3aed;
-    color:#fff;
-    font-size:12px;
+.mlb-chip-tooltip,
+.mlb-chip-sem-envio{
     display:inline-flex;
     align-items:center;
-    justify-content:center;
-    cursor:help;
+    min-height:46px;
+    padding:8px 14px;
+    border-radius:16px;
+    font-size:18px;
+    font-weight:900;
+    letter-spacing:0.3px;
+    line-height:1;
+}
+
+.mlb-chip-tooltip{
     position:relative;
+    cursor:help;
+    background:linear-gradient(135deg,#0f766e,#155e75);
+    color:#fff;
+    box-shadow:0 8px 18px rgba(15,23,42,0.14);
+    border:1px solid rgba(255,255,255,0.18);
+}
+
+.mlb-chip-tooltip::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:16px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.18);
+    pointer-events:none;
+}
+
+.mlb-chip-sem-envio{
+    background:#eef2f7;
+    color:#0f172a;
+    border:1px solid #d8e0ea;
 }
 
 .mlb-info-tooltip{
     display:none;
     position:absolute;
-    top:115%;
-    left:0;
-    width:320px;
-    max-width:90vw;
+    top:calc(100% + 10px);
+    right:0;
+    left:auto;
+    width:420px;
+    max-width:min(420px, calc(100vw - 40px));
     background:#111827;
     color:#fff;
-    padding:12px;
-    border-radius:10px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    padding:14px;
+    border-radius:14px;
+    box-shadow:0 14px 28px rgba(0,0,0,0.32);
     z-index:999;
-    line-height:1.45;
+    line-height:1.5;
     font-size:12px;
     white-space:normal;
 }
 
-.mlb-info-mini:hover .mlb-info-tooltip{
+.mlb-chip-tooltip:hover .mlb-info-tooltip{
     display:block;
+}
+
+.mlb-info-tooltip::before{
+    content:"";
+    position:absolute;
+    top:-8px;
+    right:28px;
+    width:14px;
+    height:14px;
+    background:#111827;
+    transform:rotate(45deg);
 }
 
 .mlb-info-tooltip strong{
@@ -1099,7 +1134,7 @@ h1{ margin-bottom:15px; }
 }
 
 .mlb{
-    font-size:22px;
+    font-size:16px;
     font-weight:800;
     color:#111827;
     letter-spacing:0.3px;
@@ -1192,7 +1227,7 @@ h1{ margin-bottom:15px; }
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
-    font-size:22px;
+    font-size:16px;
     font-weight:800;
     color:#111827;
     letter-spacing:0.3px;
@@ -1244,7 +1279,7 @@ h1{ margin-bottom:15px; }
     overflow:hidden !important;
     text-overflow:ellipsis !important;
     white-space:nowrap !important;
-    font-size:22px !important;
+    font-size:18px !important;
     font-weight:800 !important;
     color:#111827 !important;
     letter-spacing:0.3px !important;
@@ -1376,6 +1411,35 @@ h1{ margin-bottom:15px; }
     gap:10px;
     margin-top:6px;
     margin-bottom:12px;
+}
+
+.saldo-resumo-linha{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-top:6px;
+}
+
+.card-resumo-topo-direita{
+    margin-top:0;
+    margin-bottom:0;
+    margin-left:auto;
+    justify-content:flex-end;
+    flex-shrink:0;
+}
+
+@media (max-width: 900px){
+    .saldo-resumo-linha{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .card-resumo-topo-direita{
+        margin-left:0;
+        justify-content:flex-start;
+        width:100%;
+    }
 }
 
 .card-resumo-pill{
@@ -1831,7 +1895,7 @@ h1{ margin-bottom:15px; }
 .saldo-final,
 .sku-relacionado,
 .sku-info-mini,
-.mlb-info-mini{
+.mlb-chip-tooltip{
     overflow: visible !important;
 }
 
@@ -1852,7 +1916,7 @@ h1{ margin-bottom:15px; }
 .saldo-final:hover,
 .sku-relacionado:hover,
 .sku-info-mini:hover,
-.mlb-info-mini:hover{
+.mlb-chip-tooltip:hover{
     z-index: 10001 !important;
 }
 
@@ -1877,6 +1941,51 @@ h1{ margin-bottom:15px; }
         right: auto !important;
         width: min(380px, calc(100vw - 40px)) !important;
         max-width: calc(100vw - 40px) !important;
+    }
+}
+
+
+/* ===== AJUSTE VISUAL TITULO + MLB SEM ALTERAR O CARD ===== */
+.titulo-inline{
+    display:flex !important;
+    align-items:center !important;
+    min-height:58px !important;
+    padding:10px 18px !important;
+    border-radius:16px !important;
+    background:linear-gradient(135deg,#f8fafc,#eef2f7) !important;
+    border:1px solid #d8e0ea !important;
+    box-shadow:0 8px 18px rgba(15,23,42,0.06) !important;
+}
+
+.titulo-inline .titulo-carro-relacionado{
+    font-size:18px !important;
+    font-weight:900 !important;
+    color:#0f172a !important;
+    line-height:1.05 !important;
+}
+
+.titulo-inline .titulo-carro-relacionado.titulo-duplicado-vermelho{
+    color:#b91c1c !important;
+}
+
+.linha-mlb-titulo{
+    align-items:stretch !important;
+}
+
+.mlb-envio-wrap{
+    flex-shrink:0 !important;
+}
+
+@media (max-width: 900px){
+    .titulo-inline{
+        min-height:auto !important;
+        padding:12px 16px !important;
+    }
+
+    .titulo-inline .titulo-carro-relacionado,
+    .mlb-chip-tooltip,
+    .mlb-chip-sem-envio{
+        font-size:15px !important;
     }
 }
 
@@ -2269,30 +2378,127 @@ function formatarDataHoraBr(valor){
     return texto;
 }
 
+function normalizarBooleanColeta(valor){
+    if (valor === true || valor === 1) return true;
+    if (valor === false || valor === 0 || valor === null || valor === undefined) return false;
+
+    const texto = String(valor || "").trim().toUpperCase();
+    if (!texto) return false;
+
+    return ["SIM", "S", "TRUE", "OK", "COLETADO", "COLETADA", "FINALIZADO", "FINALIZADA"].includes(texto);
+}
+
+function extrairHistoricoLotesMlb(registro){
+    const fontes = [];
+
+    if (Array.isArray(registro?.lotes)) fontes.push(...registro.lotes);
+    if (Array.isArray(registro?.historico_lotes)) fontes.push(...registro.historico_lotes);
+    if (Array.isArray(registro?.historico_envios)) fontes.push(...registro.historico_envios);
+    if (Array.isArray(registro?.envios)) fontes.push(...registro.envios);
+    if (Array.isArray(registro?.lotes_enviados)) fontes.push(...registro.lotes_enviados);
+    if (registro?.ultimo_lote && typeof registro.ultimo_lote === 'object') fontes.push(registro.ultimo_lote);
+
+    const vistos = new Set();
+
+    return fontes
+        .map((lote, indice) => {
+            const numeroLote = String(
+                lote?.numero_lote ?? lote?.lote ?? lote?.numero ?? lote?.n_lote ?? ''
+            ).trim();
+
+            const quantidade = numeroInteiro(
+                lote?.quantidade ?? lote?.qtd ?? lote?.quantidade_enviada ?? lote?.qtd_enviada ?? 0
+            );
+
+            const dataColetaRaw =
+                lote?.data_agendada_coleta ??
+                lote?.data_coleta_agendada ??
+                lote?.coleta_agendada ??
+                lote?.coleta_agendada_em ??
+                lote?.agendamento_coleta ??
+                lote?.data_agendamento_coleta ??
+                lote?.data_programada_coleta ??
+                lote?.scheduled_collect_at ??
+                lote?.scheduled_collection_at ??
+                lote?.data_coleta ??
+                lote?.coleta_em ??
+                lote?.data_coletado ??
+                lote?.coletado_em ??
+                lote?.data_geracao ??
+                lote?.criado_em ??
+                '';
+
+            const coletado = normalizarBooleanColeta(
+                lote?.coletado ?? lote?.foi_coletado ?? lote?.status_coleta ?? lote?.coleta_realizada
+            );
+
+            const chave = `${numeroLote}|||${quantidade}|||${String(dataColetaRaw || '').trim()}|||${coletado}`;
+            if (vistos.has(chave)) return null;
+            vistos.add(chave);
+
+            return {
+                numero_lote: numeroLote,
+                quantidade,
+                data_coleta_raw: String(dataColetaRaw || '').trim(),
+                data_coleta_br: formatarDataHoraBr(dataColetaRaw || ''),
+                coletado,
+                indice
+            };
+        })
+        .filter(Boolean)
+        .filter(lote => lote.numero_lote || lote.quantidade > 0 || lote.data_coleta_raw)
+        .sort((a, b) => {
+            const dataA = Date.parse(a.data_coleta_raw || '') || 0;
+            const dataB = Date.parse(b.data_coleta_raw || '') || 0;
+            if (dataA !== dataB) return dataB - dataA;
+            return String(b.numero_lote || '').localeCompare(String(a.numero_lote || ''));
+        });
+}
+
 function montarTooltipUltimoLoteMlb(codigo){
     const registro = statusSalvos[String(codigo)] || {};
-    const ultimoLote = registro.ultimo_lote || {};
-    const numeroLote = String(ultimoLote.numero_lote || '').trim();
+    const historicoLotes = extrairHistoricoLotesMlb(registro);
 
-    if (!numeroLote){
-        return `
-            <div class="mlb-info-tooltip">
-                <strong>Envio MLB:</strong><br>
-                Este MLB ainda não foi enviado.
-            </div>
-        `;
+    if (!historicoLotes.length){
+        return "";
     }
 
-    const quantidade = numeroInteiro(ultimoLote.quantidade || 0);
-    const dataBr = formatarDataHoraBr(ultimoLote.data_geracao || '');
+    const totalQuantidade = historicoLotes.reduce((acc, lote) => acc + numeroInteiro(lote.quantidade || 0), 0);
+    const coletados = historicoLotes.filter(lote => lote.coletado).length;
+    const statusResumo = coletados > 0 ? 'Já foi enviado / está em lote' : 'Está em lote';
+
+    const linhas = historicoLotes.map((lote, index) => `
+        <div style="padding:${index === 0 ? '0 0 8px 0' : '8px 0'}; border-top:${index === 0 ? 'none' : '1px solid rgba(255,255,255,0.10)'};">
+            <div><strong>Lote:</strong> ${escapeHtml(lote.numero_lote || '-')}</div>
+            <div><strong>Quantidade:</strong> ${numeroInteiro(lote.quantidade || 0)}</div>
+            <div><strong>Data da coleta:</strong> ${escapeHtml(lote.data_coleta_br || '-')}</div>
+            <div><strong>Status:</strong> ${lote.coletado ? 'Coletado' : 'Não coletado'}</div>
+        </div>
+    `).join('');
 
     return `
         <div class="mlb-info-tooltip">
-            <strong>Envio MLB:</strong><br>
-            Já foi enviado<br>
-            Lote: ${numeroLote}<br>
-            Quantidade: ${quantidade}<br>
-            Data: ${dataBr}
+            <div><strong>Envio MLB:</strong> ${statusResumo}</div>
+            <div style="margin-top:6px;"><strong>Lotes encontrados:</strong> ${historicoLotes.length} | <strong>Qtd total:</strong> ${totalQuantidade}</div>
+            <div style="margin-top:8px; max-height:260px; overflow:auto; padding-right:4px;">
+                ${linhas}
+            </div>
+        </div>
+    `;
+}
+
+function montarBlocoMlb(codigo){
+    const historicoLotes = extrairHistoricoLotesMlb(statusSalvos[String(codigo)] || {});
+    const textoMlb = escapeHtml(codigo || '-');
+
+    if (!historicoLotes.length){
+        return `<div class="mlb-chip-sem-envio">${textoMlb}</div>`;
+    }
+
+    return `
+        <div class="mlb-chip-tooltip">
+            ${textoMlb}
+            ${montarTooltipUltimoLoteMlb(codigo)}
         </div>
     `;
 }
@@ -3540,7 +3746,9 @@ function montarHTMLCard(item){
                 <div class="titulo-inline">
                     <span class="titulo-carro-relacionado ${tituloDuplicado(item["Título"]) ? 'titulo-duplicado-vermelho' : ''}">${item["Título"] || ""}${tituloDuplicado(item["Título"]) ? montarTooltipTituloDuplicado(item) : montarTooltipTitulosMesmoCarro(item)}</span>
                 </div>
-                <div class="mlb">${item["Código do Anúncio"]}</div>
+                <div class="mlb-envio-wrap">
+                    ${montarBlocoMlb(codigo)}
+                </div>
             </div>
 
             <div class="mlb-topo-coluna">
@@ -3597,21 +3805,6 @@ function montarHTMLCard(item){
     </div>
 
     <div style="margin-top:6px;">
-        <div class="card-resumo-topo">
-            <div class="card-resumo-pill pill-caminho">
-                <span class="pill-label">A Caminho</span>
-                <span class="pill-value">${item["A CAMINHO DO FULL"] || 0}</span>
-            </div>
-            <div class="card-resumo-pill pill-full">
-                <span class="pill-label">Full</span>
-                <span class="pill-value">${item["ESTOQUE FULL"] || 0}</span>
-            </div>
-            <div class="card-resumo-pill pill-vai-ficar">
-                <span class="pill-label">Vai Ficar</span>
-                <span class="pill-value">${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</span>
-            </div>
-        </div>
-
         <div class="sku-linha-profissional">
             <div class="card-resumo-pill pill-sku">
                 <span class="pill-label">SKU</span>
@@ -3722,8 +3915,25 @@ function montarHTMLCard(item){
 
         <hr style="margin:4px 0 0 0">
 
-        <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final saldo-final-abaixo" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
-            ${montarTextoSaldoFinal(item, calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)))}
+        <div class="saldo-resumo-linha">
+            <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final saldo-final-abaixo" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
+                ${montarTextoSaldoFinal(item, calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)))}
+            </div>
+
+            <div class="card-resumo-topo card-resumo-topo-direita">
+                <div class="card-resumo-pill pill-caminho">
+                    <span class="pill-label">A Caminho</span>
+                    <span class="pill-value">${item["A CAMINHO DO FULL"] || 0}</span>
+                </div>
+                <div class="card-resumo-pill pill-full">
+                    <span class="pill-label">Full</span>
+                    <span class="pill-value">${item["ESTOQUE FULL"] || 0}</span>
+                </div>
+                <div class="card-resumo-pill pill-vai-ficar">
+                    <span class="pill-label">Vai Ficar</span>
+                    <span class="pill-value">${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</span>
+                </div>
+            </div>
         </div>
 
         <div class="linha-quatro">
@@ -3749,6 +3959,7 @@ function montarHTMLCard(item){
                             <div class="historico-mes-card"><div class="historico-mes-label">JANEIRO</div><div class="historico-mes-valor">${item["JANEIRO"] || 0}</div></div>
                             <div class="historico-mes-card"><div class="historico-mes-label">FEVEREIRO</div><div class="historico-mes-valor">${item["FEVEREIRO"] || 0}</div></div>
                             <div class="historico-mes-card"><div class="historico-mes-label">MARÇO</div><div class="historico-mes-valor">${item["MARÇO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">ABRIL</div><div class="historico-mes-valor">${item["ABRIL"] || 0}</div></div>
                         </div>
 
                         <div class="historico-mensal-rodape">
