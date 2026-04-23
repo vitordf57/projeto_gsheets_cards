@@ -452,41 +452,60 @@ h1{ margin-bottom:15px; }
     font-weight:bold;
 }
 
-.acao-box,
-.retorno-box{
-    margin-left:12px;
-    font-size:12px;
-    background:#eef4ff;
-    padding:8px 12px;
-    border-radius:10px;
-    border:1px solid #bfd3ff;
-    min-width:260px;
-    max-width:340px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
+.registro-topo{
+    width:auto;
+    min-width:92px;
+    height:45px;
+    padding:0 14px;
+    gap:8px;
+    border-radius:12px;
+    margin-right:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:700;
+    line-height:1;
 }
 
-.acao-titulo{
-    font-weight:bold;
-    color:#1c4fb8;
+.registro-label{
+    font-size:11px;
+    letter-spacing:0.3px;
 }
 
-.acao-textarea{
+.acao-topo{
+    background:linear-gradient(135deg,#0d6efd,#0b5ed7);
+}
+
+.retorno-topo{
+    background:linear-gradient(135deg,#f59e0b,#d97706);
+}
+
+.acao-topo:hover{
+    box-shadow:0 6px 15px rgba(13,110,253,0.28);
+}
+
+.retorno-topo:hover{
+    box-shadow:0 6px 15px rgba(217,119,6,0.28);
+}
+
+.registro-textarea{
     width:100%;
-    min-height:95px;
+    min-height:140px;
     resize:vertical;
-    border:none;
+    border:1px solid #d1d5db;
+    border-radius:12px;
     outline:none;
-    background:transparent;
-    font-size:12px;
+    background:#fff;
+    font-size:14px;
     color:#1f2937;
     font-family:Arial;
-    padding:0;
+    padding:12px 14px;
     margin:0;
+    box-sizing:border-box;
 }
 
-.acao-textarea::placeholder{
+.registro-textarea::placeholder{
     color:#6b7280;
 }
 
@@ -614,7 +633,7 @@ h1{ margin-bottom:15px; }
 }
 
 .linha-quatro .duplo-bloco:nth-child(2){
-    flex:1.4;
+    flex:0.82;
 }
 
 .linha-quatro .duplo-bloco:nth-child(2) .bloco:nth-child(1){
@@ -1350,6 +1369,517 @@ h1{ margin-bottom:15px; }
     margin-bottom:0;
 }
 
+
+.card-resumo-topo{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:6px;
+    margin-bottom:12px;
+}
+
+.card-resumo-pill{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    box-shadow:0 4px 10px rgba(15,23,42,0.04);
+}
+
+.card-resumo-pill .pill-label{
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:0.4px;
+    text-transform:uppercase;
+    color:#64748b;
+}
+
+.card-resumo-pill .pill-value{
+    font-size:15px;
+    font-weight:800;
+    color:#0f172a;
+}
+
+.card-resumo-pill.pill-caminho{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+}
+.card-resumo-pill.pill-caminho .pill-value{
+    color:#1d4ed8;
+}
+
+.card-resumo-pill.pill-full{
+    background:#ecfdf5;
+    border-color:#bbf7d0;
+}
+.card-resumo-pill.pill-full .pill-value{
+    color:#15803d;
+}
+
+.card-resumo-pill.pill-vai-ficar{
+    background:#fff7ed;
+    border-color:#fed7aa;
+}
+.card-resumo-pill.pill-vai-ficar .pill-value{
+    color:#c2410c;
+}
+
+.sku-linha-profissional{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:12px;
+}
+
+.sku-titulo-label{
+    font-size:13px;
+    font-weight:800;
+    color:#475569;
+    letter-spacing:0.3px;
+    text-transform:uppercase;
+}
+
+.card-resumo-pill.pill-sku{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+}
+.card-resumo-pill.pill-sku .pill-value{
+    color:#0f172a;
+}
+
+.card-resumo-pill.pill-ads{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+}
+.card-resumo-pill.pill-ads .pill-value{
+    color:#0f172a;
+}
+
+.card-resumo-pill.pill-curva{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+}
+.card-resumo-pill.pill-curva .pill-value{
+    color:#0f172a;
+}
+
+.sku-pill-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.sku-pill-wrap .sku-chip-click{
+    background:#eef4ff;
+    color:#244179;
+    border:1px solid #cfe0ff;
+    border-radius:999px;
+    padding:4px 10px;
+    font-weight:bold;
+}
+
+.sku-pill-wrap .sku-info-mini{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#244179;
+    color:#fff;
+    font-size:12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    position:relative;
+}
+
+.sku-pill-wrap .sku-info-mini.tem-info{
+    background:#198754;
+}
+
+.info-detalhes-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:10px 14px;
+    margin-top:12px;
+}
+
+.info-detalhe-card{
+    background:#ffffff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    box-shadow:0 4px 10px rgba(15,23,42,0.03);
+}
+
+.info-detalhe-card .detalhe-label{
+    display:block;
+    font-size:11px;
+    font-weight:800;
+    color:#64748b;
+    text-transform:uppercase;
+    letter-spacing:0.35px;
+    margin-bottom:4px;
+}
+
+.info-detalhe-card .detalhe-valor{
+    display:block;
+    font-size:15px;
+    font-weight:700;
+    color:#111827;
+    line-height:1.35;
+}
+
+.info-detalhe-card.status-full-card{
+    background:#f8fafc;
+}
+
+.outros-mlbs-card .detalhe-valor{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+
+.historico-mensal-box{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+.historico-mensal-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+.historico-mensal-resumo{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.historico-mini-badge{
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    border:1px solid #e5e7eb;
+    background:#fff;
+    color:#475569;
+}
+.historico-select-mes{
+    min-width:170px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    padding:8px 12px;
+    background:#fff;
+    font-size:13px;
+    font-weight:600;
+    color:#111827;
+    outline:none;
+}
+.historico-grafico-wrap{
+    background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.historico-canvas{
+    width:100%;
+    height:220px !important;
+    max-height:220px;
+}
+.historico-meses-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+    gap:10px;
+}
+.historico-mes-card{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    background:#fff;
+    padding:10px 12px;
+    box-shadow:0 3px 10px rgba(15,23,42,0.03);
+}
+.historico-mes-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color:#64748b;
+    font-weight:800;
+    margin-bottom:4px;
+}
+.historico-mes-valor{
+    font-size:18px;
+    font-weight:800;
+    color:#111827;
+}
+.historico-mensal-rodape{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.historico-info-pill{
+    padding:8px 12px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:700;
+}
+.historico-info-pill.variacao{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+}
+.historico-info-pill.leitura{
+    background:#ecfdf5;
+    border:1px solid #bbf7d0;
+    color:#166534;
+}
+
+
+.historico-mensal-box{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+.historico-mensal-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+.historico-mensal-resumo{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.historico-mini-badge{
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    border:1px solid #e5e7eb;
+    background:#fff;
+    color:#475569;
+}
+.historico-acao-secundaria{
+    border:none;
+    border-radius:10px;
+    padding:8px 12px;
+    background:#e2e8f0;
+    color:#0f172a;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+}
+.historico-grafico-wrap{
+    background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.historico-canvas{
+    width:100%;
+    height:260px !important;
+    max-height:260px;
+}
+.historico-meses-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
+    gap:10px;
+}
+.historico-mes-card{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    background:#fff;
+    padding:12px;
+    box-shadow:0 3px 10px rgba(15,23,42,0.03);
+    cursor:pointer;
+    transition:0.18s ease;
+}
+.historico-mes-card:hover{
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(15,23,42,0.07);
+}
+.historico-mes-card.ativo{
+    border-color:#1d4ed8;
+    box-shadow:0 0 0 2px rgba(29,78,216,0.10);
+}
+.historico-mes-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color:#64748b;
+    font-weight:800;
+    margin-bottom:4px;
+}
+.historico-mes-valor{
+    font-size:18px;
+    font-weight:800;
+    color:#111827;
+}
+.historico-mensal-rodape{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.historico-info-pill{
+    padding:8px 12px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:700;
+}
+.historico-info-pill.variacao{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+}
+.historico-info-pill.leitura{
+    background:#ecfdf5;
+    border:1px solid #bbf7d0;
+    color:#166534;
+}
+
+
+.vendas-visual-box{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+.vendas-grid-resumo{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(145px, 1fr));
+    gap:8px;
+}
+.vendas-card{
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:10px;
+    box-shadow:0 3px 10px rgba(15,23,42,0.04);
+}
+.vendas-card.vendas-7d{
+    background:linear-gradient(180deg,#eff6ff 0%, #dbeafe 100%);
+    border-color:#bfdbfe;
+}
+.vendas-card.vendas-15d{
+    background:linear-gradient(180deg,#ecfeff 0%, #cffafe 100%);
+    border-color:#a5f3fc;
+}
+.vendas-card.vendas-30d{
+    background:linear-gradient(180deg,#ecfdf5 0%, #d1fae5 100%);
+    border-color:#a7f3d0;
+}
+.vendas-card.vendas-45d{
+    background:linear-gradient(180deg,#fff7ed 0%, #ffedd5 100%);
+    border-color:#fdba74;
+}
+.vendas-card.vendas-soma{
+    background:linear-gradient(180deg,#f5f3ff 0%, #ede9fe 100%);
+    border-color:#c4b5fd;
+}
+.vendas-label{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.45px;
+    color:#475569;
+    font-weight:800;
+    margin-bottom:4px;
+}
+.vendas-valor{
+    font-size:16px;
+    font-weight:800;
+    color:#0f172a;
+}
+.vendas-subvalor{
+    margin-top:3px;
+    font-size:12px;
+    font-weight:700;
+    color:#334155;
+}
+.vendas-rodape{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+
+.titulo-carro-relacionado.titulo-duplicado-vermelho{
+    color:#b91c1c !important;
+}
+
+
+
+/* ===== CORRECAO TOOLTIPS SOBREPOSTOS / CORTADOS ===== */
+.card,
+.linha-topo,
+.mlb-area,
+.mlb-topo-coluna,
+.linha-mlb-titulo,
+.topo-esquerda,
+.topo-direita,
+.titulo-inline,
+.titulo-carro-relacionado,
+.titulo-duplicado,
+.ia-box,
+.saldo-final,
+.sku-relacionado,
+.sku-info-mini,
+.mlb-info-mini{
+    overflow: visible !important;
+}
+
+.titulo-inline{
+    text-overflow: initial !important;
+}
+
+.titulo-inline .titulo-carro-relacionado{
+    position: relative !important;
+    z-index: 20 !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+}
+
+.titulo-inline .titulo-carro-relacionado:hover,
+.ia-box:hover,
+.titulo-duplicado:hover,
+.saldo-final:hover,
+.sku-relacionado:hover,
+.sku-info-mini:hover,
+.mlb-info-mini:hover{
+    z-index: 10001 !important;
+}
+
+.ia-tooltip,
+.titulo-duplicado-tooltip,
+.saldo-final-tooltip,
+.titulo-carro-tooltip,
+.sku-relacionado-tooltip,
+.mlb-info-tooltip{
+    z-index: 10002 !important;
+    pointer-events: auto;
+}
+
+@media (max-width: 900px){
+    .ia-tooltip,
+    .titulo-duplicado-tooltip,
+    .saldo-final-tooltip,
+    .titulo-carro-tooltip,
+    .sku-relacionado-tooltip,
+    .mlb-info-tooltip{
+        left: 0 !important;
+        right: auto !important;
+        width: min(380px, calc(100vw - 40px)) !important;
+        max-width: calc(100vw - 40px) !important;
+    }
+}
+
 </style>
 
 <div class="page-wrap">
@@ -1608,6 +2138,9 @@ let codigoAtualComentario = null;
 let tiposMlbSalvos = JSON.parse(localStorage.getItem("tiposMlbSalvos") || "{}");
 let acoesMlbSalvas = JSON.parse(localStorage.getItem("acoesMlbSalvas") || "{}");
 let retornosMlbSalvos = JSON.parse(localStorage.getItem("retornosMlbSalvos") || "{}");
+let tipoAtualRegistro = "";
+let codigoAtualRegistro = null;
+
 
 function salvarAcaoMlb(codigo, valor){
     acoesMlbSalvas[String(codigo)] = valor || "";
@@ -1766,11 +2299,12 @@ function montarTooltipUltimoLoteMlb(codigo){
 
 function montarTextoSaldoFinal(item, saldo){
     const mediaSignus = numeroInteiro(item["MEDIA_SIGNUS"] || 0);
+    const totalSignus = numeroInteiro(item["ESTOQUE TOTAL SIGNUS"] || 0);
     const precisaCompra = saldo <= mediaSignus;
     const comprasTexto = precisaCompra ? ` | <span style="color:#b45309; font-weight:700;">COMPRAS</span>` : "";
 
     return `
-        Saldo 4i após envio: ${saldo} | Média mensal SKU: ${mediaSignus}${comprasTexto}
+        Total Signus: ${totalSignus} | Saldo 4i após envio: ${saldo} | Média mensal SKU: ${mediaSignus}${comprasTexto}
         ${montarTooltipSaldoSku(item)}
     `;
 }
@@ -2490,7 +3024,7 @@ function montarTooltipTituloDuplicado(item){
         .join("");
 
     return `
-        <div class="titulo-duplicado-tooltip">
+        <div class="titulo-carro-tooltip titulo-duplicado-tooltip">
             <div style="margin-bottom:8px;"><strong>Títulos iguais encontrados:</strong> ${duplicados.length}</div>
             ${linhas}
         </div>
@@ -2937,6 +3471,14 @@ function escapeHtml(texto){
         .replaceAll("'", '&#39;');
 }
 
+function montarBadgeResumoRegistro(texto, iconeVazio="📝"){
+    const possuiTexto = String(texto || "").trim().length > 0;
+    if (possuiTexto) {
+        return `<span style="font-size:11px; background:#25d366; color:#fff; border-radius:999px; padding:2px 7px; font-weight:bold;">1</span>`;
+    }
+    return `<span style="font-size:18px; line-height:1;">${iconeVazio}</span>`;
+}
+
 function montarBubbleResumoComentario(codigo){
     const historico = comentariosMlbChat[codigo] || [];
     if (historico.length > 0) {
@@ -2996,8 +3538,7 @@ function montarHTMLCard(item){
             
             <div class="linha-mlb-titulo">
                 <div class="titulo-inline">
-                    <span class="titulo-carro-relacionado">${item["Título"] || ""}${montarTooltipTitulosMesmoCarro(item)}</span>
-                    ${tituloDuplicado(item["Título"]) ? `<span class="titulo-duplicado">TÍTULO DUPLICADO ${montarTooltipTituloDuplicado(item)}</span>` : ''}
+                    <span class="titulo-carro-relacionado ${tituloDuplicado(item["Título"]) ? 'titulo-duplicado-vermelho' : ''}">${item["Título"] || ""}${tituloDuplicado(item["Título"]) ? montarTooltipTituloDuplicado(item) : montarTooltipTitulosMesmoCarro(item)}</span>
                 </div>
                 <div class="mlb">${item["Código do Anúncio"]}</div>
             </div>
@@ -3031,14 +3572,18 @@ function montarHTMLCard(item){
                         </div>
                     </div>
 
-                    <div class="acao-box">
-                        <div class="acao-titulo">AÇÃO</div>
-                        <textarea class="acao-textarea" placeholder="Digite a ação deste MLB..." oninput="salvarAcaoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterAcaoMlbSalva(codigo))}</textarea>
+                    <div class="comentario-topo registro-topo acao-topo"
+                        onclick="abrirModalRegistro('acao', '${codigo}')"
+                        title="Abrir ação do MLB">
+                        <span class="registro-label">AÇÃO</span>
+                        ${montarBadgeResumoRegistro(obterAcaoMlbSalva(codigo), "📝")}
                     </div>
 
-                    <div class="retorno-box">
-                        <div class="acao-titulo">RETORNO</div>
-                        <textarea class="acao-textarea" placeholder="Digite o retorno deste MLB..." oninput="salvarRetornoMlb('${codigo}', this.value)">${escaparHtmlAtributo(obterRetornoMlbSalvo(codigo))}</textarea>
+                    <div class="comentario-topo registro-topo retorno-topo"
+                        onclick="abrirModalRegistro('retorno', '${codigo}')"
+                        title="Abrir retorno do MLB">
+                        <span class="registro-label">RETORNO</span>
+                        ${montarBadgeResumoRegistro(obterRetornoMlbSalvo(codigo), "↩️")}
                     </div>
 
                     <div class="comentario-topo"
@@ -3052,26 +3597,83 @@ function montarHTMLCard(item){
     </div>
 
     <div style="margin-top:6px;">
-        <div><strong>SKU:</strong> <span class="sku-info-wrap"><span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span><span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span></span>${String(item["ATENÇÃO"] || item["ATENCAO"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#b45309;">${item["ATENÇÃO"] || item["ATENCAO"]}</span>` : ""}${String(item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"] || "").trim() ? ` <span style="margin-left:8px; font-weight:bold; color:#1d4ed8;">${item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"]}</span>` : ""}</div>
-        <div class="info-extra-sku">
-            <div class="metric">ADS: ${item["ADS"] || ""}</div>
-            <div class="metric">Curva 30d: ${item["Curva 30d"] || item["Curva 30D"] || ""}</div>
-            <div class="metric">Tendência 30-0: ${item["Tendência 30-0"] || item["Tendência 30"] || ""}</div>
-            <div class="metric">Cobertura: ${item["Cobertura"] || ""}</div>
-            <div class="metric">Ação Recomendada: ${item["Ação Recomendada"] || ""}</div>
+        <div class="card-resumo-topo">
+            <div class="card-resumo-pill pill-caminho">
+                <span class="pill-label">A Caminho</span>
+                <span class="pill-value">${item["A CAMINHO DO FULL"] || 0}</span>
+            </div>
+            <div class="card-resumo-pill pill-full">
+                <span class="pill-label">Full</span>
+                <span class="pill-value">${item["ESTOQUE FULL"] || 0}</span>
+            </div>
+            <div class="card-resumo-pill pill-vai-ficar">
+                <span class="pill-label">Vai Ficar</span>
+                <span class="pill-value">${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</span>
+            </div>
         </div>
-        <div><strong>Conta:</strong> ${item["Nickname"] || ""}</div>
-        <div><strong>Full:</strong> ${item["Full"] || ""}</div>
-        <div><strong>Condição:</strong> ${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</div>
-        <div><strong>Lote:</strong> ${item["LOTE"] || ""}</div>
-        <div><strong>Exposição:</strong> ${item["EXPOSIÇÃO"] || ""}</div>
-        <div>
-    <strong>Outros MLBs mesmo SKU:</strong>
-    ${analise.qtdSKU > 0
-        ? `<span class="sku-relacionado">${analise.qtdSKU}${montarTooltipSkuRelacionado(item)}</span>`
-        : analise.qtdSKU}
-</div>
-        <div><strong>Títulos iguais:</strong> ${analise.qtdTitulo}</div>
+
+        <div class="sku-linha-profissional">
+            <div class="card-resumo-pill pill-sku">
+                <span class="pill-label">SKU</span>
+                <span class="pill-value">
+                    <span class="sku-pill-wrap">
+                        <span class="sku-chip-click" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">${item["SKU"] || ""}</span>
+                        <span class="sku-info-mini ${comentariosSalvos[String(item["SKU"] || "")] ? 'tem-info' : ''}" onclick="abrirComentarioSku('${item["Código do Anúncio"]}', '${item["SKU"]}')">i</span>
+                    </span>
+                </span>
+            </div>
+
+            <div class="card-resumo-pill pill-ads">
+                <span class="pill-label">ADS</span>
+                <span class="pill-value">${item["ADS"] || ""}</span>
+            </div>
+
+            <div class="card-resumo-pill pill-curva">
+                <span class="pill-label">Curva 30d</span>
+                <span class="pill-value">${item["Curva 30d"] || item["Curva 30D"] || ""}</span>
+            </div>
+
+            ${String(item["ATENÇÃO"] || item["ATENCAO"] || "").trim() ? `
+            <div class="card-resumo-pill">
+                <span class="pill-label">Atenção</span>
+                <span class="pill-value" style="color:#b45309;">${item["ATENÇÃO"] || item["ATENCAO"]}</span>
+            </div>` : ""}
+
+            ${String(item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"] || "").trim() ? `
+            <div class="card-resumo-pill">
+                <span class="pill-label">Venda SKU 30D</span>
+                <span class="pill-value" style="color:#1d4ed8;">${item["VENDA TOTAL DO SKU ULTIMOS 30 DIAS"]}</span>
+            </div>` : ""}
+        </div>
+
+        <div class="info-extra-sku"></div>
+
+        <div class="info-detalhes-grid">
+            <div class="info-detalhe-card">
+                <span class="detalhe-label">Conta</span>
+                <span class="detalhe-valor">${item["Nickname"] || ""}</span>
+            </div>
+            <div class="info-detalhe-card status-full-card">
+                <span class="detalhe-label">Status Full</span>
+                <span class="detalhe-valor">${item["Full"] || ""}</span>
+            </div>
+            <div class="info-detalhe-card">
+                <span class="detalhe-label">Condição</span>
+                <span class="detalhe-valor">${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</span>
+            </div>
+            <div class="info-detalhe-card">
+                <span class="detalhe-label">Lote</span>
+                <span class="detalhe-valor">${item["LOTE"] || ""}</span>
+            </div>
+            <div class="info-detalhe-card outros-mlbs-card">
+                <span class="detalhe-label">Outros MLBs mesmo SKU</span>
+                <span class="detalhe-valor">
+                    ${analise.qtdSKU > 0
+                        ? `<span class="sku-relacionado">${analise.qtdSKU}${montarTooltipSkuRelacionado(item)}</span>`
+                        : analise.qtdSKU}
+                </span>
+            </div>
+        </div>
 
         <div class="linha-acao-final">
 
@@ -3130,46 +3732,72 @@ function montarHTMLCard(item){
 
                 <div class="bloco">
                     <h3>📅 HISTÓRICO MENSAL MELI</h3>
-                    <div class="metric">AGOSTO: ${item["AGOSTO"] || 0}</div>
-                    <div class="metric">SETEMBRO: ${item["SETEMBRO"] || 0}</div>
-                    <div class="metric">OUTUBRO: ${item["OUTUBRO"] || 0}</div>
-                    <div class="metric">NOVEMBRO: ${item["NOVEMBRO"] || 0}</div>
-                    <div class="metric">DEZEMBRO: ${item["DEZEMBRO"] || 0}</div>
-                    <div class="metric">JANEIRO: ${item["JANEIRO"] || 0}</div>
-                    <div class="metric">FEVEREIRO: ${item["FEVEREIRO"] || 0}</div>
-                    <div class="metric">MARÇO: ${item["MARÇO"] || 0}</div>
-                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
-                    <div class="metric" style="font-weight:bold; color:#7a4100;">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
+                    <div class="historico-mensal-box">
+                        <div class="historico-mensal-topo">
+                            <div class="historico-mensal-resumo">
+                                <span class="historico-mini-badge">8 meses</span>
+                                <span class="historico-mini-badge">Visão mensal</span>
+                            </div>
+                        </div>
+
+                        <div class="historico-meses-grid">
+                            <div class="historico-mes-card"><div class="historico-mes-label">AGOSTO</div><div class="historico-mes-valor">${item["AGOSTO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">SETEMBRO</div><div class="historico-mes-valor">${item["SETEMBRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">OUTUBRO</div><div class="historico-mes-valor">${item["OUTUBRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">NOVEMBRO</div><div class="historico-mes-valor">${item["NOVEMBRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">DEZEMBRO</div><div class="historico-mes-valor">${item["DEZEMBRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">JANEIRO</div><div class="historico-mes-valor">${item["JANEIRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">FEVEREIRO</div><div class="historico-mes-valor">${item["FEVEREIRO"] || 0}</div></div>
+                            <div class="historico-mes-card"><div class="historico-mes-label">MARÇO</div><div class="historico-mes-valor">${item["MARÇO"] || 0}</div></div>
+                        </div>
+
+                        <div class="historico-mensal-rodape">
+                            <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
+                            <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="duplo-bloco">
                 <div class="bloco">
                     <h3>📊 VENDAS</h3>
-                    <div style="display:flex; gap:30px; align-items:flex-start;">
-                        <div style="flex:1;">
-                            <div class="metric">7D: ${item["7 DIAS"] || 0} | R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
-                            <div class="metric">15D: ${item["15 DIAS"] || 0} | R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
-                            <div class="metric">30D: ${item["30 DIAS"] || 0} | R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
-                            <div class="metric">45D: ${item["45 DIAS"] || 0} | R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+                    <div class="vendas-visual-box">
+                        <div class="vendas-grid-resumo">
+                            <div class="vendas-card vendas-7d">
+                                <div class="vendas-label">7 dias</div>
+                                <div class="vendas-valor">${item["7 DIAS"] || 0}</div>
+                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
+                            </div>
+                            <div class="vendas-card vendas-15d">
+                                <div class="vendas-label">15 dias</div>
+                                <div class="vendas-valor">${item["15 DIAS"] || 0}</div>
+                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
+                            </div>
+                            <div class="vendas-card vendas-30d">
+                                <div class="vendas-label">30 dias</div>
+                                <div class="vendas-valor">${item["30 DIAS"] || 0}</div>
+                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
+                            </div>
+                            <div class="vendas-card vendas-45d">
+                                <div class="vendas-label">45 dias</div>
+                                <div class="vendas-valor">${item["45 DIAS"] || 0}</div>
+                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
+                            </div>
+                            <div class="vendas-card vendas-soma">
+                                <div class="vendas-label">30 + 7</div>
+                                <div class="vendas-valor">${(Number(item["30 DIAS"] || 0) + Number(item["7 DIAS"] || 0))}</div>
+                            </div>
+                            <div class="vendas-card vendas-soma">
+                                <div class="vendas-label">30 + 15</div>
+                                <div class="vendas-valor">${(Number(item["30 DIAS"] || 0) + Number(item["15 DIAS"] || 0))}</div>
+                            </div>
                         </div>
-                        <div style="min-width:120px;">
-                            <div class="metric">30+7: ${(Number(item["30 DIAS"] || 0) + Number(item["7 DIAS"] || 0))}</div>
-                            <div class="metric">30+15: ${(Number(item["30 DIAS"] || 0) + Number(item["15 DIAS"] || 0))}</div>
+                        <div class="vendas-rodape">
+                            <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
+                            <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
                         </div>
                     </div>
-                    <div class="metric" style="margin-top:10px; font-weight:bold; color:#7a4100;">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
-                    <div class="metric" style="font-weight:bold; color:#1b5e20;">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
-                </div>
-
-                <div class="bloco">
-                    <h3>📦 ESTOQUE</h3>
-                    <div class="metric">Total Signus: ${item["ESTOQUE TOTAL SIGNUS"] || 0}</div>
-                    <div class="metric">A Caminho: ${item["A CAMINHO DO FULL"] || 0}</div>
-                    <div class="metric">Full: ${item["ESTOQUE FULL"] || 0}</div>
-                    <div class="metric">Vai Ficar: ${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</div>
-                    <div class="metric" style="font-weight:bold; color:#1c4fb8;">15D - Full = ${numeroInteiro(item["15 DIAS"] || 0) - numeroInteiro(item["ESTOQUE FULL"] || 0)}</div>
-                    <div class="metric">Média mensal SKU: ${item["MEDIA_SIGNUS"] || 0}</div>
                 </div>
             </div>
         </div>
@@ -3196,6 +3824,7 @@ function renderProximoLote(){
             card.className = "card";
             card.innerHTML = montarHTMLCard(item);
             fragment.appendChild(card);
+            
         } catch (erroCard) {
             console.error("Erro ao montar card:", item, erroCard);
         }
@@ -3614,6 +4243,37 @@ function abrirComentarioSku(codigo, sku){
 
     document.getElementById("textoComentario").value = comentariosSalvos[sku] || "";
     document.getElementById("modalSkuInfo").style.display = "flex";
+}
+
+function abrirModalRegistro(tipo, codigo){
+    tipoAtualRegistro = tipo;
+    codigoAtualRegistro = codigo;
+
+    const isAcao = tipo === "acao";
+    document.getElementById("tituloModalRegistro").textContent = isAcao ? "Ação do MLB" : "Retorno do MLB";
+    document.getElementById("textoRegistroMlb").value = isAcao ? obterAcaoMlbSalva(codigo) : obterRetornoMlbSalvo(codigo);
+    document.getElementById("modalRegistroMlb").style.display = "flex";
+}
+
+function fecharModalRegistro(){
+    document.getElementById("modalRegistroMlb").style.display = "none";
+    tipoAtualRegistro = "";
+    codigoAtualRegistro = null;
+}
+
+function salvarRegistroModal(){
+    if (!codigoAtualRegistro || !tipoAtualRegistro) return;
+
+    const texto = document.getElementById("textoRegistroMlb").value || "";
+
+    if (tipoAtualRegistro === "acao") {
+        salvarAcaoMlb(codigoAtualRegistro, texto);
+    } else {
+        salvarRetornoMlb(codigoAtualRegistro, texto);
+    }
+
+    fecharModalRegistro();
+    renderCards();
 }
 
 function fecharComentarioSku(){
@@ -4065,6 +4725,19 @@ if (
         <div class="modal-botoes" style="justify-content:space-between; margin-top:10px;">
             <button onclick="salvarComentarioModal()" class="btn-salvar-sku">Salvar info do SKU</button>
             <button onclick="fecharComentarioSku()" class="btn-fechar">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalRegistroMlb" class="modal-comentario">
+    <div class="modal-conteudo">
+        <h3 id="tituloModalRegistro">Registro do MLB</h3>
+
+        <textarea id="textoRegistroMlb" class="registro-textarea" placeholder="Digite aqui..."></textarea>
+
+        <div class="modal-botoes">
+            <button onclick="salvarRegistroModal()" class="btn-salvar-sku">Salvar</button>
+            <button onclick="fecharModalRegistro()" class="btn-fechar">Fechar</button>
         </div>
     </div>
 </div>
