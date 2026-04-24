@@ -8,6 +8,7 @@ import sqlite3
 import time
 from io import BytesIO
 from collections import Counter
+from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 import os
 import json
@@ -38,6 +39,7 @@ SCREEN_ENDPOINT_RULES = {
     "/exportar-excel": "principal",
     "/criar-lote-enviando": "principal",
     "/gerar-filete": "principal",
+    "/gerar-filete-enviando": "principal",
     "/dados-full": "principal",
     "/salvar-status": "principal",
     "/status": "principal",
@@ -2559,92 +2561,179 @@ def criar_lote_enviando():
 
     return jsonify({"ok": True, "lotes_criados": grupos})
 
-def montar_excel_filete_antigo(df, numero_lote, tipo_lote):
+def _valor_primeiro(row, nomes):
+    for nome in nomes:
+        if nome in row and str(row.get(nome, "") or "").strip() != "":
+            return row.get(nome)
+    return ""
+
+
+def _formatar_data_filete(valor):
+    texto = str(valor or "").strip()
+    if not texto:
+        return ""
+    dt = parse_data_hora(texto)
+    if dt:
+        return dt.strftime("%d/%m/%Y")
+    return texto
+
+
+def _normalizar_conta_filete(conta):
+    texto = str(conta or "").strip().upper()
+    if not texto:
+        return "SEM CONTA"
+    return texto
+
+
+def _copiar_template_filete():
+    caminhos = [
+        os.path.join(app.root_path, "PICKING.xlsx"),
+        os.path.join(os.getcwd(), "PICKING.xlsx"),
+        os.path.join(os.path.dirname(__file__), "PICKING.xlsx"),
+        os.path.join("static", "PICKING.xlsx"),
+    ]
+    for caminho in caminhos:
+        if caminho and os.path.exists(caminho):
+            return load_workbook(caminho)
+    raise FileNotFoundError("Arquivo modelo PICKING.xlsx não encontrado na pasta do sistema.")
+
+
+def _linhas_inicio_blocos_filete(ws):
+    inicios = []
+    for row in range(1, ws.max_row + 1):
+        valor = str(ws.cell(row=row, column=4).value or "").strip().upper()
+        if valor == "ETAPA 2 - PICKING":
+            inicios.append(row)
+    if not inicios:
+        inicios = list(range(1, ws.max_row + 1, 9))
+    return inicios
+
+
+def _limpar_blocos_filete(ws):
+    for inicio in _linhas_inicio_blocos_filete(ws):
+        for celula in [
+            (inicio + 1, 5),
+            (inicio + 2, 5),
+            (inicio + 2, 7),
+            (inicio + 3, 5),
+            (inicio + 4, 5),
+            (inicio + 4, 7),
+            (inicio + 5, 5),
+            (inicio + 5, 7),
+        ]:
+            ws.cell(*celula).value = ""
+
+
+def _preencher_blocos_filete(ws, itens, conta_label, numero_lote, data_lote):
+    inicios = _linhas_inicio_blocos_filete(ws)
+    _limpar_blocos_filete(ws)
+
+    for idx, (_, row) in enumerate(itens.iterrows()):
+        if idx >= len(inicios):
+            break
+        inicio = inicios[idx]
+        codigo = str(row.get("Código do Anúncio", "") or "").strip()
+        sku = row.get("SKU", "")
+        titulo = str(row.get("Título", "") or "").strip()
+        endereco = str(row.get("ENDEREÇO", "") or "").strip()
+        try:
+            enviar = int(float(str(row.get("Enviar", 0) or 0).replace(",", ".")))
+        except:
+            enviar = row.get("Enviar", "") or ""
+
+        ws.cell(inicio + 1, 5).value = conta_label
+        ws.cell(inicio + 2, 5).value = numero_lote
+        ws.cell(inicio + 2, 7).value = _formatar_data_filete(data_lote)
+        ws.cell(inicio + 3, 5).value = titulo
+        ws.cell(inicio + 4, 5).value = codigo
+        ws.cell(inicio + 4, 7).value = sku
+        ws.cell(inicio + 5, 5).value = endereco
+        ws.cell(inicio + 5, 7).value = enviar
+
+
+def _preencher_base_filete(wb, df, numero_lote, tipo_lote, data_lote, conta_prefixo=""):
+    if "BASE" not in wb.sheetnames:
+        return
+    ws = wb["BASE"]
+    if ws.max_row > 1:
+        ws.delete_rows(2, ws.max_row - 1)
+
+    data_formatada = _formatar_data_filete(data_lote)
+    for idx, (_, row) in enumerate(df.iterrows(), start=2):
+        conta = str(row.get("Nickname", "") or "").strip()
+        codigo = str(row.get("Código do Anúncio", "") or "").strip()
+        sku = row.get("SKU", "")
+        try:
+            enviar = int(float(str(row.get("Enviar", 0) or 0).replace(",", ".")))
+        except:
+            enviar = row.get("Enviar", "") or ""
+        endereco = str(row.get("ENDEREÇO", "") or "").strip()
+        titulo = str(row.get("Título", "") or "").strip()
+
+        valores = [
+            conta,
+            codigo,
+            sku,
+            enviar,
+            row.get("ESTOQUE TOTAL SIGNUS", ""),
+            row.get("APÓS ENVIO", ""),
+            endereco,
+            tipo_lote,
+            titulo,
+            row.get("Motivo", ""),
+            row.get("RETORNO", ""),
+            numero_lote,
+            data_formatada,
+            data_formatada,
+            f"{conta_prefixo}{conta}".strip(),
+            conta_prefixo,
+        ]
+        for col, valor in enumerate(valores, start=1):
+            ws.cell(row=idx, column=col).value = valor
+
+
+def montar_excel_filete_antigo(df, numero_lote, tipo_lote, data_lote=""):
+    wb = _copiar_template_filete()
+
+    for col in ["Nickname", "Código do Anúncio", "SKU", "Título", "ENDEREÇO", "Enviar"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    df = df.copy()
+    df["CONTA_ARQ"] = df["Nickname"].apply(_normalizar_conta_filete)
+    if "ENDEREÇO" in df.columns:
+        df = df.sort_values(by=["CONTA_ARQ", "ENDEREÇO", "Código do Anúncio"], kind="stable")
+
+    grupos = list(df.groupby("CONTA_ARQ", sort=True))
+    if not grupos:
+        grupos = [("SEM CONTA", df)]
+
+    # Regra visual solicitada: a primeira conta usa o modelo azul (UNITARIO C1) e a segunda usa o modelo laranja (UNITARIO C2).
+    abas_modelo = ["UNITARIO C1", "UNITARIO C2"]
+    todas_abas_usadas = []
+    for idx, (conta_key, df_conta) in enumerate(grupos):
+        if idx < len(abas_modelo):
+            aba = abas_modelo[idx]
+            if aba not in wb.sheetnames:
+                continue
+            ws = wb[aba]
+        else:
+            origem = wb[abas_modelo[-1]]
+            ws = wb.copy_worksheet(origem)
+            ws.title = f"UNITARIO C{idx + 1}"
+        todas_abas_usadas.append(ws.title)
+        conta_original = str(df_conta.iloc[0].get("Nickname", "") or conta_key).strip() or conta_key
+        conta_label = f"CONTA {idx + 1} - {conta_original}" if idx > 0 else conta_original
+        _preencher_blocos_filete(ws, df_conta, conta_label, numero_lote, data_lote)
+
+    for aba in abas_modelo:
+        if aba in wb.sheetnames and aba not in todas_abas_usadas:
+            _limpar_blocos_filete(wb[aba])
+
+    _preencher_base_filete(wb, df, numero_lote, tipo_lote, data_lote)
+
     output = BytesIO()
-
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        workbook = writer.book
-        worksheet = workbook.create_sheet("Filete", 0)
-
-        fill_topo = PatternFill(fill_type="solid", fgColor="D9E2F3")
-        fill_label = PatternFill(fill_type="solid", fgColor="F4B183")
-        fill_valor = PatternFill(fill_type="solid", fgColor="FFFDEB")
-
-        border = Border(
-            left=Side(style="thin", color="000000"),
-            right=Side(style="thin", color="000000"),
-            top=Side(style="thin", color="000000"),
-            bottom=Side(style="thin", color="000000")
-        )
-
-        center = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        left = Alignment(horizontal="left", vertical="center", wrap_text=True)
-
-        colunas = ["Nickname", "Código do Anúncio", "SKU", "Enviar", "ENDEREÇO", "Título"]
-
-        for col in colunas:
-            if col not in df.columns:
-                df[col] = ""
-
-        df_export = df[colunas].copy()
-        df_export.rename(columns={
-            "Nickname": "CONTA",
-            "Código do Anúncio": "CÓDIGO",
-            "Enviar": "ENVIAR",
-            "Título": "TÍTULO"
-        }, inplace=True)
-
-        conta_principal = ""
-        contas = [str(c).strip() for c in df_export["CONTA"].tolist() if str(c).strip()]
-        if contas:
-            conta_principal = contas[0]
-
-        worksheet["A1"] = f"CONTA: {conta_principal}" if conta_principal else "CONTA:"
-        worksheet["A1"].font = Font(bold=True, size=12)
-        worksheet["A1"].fill = fill_topo
-        worksheet["A1"].alignment = left
-        worksheet["A1"].border = border
-        worksheet.merge_cells("A1:D1")
-
-        worksheet["E1"] = f"Lote {tipo_lote} - #{numero_lote}"
-        worksheet["E1"].font = Font(bold=True, size=12)
-        worksheet["E1"].fill = fill_topo
-        worksheet["E1"].alignment = center
-        worksheet["E1"].border = border
-
-        cabecalhos = ["CÓDIGO", "SKU", "ENVIAR", "ENDEREÇO", "TÍTULO"]
-        for idx, coluna in enumerate(cabecalhos, start=1):
-            cell = worksheet.cell(row=2, column=idx, value=coluna)
-            cell.font = Font(bold=True)
-            cell.fill = fill_label
-            cell.alignment = center
-            cell.border = border
-
-        linha = 3
-        for _, row in df_export.iterrows():
-            valores = [
-                row["CÓDIGO"],
-                row["SKU"],
-                int(float(row["ENVIAR"] or 0)),
-                row["ENDEREÇO"],
-                row["TÍTULO"]
-            ]
-            for col_idx, valor in enumerate(valores, start=1):
-                cell = worksheet.cell(row=linha, column=col_idx, value=valor)
-                cell.fill = fill_valor
-                cell.alignment = center if col_idx in [1, 2, 3] else left
-                cell.border = border
-                if col_idx in [1, 2, 3]:
-                    cell.font = Font(bold=True, size=12)
-            linha += 1
-
-        worksheet.row_dimensions[1].height = 24
-        worksheet.row_dimensions[2].height = 22
-
-        larguras = {"A": 24, "B": 17, "C": 12, "D": 24, "E": 68}
-        for col, largura in larguras.items():
-            worksheet.column_dimensions[col].width = largura
-
+    wb.save(output)
     output.seek(0)
     return output
 
@@ -2653,6 +2742,7 @@ def montar_excel_filete_antigo(df, numero_lote, tipo_lote):
 def gerar_filete():
     numero_lote = request.args.get("numero_lote", "").strip()
     tipo_lote = request.args.get("tipo_lote", "Diversos").strip() or "Diversos"
+    data_lote = request.args.get("data_lote", "").strip()
 
     if not numero_lote:
         return "Informe um número de lote válido.", 400
@@ -2697,7 +2787,7 @@ def gerar_filete():
     except ValueError as e:
         return str(e), 400
 
-    output = montar_excel_filete_antigo(df, numero_lote, tipo_lote)
+    output = montar_excel_filete_antigo(df, numero_lote, tipo_lote, data_lote)
 
     nome_arquivo = "filete.xlsx"
     if numero_lote:
@@ -2761,8 +2851,8 @@ def carregar_itens_snapshot_lote(numero_lote):
     return itens
     return itens
 
-def montar_excel_filete_lote(df, numero_lote, tipo_lote):
-    return montar_excel_filete_antigo(df, numero_lote, tipo_lote)
+def montar_excel_filete_lote(df, numero_lote, tipo_lote, data_lote=""):
+    return montar_excel_filete_antigo(df, numero_lote, tipo_lote, data_lote)
 
 
 
@@ -3118,7 +3208,7 @@ def lote_envio_filete_excel(numero_lote):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT numero_lote, tipo_lote
+        SELECT numero_lote, tipo_lote, data_coleta_agendada
         FROM lotes_envio
         WHERE numero_lote = ?
     """, (numero_lote,))
@@ -3126,6 +3216,7 @@ def lote_envio_filete_excel(numero_lote):
     conn.close()
 
     tipo_lote = lote["tipo_lote"] if lote else "Diversos"
+    data_lote = lote["data_coleta_agendada"] if lote and "data_coleta_agendada" in lote.keys() else ""
 
     df = pd.DataFrame([{
         "Nickname": item["nickname"],
@@ -3137,7 +3228,7 @@ def lote_envio_filete_excel(numero_lote):
         "Lote": item["lote_filete"]
     } for item in itens])
 
-    output = montar_excel_filete_lote(df, numero_lote, tipo_lote)
+    output = montar_excel_filete_lote(df, numero_lote, tipo_lote, data_lote)
 
     return send_file(
         output,
@@ -3146,6 +3237,50 @@ def lote_envio_filete_excel(numero_lote):
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
+
+@app.route("/gerar-filete-enviando", methods=["POST"])
+def gerar_filete_enviando():
+    data = request.get_json() or {}
+    numero_lote = str(data.get("numero_lote", "") or "").strip()
+    tipo_lote = str(data.get("tipo_lote", "Diversos") or "Diversos").strip() or "Diversos"
+    data_lote = str(data.get("data_lote", "") or "").strip()
+
+    if not numero_lote:
+        return jsonify({"ok": False, "erro": "Informe o número do lote."}), 400
+    if not data_lote:
+        return jsonify({"ok": False, "erro": "Informe a data do lote."}), 400
+
+    df = carregar_dados_base()
+
+    conn = sqlite3.connect("status.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT codigo, status, quantidade, estrategia FROM status_cards")
+    rows = cursor.fetchall()
+    conn.close()
+
+    mapa_status = {str(codigo): status or "" for codigo, status, quantidade, estrategia in rows}
+    mapa_quantidade = {str(codigo): quantidade or 0 for codigo, status, quantidade, estrategia in rows}
+
+    df["STATUS_CARD"] = df["Código do Anúncio"].astype(str).map(mapa_status).fillna("principal")
+    df["Enviar"] = df["Código do Anúncio"].astype(str).map(mapa_quantidade).fillna(0)
+    df = df[(df["STATUS_CARD"] == "enviando") & (df["Enviar"].astype(float) > 0)].copy()
+
+    if df.empty:
+        return jsonify({"ok": False, "erro": "Não há itens na tela Enviando para gerar o filete."}), 400
+
+    for col in ["Nickname", "Código do Anúncio", "SKU", "Título", "ENDEREÇO"]:
+        if col not in df.columns:
+            df[col] = ""
+
+    output = montar_excel_filete_antigo(df, numero_lote, tipo_lote, data_lote)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"filete_{numero_lote}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 @app.route("/lote-envio/<numero_lote>/exportar-excel")
 def lote_envio_exportar_excel(numero_lote):

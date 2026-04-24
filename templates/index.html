@@ -128,6 +128,15 @@ h1{ margin-bottom:15px; }
     background:#0b5ed7;
 }
 
+.btn-gerar-filete-topo{
+    display:none;
+    background:#f59e0b;
+}
+
+.btn-gerar-filete-topo:hover{
+    background:#d97706;
+}
+
 .filtros-painel{
     display:none;
     margin-top:14px;
@@ -1612,7 +1621,8 @@ h1{ margin-bottom:15px; }
 .historico-mensal-box{
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:10px; /* menor */
+    margin-top:6px; /* sobe ele */
 }
 .historico-mensal-topo{
     display:flex;
@@ -1819,14 +1829,14 @@ h1{ margin-bottom:15px; }
 }
 .vendas-grid-resumo{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(145px, 1fr));
-    gap:8px;
+    grid-template-columns:repeat(4, 1fr); /* fixo e alinhado */
+    gap:10px;
 }
 .vendas-card{
     border:1px solid #e5e7eb;
-    border-radius:14px;
-    padding:10px;
-    box-shadow:0 3px 10px rgba(15,23,42,0.04);
+    border-radius:12px; /* menor */
+    padding:8px; /* menor */
+    box-shadow:0 2px 8px rgba(15,23,42,0.04); /* mais leve */
 }
 .vendas-card.vendas-7d{
     background:linear-gradient(180deg,#eff6ff 0%, #dbeafe 100%);
@@ -1857,15 +1867,12 @@ h1{ margin-bottom:15px; }
     margin-bottom:4px;
 }
 .vendas-valor{
-    font-size:16px;
+    font-size:14px; /* menor */
     font-weight:800;
-    color:#0f172a;
 }
 .vendas-subvalor{
-    margin-top:3px;
-    font-size:12px;
-    font-weight:700;
-    color:#334155;
+    margin-top:2px;
+    font-size:11px; /* menor */
 }
 .vendas-rodape{
     display:flex;
@@ -1989,6 +1996,198 @@ h1{ margin-bottom:15px; }
     }
 }
 
+
+/* ===== BLOCO ÚNICO PROFISSIONAL: VENDAS + HISTÓRICO ===== */
+.bloco-vendas-unificado{
+    background:linear-gradient(135deg,#f8fafc 0%,#eef2f7 100%);
+    border:1px solid #dbe3ee;
+    border-radius:22px;
+    padding:18px;
+    box-shadow:0 14px 32px rgba(15,23,42,0.08);
+    position:relative;
+    overflow:hidden;
+}
+.bloco-vendas-unificado::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at top right, rgba(59,130,246,0.13), transparent 35%);
+    pointer-events:none;
+}
+.vendas-unificado-header,
+.vendas-destaque-grid,
+.vendas-apoio-grid,
+.historico-compacto-wrap{
+    position:relative;
+    z-index:1;
+}
+.vendas-unificado-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+.vendas-unificado-titulo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0;
+    font-size:20px;
+    font-weight:900;
+    color:#0f172a;
+    letter-spacing:0.2px;
+}
+.vendas-unificado-subtitulo{
+    margin-top:4px;
+    color:#64748b;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.45px;
+}
+.vendas-unificado-badges{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+}
+.vendas-destaque-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(130px, 1fr));
+    gap:12px;
+    margin-bottom:12px;
+}
+.vendas-card-destaque{
+    min-height:108px;
+    border-radius:18px;
+    padding:14px;
+    border:1px solid rgba(148,163,184,0.35);
+    box-shadow:0 10px 24px rgba(15,23,42,0.08);
+    transition:0.18s ease;
+    position:relative;
+    overflow:hidden;
+}
+.vendas-card-destaque:hover{
+    transform:translateY(-2px);
+    box-shadow:0 16px 30px rgba(15,23,42,0.12);
+}
+.vendas-card-destaque::after{
+    content:"";
+    position:absolute;
+    right:-22px;
+    top:-22px;
+    width:74px;
+    height:74px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.45);
+}
+.vendas-card-destaque .vendas-label{
+    font-size:11px;
+    letter-spacing:0.7px;
+    margin-bottom:8px;
+}
+.vendas-card-destaque .vendas-valor{
+    font-size:30px;
+    line-height:1;
+    font-weight:950;
+    color:#0f172a;
+}
+.vendas-card-destaque .vendas-subvalor{
+    margin-top:8px;
+    font-size:12px;
+    font-weight:800;
+}
+.vendas-card-destaque.vendas-7d{
+    background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
+    border-color:#bfdbfe;
+}
+.vendas-card-destaque.vendas-15d{
+    background:linear-gradient(135deg,#ecfeff 0%,#cffafe 100%);
+    border-color:#67e8f9;
+}
+.vendas-card-destaque.vendas-30d{
+    background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);
+    border-color:#86efac;
+}
+.vendas-card-destaque.vendas-45d{
+    background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);
+    border-color:#fdba74;
+}
+.vendas-apoio-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(160px, 1fr));
+    gap:10px;
+    margin-bottom:16px;
+}
+.vendas-apoio-card{
+    border-radius:16px;
+    padding:12px 14px;
+    background:rgba(255,255,255,0.78);
+    border:1px solid #e2e8f0;
+    box-shadow:0 6px 14px rgba(15,23,42,0.04);
+}
+.vendas-apoio-card .vendas-label{
+    font-size:10px;
+    margin-bottom:4px;
+}
+.vendas-apoio-card .vendas-valor{
+    font-size:20px;
+}
+.historico-compacto-wrap{
+    background:rgba(255,255,255,0.82);
+    border:1px solid #e2e8f0;
+    border-radius:18px;
+    padding:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.historico-compacto-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+}
+.historico-compacto-titulo{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    color:#0f172a;
+}
+.historico-compacto-subtitulo{
+    color:#64748b;
+    font-size:12px;
+    font-weight:800;
+}
+.historico-meses-grid.historico-seis-meses{
+    grid-template-columns:repeat(6, minmax(105px, 1fr));
+}
+.historico-seis-meses .historico-mes-card{
+    border-radius:16px;
+    padding:13px 14px;
+}
+.historico-seis-meses .historico-mes-valor{
+    font-size:24px;
+}
+@media (max-width: 1200px){
+    .vendas-destaque-grid,
+    .historico-meses-grid.historico-seis-meses{
+        grid-template-columns:repeat(2, minmax(140px, 1fr));
+    }
+}
+@media (max-width: 640px){
+    .vendas-destaque-grid,
+    .vendas-apoio-grid,
+    .historico-meses-grid.historico-seis-meses{
+        grid-template-columns:1fr;
+    }
+    .vendas-card-destaque .vendas-valor{
+        font-size:26px;
+    }
+}
+
 </style>
 
 <div class="page-wrap">
@@ -2040,6 +2239,17 @@ h1{ margin-bottom:15px; }
     aria-label="Criar lote"
 >
     📦
+</button>
+
+<button
+    id="btnGerarFilete"
+    type="button"
+    class="btn-acao-icone btn-gerar-filete-topo"
+    onclick="abrirModalGerarFilete()"
+    title="Gerar filete"
+    aria-label="Gerar filete"
+>
+    🧾
 </button>
             </div>
     
@@ -2331,6 +2541,11 @@ function valorParaNumero(v){
 
 function textoNormalizado(v){
     return String(v || "").toUpperCase().trim();
+}
+
+function obterTextoStatusFull(item){
+    const full = String(item?.["Full"] || "").trim().toUpperCase();
+    return full === "NO FULL" ? "Está no Full" : "Não está no Full";
 }
 
 function numeroInteiro(v){
@@ -3214,6 +3429,7 @@ function montarTooltipTituloDuplicado(item){
             const sku = x["SKU"] || "";
             const vendas30 = numeroInteiro(x["30 DIAS"] || 0);
             const valor30 = x["Total de Vendas 30 DIAS"] || "0,00";
+            const statusFull = obterTextoStatusFull(x);
 
             const destaque = String(codigo) === String(item["Código do Anúncio"])
                 ? ' <strong>(este card)</strong>'
@@ -3223,6 +3439,7 @@ function montarTooltipTituloDuplicado(item){
                 <div style="margin-bottom:8px;">
                     <strong>${codigo}</strong>${destaque}<br>
                     Conta: ${conta} | SKU: ${sku}<br>
+                    Full: ${statusFull}<br>
                     Venda 30 dias: ${vendas30} | R$ ${valor30}
                 </div>
             `;
@@ -3254,6 +3471,7 @@ function montarTooltipTitulosMesmoCarro(item){
             <div style="margin-bottom:10px;">
                 <strong>${x["Código do Anúncio"] || ""}</strong><br>
                 Conta: ${x["Nickname"] || ""} | SKU: ${x["SKU"] || ""}<br>
+                Full: ${obterTextoStatusFull(x)}<br>
                 Título: ${x["Título"] || ""}
             </div>
         `)
@@ -3392,6 +3610,11 @@ function atualizarVisibilidadeFilete(){
 
     if (btnCriarLote){
         btnCriarLote.style.display = mostrar ? "flex" : "none";
+    }
+
+    const btnGerarFilete = document.getElementById("btnGerarFilete");
+    if (btnGerarFilete){
+        btnGerarFilete.style.display = mostrar ? "flex" : "none";
     }
 
     if (btnGerarPdf){
@@ -3936,81 +4159,67 @@ function montarHTMLCard(item){
             </div>
         </div>
 
-        <div class="linha-quatro">
-            <div class="duplo-bloco">
-
-
-                <div class="bloco">
-                    <h3>📅 HISTÓRICO MENSAL MELI</h3>
-                    <div class="historico-mensal-box">
-                        <div class="historico-mensal-topo">
-                            <div class="historico-mensal-resumo">
-                                <span class="historico-mini-badge">8 meses</span>
-                                <span class="historico-mini-badge">Visão mensal</span>
-                            </div>
-                        </div>
-
-                        <div class="historico-meses-grid">
-                            <div class="historico-mes-card"><div class="historico-mes-label">AGOSTO</div><div class="historico-mes-valor">${item["AGOSTO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">SETEMBRO</div><div class="historico-mes-valor">${item["SETEMBRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">OUTUBRO</div><div class="historico-mes-valor">${item["OUTUBRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">NOVEMBRO</div><div class="historico-mes-valor">${item["NOVEMBRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">DEZEMBRO</div><div class="historico-mes-valor">${item["DEZEMBRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">JANEIRO</div><div class="historico-mes-valor">${item["JANEIRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">FEVEREIRO</div><div class="historico-mes-valor">${item["FEVEREIRO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">MARÇO</div><div class="historico-mes-valor">${item["MARÇO"] || 0}</div></div>
-                            <div class="historico-mes-card"><div class="historico-mes-label">ABRIL</div><div class="historico-mes-valor">${item["ABRIL"] || 0}</div></div>
-                        </div>
-
-                        <div class="historico-mensal-rodape">
-                            <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
-                            <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
-                        </div>
-                    </div>
+        <div class="bloco-vendas-unificado">
+            <div class="vendas-unificado-header">
+                <div>
+                    <h3 class="vendas-unificado-titulo">📊 VENDAS</h3>
+                    <div class="vendas-unificado-subtitulo">Destaque principal de performance</div>
+                </div>
+                <div class="vendas-unificado-badges">
+                    <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
+                    <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
                 </div>
             </div>
 
-            <div class="duplo-bloco">
-                <div class="bloco">
-                    <h3>📊 VENDAS</h3>
-                    <div class="vendas-visual-box">
-                        <div class="vendas-grid-resumo">
-                            <div class="vendas-card vendas-7d">
-                                <div class="vendas-label">7 dias</div>
-                                <div class="vendas-valor">${item["7 DIAS"] || 0}</div>
-                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
-                            </div>
-                            <div class="vendas-card vendas-15d">
-                                <div class="vendas-label">15 dias</div>
-                                <div class="vendas-valor">${item["15 DIAS"] || 0}</div>
-                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
-                            </div>
-                            <div class="vendas-card vendas-30d">
-                                <div class="vendas-label">30 dias</div>
-                                <div class="vendas-valor">${item["30 DIAS"] || 0}</div>
-                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
-                            </div>
-                            <div class="vendas-card vendas-45d">
-                                <div class="vendas-label">45 dias</div>
-                                <div class="vendas-valor">${item["45 DIAS"] || 0}</div>
-                                <div class="vendas-subvalor">R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
-                            </div>
-                            <div class="vendas-card vendas-soma">
-                                <div class="vendas-label">30 + 7</div>
-                                <div class="vendas-valor">${(Number(item["30 DIAS"] || 0) + Number(item["7 DIAS"] || 0))}</div>
-                            </div>
-                            <div class="vendas-card vendas-soma">
-                                <div class="vendas-label">30 + 15</div>
-                                <div class="vendas-valor">${(Number(item["30 DIAS"] || 0) + Number(item["15 DIAS"] || 0))}</div>
-                            </div>
-                        </div>
-                        <div class="vendas-rodape">
-                            <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
-                            <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
-                        </div>
-                    </div>
+            <div class="vendas-destaque-grid">
+                <div class="vendas-card-destaque vendas-7d">
+                    <div class="vendas-label">7 dias</div>
+                    <div class="vendas-valor">${item["7 DIAS"] || 0}</div>
+                    <div class="vendas-subvalor">R$ ${item["Total de Vendas 7 DIAS"] || "0,00"}</div>
+                </div>
+                <div class="vendas-card-destaque vendas-15d">
+                    <div class="vendas-label">15 dias</div>
+                    <div class="vendas-valor">${item["15 DIAS"] || 0}</div>
+                    <div class="vendas-subvalor">R$ ${item["Total de Vendas 15 DIAS"] || "0,00"}</div>
+                </div>
+                <div class="vendas-card-destaque vendas-30d">
+                    <div class="vendas-label">30 dias</div>
+                    <div class="vendas-valor">${item["30 DIAS"] || 0}</div>
+                    <div class="vendas-subvalor">R$ ${item["Total de Vendas 30 DIAS"] || "0,00"}</div>
+                </div>
+                <div class="vendas-card-destaque vendas-45d">
+                    <div class="vendas-label">45 dias</div>
+                    <div class="vendas-valor">${item["45 DIAS"] || 0}</div>
+                    <div class="vendas-subvalor">R$ ${item["Total de Vendas 45 DIAS"] || "0,00"}</div>
                 </div>
             </div>
+            <div class="historico-compacto-wrap">
+                <div class="historico-compacto-header">
+                    <div>
+                        <h3 class="historico-compacto-titulo">📅 HISTÓRICO MENSAL MELI</h3>
+                        <div class="historico-compacto-subtitulo">6 meses anteriores</div>
+                    </div>
+                    <div class="historico-mensal-resumo">
+                        <span class="historico-mini-badge">6 meses</span>
+                        <span class="historico-mini-badge">Visão mensal</span>
+                    </div>
+                </div>
+
+                <div class="historico-meses-grid historico-seis-meses">
+                    <div class="historico-mes-card"><div class="historico-mes-label">OUTUBRO</div><div class="historico-mes-valor">${item["OUTUBRO"] || 0}</div></div>
+                    <div class="historico-mes-card"><div class="historico-mes-label">NOVEMBRO</div><div class="historico-mes-valor">${item["NOVEMBRO"] || 0}</div></div>
+                    <div class="historico-mes-card"><div class="historico-mes-label">DEZEMBRO</div><div class="historico-mes-valor">${item["DEZEMBRO"] || 0}</div></div>
+                    <div class="historico-mes-card"><div class="historico-mes-label">JANEIRO</div><div class="historico-mes-valor">${item["JANEIRO"] || 0}</div></div>
+                    <div class="historico-mes-card"><div class="historico-mes-label">FEVEREIRO</div><div class="historico-mes-valor">${item["FEVEREIRO"] || 0}</div></div>
+                    <div class="historico-mes-card"><div class="historico-mes-label">MARÇO</div><div class="historico-mes-valor">${item["MARÇO"] || 0}</div></div>
+                </div>
+
+                <div class="historico-mensal-rodape" style="margin-top:12px;">
+                    <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
+                    <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
     `;
@@ -4683,6 +4892,84 @@ function abrirModalCriarLote(){
     document.getElementById("modalFilete").style.display = "flex";
 }
 
+
+function abrirModalGerarFilete(){
+    if (telaAtual !== "enviando") return;
+
+    const itensEnviando = dadosFiltradosBase.filter(item => {
+        const codigo = String(item["Código do Anúncio"] || "");
+        const statusItem = statusSalvos[codigo] || {};
+        const quantidade = Number(statusItem.quantidade || 0);
+        return obterDestino(item) === "enviando" && quantidade > 0;
+    });
+
+    if (!itensEnviando.length){
+        alert("Não há itens na tela Enviando para gerar o filete.");
+        return;
+    }
+
+    document.getElementById("numeroLoteGerarFilete").value = "";
+    document.getElementById("dataLoteGerarFilete").value = "";
+    document.getElementById("tipoLoteGerarFilete").value = "Diversos";
+    document.getElementById("modalGerarFilete").style.display = "flex";
+}
+
+function fecharModalGerarFilete(){
+    const modal = document.getElementById("modalGerarFilete");
+    if (modal) modal.style.display = "none";
+}
+
+function gerarFileteTelaEnviando(){
+    const numeroLote = document.getElementById("numeroLoteGerarFilete").value.trim();
+    const dataLote = document.getElementById("dataLoteGerarFilete").value;
+    const tipoLote = document.getElementById("tipoLoteGerarFilete").value || "Diversos";
+
+    if (!numeroLote){
+        alert("Informe o número do lote.");
+        document.getElementById("numeroLoteGerarFilete").focus();
+        return;
+    }
+
+    if (!dataLote){
+        alert("Informe a data do lote.");
+        document.getElementById("dataLoteGerarFilete").focus();
+        return;
+    }
+
+    fetch("/gerar-filete-enviando", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            numero_lote: numeroLote,
+            data_lote: dataLote,
+            tipo_lote: tipoLote
+        })
+    })
+    .then(async response => {
+        if (!response.ok){
+            let erro = "Erro ao gerar filete.";
+            try {
+                const data = await response.json();
+                erro = data.erro || erro;
+            } catch(e) {}
+            throw new Error(erro);
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `filete_${numeroLote}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        fecharModalGerarFilete();
+    })
+    .catch(err => alert(err.message || "Erro ao gerar filete."));
+}
+
 function criarLote(){
     const tipoLote = document.getElementById("tipoLoteFilete").value;
     const inputs = Array.from(document.querySelectorAll("#camposLotesCriacao .input-lote-grupo"));
@@ -5021,6 +5308,43 @@ if (
         <div class="modal-botoes">
             <button type="button" onclick="criarLote()">Criar lote</button>
             <button type="button" onclick="fecharModalCriarLote()" class="btn-fechar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+
+<div id="modalGerarFilete" class="modal-filete">
+    <div class="modal-conteudo">
+        <h3>Gerar Filete</h3>
+
+        <div class="filete-info">
+            Informe a <strong>data</strong> e o <strong>número do lote</strong> antes de gerar o filete da tela <strong>Enviando</strong>.
+        </div>
+
+        <div style="display:grid; gap:12px;">
+            <div>
+                <label for="tipoLoteGerarFilete"><strong>Tipo do lote</strong></label>
+                <select id="tipoLoteGerarFilete">
+                    <option value="Diversos">Diversos</option>
+                    <option value="Caixa">Caixa</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="numeroLoteGerarFilete"><strong>Nº do lote</strong></label>
+                <input type="text" id="numeroLoteGerarFilete" placeholder="Ex: 59618562">
+            </div>
+
+            <div>
+                <label for="dataLoteGerarFilete"><strong>Data do lote</strong></label>
+                <input type="date" id="dataLoteGerarFilete">
+            </div>
+        </div>
+
+        <div class="modal-botoes">
+            <button type="button" onclick="gerarFileteTelaEnviando()">Gerar filete</button>
+            <button type="button" onclick="fecharModalGerarFilete()" class="btn-fechar">Cancelar</button>
         </div>
     </div>
 </div>
