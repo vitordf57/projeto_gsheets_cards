@@ -30,6 +30,7 @@ configure_auth_app(app)
 SCREEN_ENDPOINT_RULES = {
     "/home": "home",
     "/metricas-full": "metricas_full",
+    "/dados-fiscais": "metricas_full",
     "/conferencia": "conferencia",
     "/picking": "picking",
     "/api/historico-mensal": "principal",
@@ -4066,6 +4067,140 @@ def api_full_distribuicao_detalhe():
         }), 500
     
 init_db()
+
+@app.route("/dados-fiscais")
+def dados_fiscais():
+    """
+    Tela de Dados Fiscais por MLB.
+    - Sem filtro: mostra todos os MLBs encontrados nos lotes de envio.
+    - Com ?lote=NUMERO: mostra somente os MLBs daquele número de lote.
+    Os dados fiscais vêm primeiro do dados_json salvo no snapshot do lote e,
+    quando possível, são enriquecidos com a base principal.
+    """
+    numero_lote = str(
+        request.args.get("lote")
+        or request.args.get("numero_lote")
+        or request.args.get("numeroLote")
+        or ""
+    ).strip()
+
+    resultado = []
+    lotes_disponiveis = []
+
+    def pegar(dados, *chaves):
+        for chave in chaves:
+            if chave in dados and str(dados.get(chave, "") or "").strip() != "":
+                return dados.get(chave, "")
+        return ""
+
+    try:
+        garantir_tabela_lotes_envio_snapshot()
+
+        conn = sqlite3.connect("status.db")
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT DISTINCT numero_lote
+            FROM lotes_envio_itens_snapshot
+            WHERE COALESCE(numero_lote, '') <> ''
+            ORDER BY numero_lote DESC
+        """)
+        lotes_disponiveis = [str(row["numero_lote"] or "") for row in cursor.fetchall()]
+
+        if numero_lote:
+            cursor.execute("""
+                SELECT *
+                FROM lotes_envio_itens_snapshot
+                WHERE numero_lote = ?
+                ORDER BY codigo, sku, id
+            """, (numero_lote,))
+        else:
+            cursor.execute("""
+                SELECT *
+                FROM lotes_envio_itens_snapshot
+                ORDER BY numero_lote DESC, codigo, sku, id
+            """)
+
+        itens = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        itens = enriquecer_itens_lote_com_base(itens)
+
+        for item in itens:
+            try:
+                dados_json = json.loads(item.get("dados_json") or "{}")
+                if not isinstance(dados_json, dict):
+                    dados_json = {}
+            except:
+                dados_json = {}
+
+            mlb = (
+                str(item.get("codigo") or "").strip()
+                or str(pegar(dados_json, "MLB", "Código do Anúncio", "# Anúncio", "# de anúncio") or "").strip()
+                or "-"
+            )
+
+            resultado.append({
+                "numero_lote": str(item.get("numero_lote") or ""),
+                "mlb": mlb,
+                "sku": str(item.get("sku") or pegar(dados_json, "SKU") or ""),
+                "titulo": str(item.get("titulo") or pegar(dados_json, "Título", "PRODUTO") or ""),
+
+                "custo_signus": pegar(dados_json, "CUSTO_SIGNUS", "CUSTO SIGNUS", "Custo Signus"),
+                "origem_signus": pegar(dados_json, "ORIGEM_SIGNUS", "ORIGEM SIGNUS", "Origem Signus"),
+                "ncm": pegar(dados_json, "NCM"),
+                "cest_signus": pegar(dados_json, "CEST", "CEST SIGNUS", "CEST_SIGNUS"),
+                "st": pegar(dados_json, "COM OU SEM ST", "ST"),
+                "id_signus": pegar(dados_json, "ID", "ID SIGNUS", "ID_SIGNUS"),
+
+                "ncm_meli": pegar(dados_json, "NCM MELI", "NCM_MELI"),
+                "regra_meli": pegar(dados_json, "REGRA TRIB. MELI", "REGRA TRIB MELI", "REGRA_MELI"),
+                "origem_meli": pegar(dados_json, "ORIGEM MELI", "ORIGEM_MELI"),
+                "tipo_origem_meli": pegar(dados_json, "TIPO ORIGEM MELI", "TIPO_ORIGEM_MELI"),
+                "cest_meli": pegar(dados_json, "CEST MELI", "CEST_MELI"),
+                "custo_meli": pegar(dados_json, "CUSTO MELI", "CUSTO_MELI"),
+                "id_meli": pegar(dados_json, "ID MELI", "ID_MELI"),
+            })
+
+    except Exception as e:
+        # Fallback: caso o banco ainda não tenha snapshots, mostra a base FULL.
+        try:
+            dados_full = carregar_csv_com_cache(CSV_URL_FULL, "full")
+        except:
+            dados_full = []
+
+        for row in dados_full:
+            resultado.append({
+                "numero_lote": "",
+                "mlb": row.get("MLB") or row.get("Código do Anúncio") or "-",
+                "sku": row.get("SKU", ""),
+                "titulo": row.get("Título", ""),
+
+                "custo_signus": row.get("CUSTO_SIGNUS", ""),
+                "origem_signus": row.get("ORIGEM_SIGNUS", ""),
+                "ncm": row.get("NCM", ""),
+                "cest_signus": row.get("CEST", "") or row.get("CEST SIGNUS", "") or row.get("CEST_SIGNUS", ""),
+                "st": row.get("COM OU SEM ST", ""),
+                "id_signus": row.get("ID", ""),
+
+                "ncm_meli": row.get("NCM MELI", ""),
+                "regra_meli": row.get("REGRA TRIB. MELI", ""),
+                "origem_meli": row.get("ORIGEM MELI", ""),
+                "tipo_origem_meli": row.get("TIPO ORIGEM MELI", ""),
+                "cest_meli": row.get("CEST MELI", ""),
+                "custo_meli": row.get("CUSTO MELI", ""),
+                "id_meli": row.get("ID MELI", ""),
+            })
+
+    return render_template(
+        "dados_fiscais.html",
+        dados=resultado,
+        lote=numero_lote,
+        lotes_disponiveis=lotes_disponiveis,
+        total_resultados=len(resultado)
+    )
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

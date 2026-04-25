@@ -1428,6 +1428,12 @@ h1{ margin-bottom:15px; }
     justify-content:space-between;
     gap:16px;
     margin-top:6px;
+    width:100%;
+    flex-wrap:nowrap;
+}
+
+.saldo-resumo-linha .envio-area{
+    margin-left:auto;
 }
 
 .card-resumo-topo-direita{
@@ -2188,6 +2194,39 @@ h1{ margin-bottom:15px; }
     }
 }
 
+
+
+/* AJUSTE SOLICITADO: GRÁFICO DIÁRIO DENTRO DO HISTÓRICO MENSAL */
+.historico-diario-wrap{
+    margin-top:12px;
+    background:linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    padding:12px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.historico-diario-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+}
+.historico-diario-titulo{ font-size:13px; font-weight:900; color:#0f172a; }
+.historico-diario-mes{ font-size:12px; font-weight:800; color:#1d4ed8; }
+.historico-diario-canvas{ width:100%; height:150px; display:block; }
+.historico-seis-meses .historico-mes-card{ padding:9px 10px; }
+.historico-seis-meses .historico-mes-label{ font-size:10px; margin-bottom:2px; }
+.historico-seis-meses .historico-mes-valor{ font-size:18px; }
+
+
+/* AJUSTE SOLICITADO: TIPO + PRIORIDADE + ESTRATÉGIA + MOTIVO NA MESMA LINHA */
+.topo-esquerda{
+    max-width:100% !important;
+    flex:1 1 auto !important;
+    align-items:flex-start !important;
+}
 </style>
 
 <div class="page-wrap">
@@ -3956,6 +3995,150 @@ function carregarChatComentario(codigo){
         });
 }
 
+function normalizarChaveHistoricoDiario(valor){
+    return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function obterCampoHistoricoDiario(item, candidatos){
+    const mapa = {};
+    Object.keys(item || {}).forEach(chave => { mapa[normalizarChaveHistoricoDiario(chave)] = item[chave]; });
+    for (const candidato of candidatos){
+        const chaveNormalizada = normalizarChaveHistoricoDiario(candidato);
+        if (Object.prototype.hasOwnProperty.call(mapa, chaveNormalizada)) return mapa[chaveNormalizada];
+    }
+    return 0;
+}
+
+function obterVendasDiaMesHistorico(item, mes, dia){
+    return numeroInteiro(obterCampoHistoricoDiario(item, [
+        `${mes} ${dia}`, `${mes}_${dia}`, `${mes}-${dia}`, `${mes}/${dia}`,
+        `${mes} DIA ${dia}`, `${mes}_DIA_${dia}`, `${mes} D${dia}`, `${mes}_D${dia}`,
+        `DIA ${dia} ${mes}`, `DIA_${dia}_${mes}`, `D${dia} ${mes}`, `D${dia}_${mes}`,
+        `${dia} ${mes}`, `${dia}_${mes}`,
+        `VENDAS ${mes} ${dia}`, `VENDAS_${mes}_${dia}`, `VENDA ${mes} ${dia}`, `VENDA_${mes}_${dia}`,
+        `${mes} VENDA DIA ${dia}`, `${mes} VENDAS DIA ${dia}`
+    ]));
+}
+
+function obterSerieDiariaHistorico(item, mes){
+    const dias = [];
+    for (let dia = 1; dia <= 31; dia++) dias.push(obterVendasDiaMesHistorico(item, mes, dia));
+    return dias;
+}
+
+function montarCardMesHistoricoDiario(item, codigo, mes){
+    const serie = obterSerieDiariaHistorico(item, mes);
+    return `
+        <div class="historico-mes-card" onclick="selecionarMesHistoricoDiario(this, '${codigo}', '${mes}', '${serie.join(',')}')">
+            <div class="historico-mes-label">${mes}</div>
+            <div class="historico-mes-valor">${item[mes] || 0}</div>
+        </div>
+    `;
+}
+
+function desenharGraficoHistoricoDiario(canvas, serie, mes){
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const larguraCss = canvas.clientWidth || 600;
+    const alturaCss = canvas.clientHeight || 150;
+    const escala = window.devicePixelRatio || 1;
+    canvas.width = larguraCss * escala;
+    canvas.height = alturaCss * escala;
+    ctx.setTransform(escala, 0, 0, escala, 0, 0);
+    ctx.clearRect(0, 0, larguraCss, alturaCss);
+
+    const margemEsq = 28, margemDir = 10, margemTop = 12, margemBottom = 24;
+    const largura = larguraCss - margemEsq - margemDir;
+    const altura = alturaCss - margemTop - margemBottom;
+    const valores = (serie || []).map(v => numeroInteiro(v));
+    const maximo = Math.max(...valores, 1);
+
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margemEsq, margemTop);
+    ctx.lineTo(margemEsq, margemTop + altura);
+    ctx.lineTo(margemEsq + largura, margemTop + altura);
+    ctx.stroke();
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "10px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(maximo, margemEsq - 6, margemTop + 4);
+    ctx.fillText("0", margemEsq - 6, margemTop + altura + 3);
+
+    ctx.textAlign = "center";
+    [1, 5, 10, 15, 20, 25, 31].forEach(dia => {
+        const x = margemEsq + ((dia - 1) / 30) * largura;
+        ctx.fillText(String(dia), x, alturaCss - 6);
+    });
+
+    ctx.beginPath();
+    valores.forEach((valor, index) => {
+        const x = margemEsq + (index / 30) * largura;
+        const y = margemTop + altura - ((valor / maximo) * altura);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(margemEsq + largura, margemTop + altura);
+    ctx.lineTo(margemEsq, margemTop + altura);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(29,78,216,0.16)";
+    ctx.fill();
+
+    ctx.beginPath();
+    valores.forEach((valor, index) => {
+        const x = margemEsq + (index / 30) * largura;
+        const y = margemTop + altura - ((valor / maximo) * altura);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = "#1d4ed8";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    valores.forEach((valor, index) => {
+        if (valor <= 0) return;
+        const x = margemEsq + (index / 30) * largura;
+        const y = margemTop + altura - ((valor / maximo) * altura);
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#1d4ed8";
+        ctx.fill();
+    });
+
+    if (valores.every(v => v === 0)){
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`Sem vendas diárias registradas em ${mes}`, margemEsq + largura / 2, margemTop + altura / 2);
+    }
+}
+
+function selecionarMesHistoricoDiario(card, codigo, mes, serieTexto){
+    const wrap = card.closest(".historico-compacto-wrap");
+    if (!wrap) return;
+    wrap.querySelectorAll(".historico-mes-card").forEach(el => el.classList.remove("ativo"));
+    card.classList.add("ativo");
+
+    const labelMes = wrap.querySelector(`#historico-diario-mes-${codigo}`);
+    if (labelMes) labelMes.textContent = mes;
+
+    const canvas = wrap.querySelector(`#historico-diario-canvas-${codigo}`);
+    const serie = String(serieTexto || "").split(",").map(v => numeroInteiro(v));
+    desenharGraficoHistoricoDiario(canvas, serie, mes);
+}
+
+function inicializarGraficosHistoricoDiario(raiz){
+    const escopo = raiz || document;
+    escopo.querySelectorAll(".historico-compacto-wrap").forEach(wrap => {
+        if (wrap.dataset.graficoDiarioInicializado === "1") return;
+        const primeiroMes = wrap.querySelector(".historico-mes-card");
+        if (primeiroMes){
+            primeiroMes.click();
+            wrap.dataset.graficoDiarioInicializado = "1";
+        }
+    });
+}
+
 function montarHTMLCard(item){
     const sugestoes = sugestaoIA(item);
     const analise = analisarSKU(item);
@@ -3992,6 +4175,30 @@ function montarHTMLCard(item){
                             <option value="URGENTE" ${valorSelecionadoPrioridade(codigo, "URGENTE")}>URGENTE</option>
                         </select>
                     </div>
+
+                    <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
+                        ${
+                            statusSalvos[String(codigo)]?.estrategia
+                            ? `
+                            <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
+                            `
+                            : `
+                            <div class="estrategia-titulo">Estratégia</div>
+                            `
+                        }
+                    </div>
+
+                    <div class="motivo-meio" onclick="abrirModalMotivo('${codigo}')">
+                        ${
+                            statusSalvos[String(codigo)]?.motivo_envio
+                            ? `
+                            <div class="estrategia-titulo">Motivo → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
+                            `
+                            : `
+                            <div class="estrategia-titulo">Motivo</div>
+                            `
+                        }
+                    </div>
                 </div>
 
                 <div class="topo-direita">
@@ -4002,21 +4209,7 @@ function montarHTMLCard(item){
                             ${sugestoes.tooltip}
                         </div>
                     </div>
-
-                    <div class="comentario-topo registro-topo acao-topo"
-                        onclick="abrirModalRegistro('acao', '${codigo}')"
-                        title="Abrir ação do MLB">
-                        <span class="registro-label">AÇÃO</span>
-                        ${montarBadgeResumoRegistro(obterAcaoMlbSalva(codigo), "📝")}
-                    </div>
-
-                    <div class="comentario-topo registro-topo retorno-topo"
-                        onclick="abrirModalRegistro('retorno', '${codigo}')"
-                        title="Abrir retorno do MLB">
-                        <span class="registro-label">RETORNO</span>
-                        ${montarBadgeResumoRegistro(obterRetornoMlbSalvo(codigo), "↩️")}
-                    </div>
-
+                    
                     <div class="comentario-topo"
                         onclick="abrirComentarioMlb('${item["Código do Anúncio"]}', '${item["SKU"]}')">
                         💬 ${montarBubbleResumoComentario(codigo)}
@@ -4078,7 +4271,7 @@ function montarHTMLCard(item){
                 <span class="detalhe-valor">${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</span>
             </div>
             <div class="info-detalhe-card">
-                <span class="detalhe-label">Lote</span>
+                    <span class="detalhe-label">Lote</span>
                 <span class="detalhe-valor">${item["LOTE"] || ""}</span>
             </div>
             <div class="info-detalhe-card outros-mlbs-card">
@@ -4091,33 +4284,14 @@ function montarHTMLCard(item){
             </div>
         </div>
 
-        <div class="linha-acao-final">
 
-    <div class="estrategia-meio" onclick="abrirModalEstrategia('${codigo}')">
-    ${
-        statusSalvos[String(codigo)]?.estrategia
-        ? `
-        <div class="estrategia-titulo">Estratégia → ${statusSalvos[String(codigo)]?.estrategia}</div>
-        `
-        : `
-        <div class="estrategia-titulo">Estratégia</div>
-        `
-    }
-</div>
+        <hr style="margin:4px 0 0 0">
 
-    <div class="motivo-meio" onclick="abrirModalMotivo('${codigo}')">
-    ${
-        statusSalvos[String(codigo)]?.motivo_envio
-        ? `
-        <div class="estrategia-titulo">Motivo → ${statusSalvos[String(codigo)]?.motivo_envio}</div>
-        `
-        : `
-        <div class="estrategia-titulo">Motivo</div>
-        `
-    }
-</div>
-
-    <div class="envio-area">
+        <div class="saldo-resumo-linha">
+            <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final saldo-final-abaixo" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
+                ${montarTextoSaldoFinal(item, calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)))}
+            </div>
+         <div class="envio-area">
         <input
             type="number"
             id="qtd-${codigo}"
@@ -4133,16 +4307,13 @@ function montarHTMLCard(item){
     ↩ Voltar
 </button>
     </div>
-
-</div>
-
-        <hr style="margin:4px 0 0 0">
-
-        <div class="saldo-resumo-linha">
-            <div id="saldo-restante-${codigo}" data-sku="${item["SKU"]}" class="saldo-final saldo-final-abaixo" style="color:${calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)) < 0 ? '#c62828' : '#1b5e20'};">
-                ${montarTextoSaldoFinal(item, calcularSaldoProjetado(item["ESTOQUE TOTAL SIGNUS"] || 0, obterQuantidadeSalva(codigo)))}
-            </div>
-
+    </div>
+        <div class="bloco-vendas-unificado">
+            <div class="vendas-unificado-header">
+                <div>
+                    <h3 class="vendas-unificado-titulo">📊 VENDAS</h3>
+                    <div class="vendas-unificado-subtitulo">Destaque principal de performance</div>
+                </div>
             <div class="card-resumo-topo card-resumo-topo-direita">
                 <div class="card-resumo-pill pill-caminho">
                     <span class="pill-label">A Caminho</span>
@@ -4157,14 +4328,6 @@ function montarHTMLCard(item){
                     <span class="pill-value">${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</span>
                 </div>
             </div>
-        </div>
-
-        <div class="bloco-vendas-unificado">
-            <div class="vendas-unificado-header">
-                <div>
-                    <h3 class="vendas-unificado-titulo">📊 VENDAS</h3>
-                    <div class="vendas-unificado-subtitulo">Destaque principal de performance</div>
-                </div>
                 <div class="vendas-unificado-badges">
                     <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
                     <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
@@ -4199,24 +4362,27 @@ function montarHTMLCard(item){
                         <h3 class="historico-compacto-titulo">📅 HISTÓRICO MENSAL MELI</h3>
                         <div class="historico-compacto-subtitulo">6 meses anteriores</div>
                     </div>
-                    <div class="historico-mensal-resumo">
-                        <span class="historico-mini-badge">6 meses</span>
-                        <span class="historico-mini-badge">Visão mensal</span>
+                    <div class="historico-mensal-rodape" style="margin-top:12px;">
+                    <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
+                    <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
                     </div>
                 </div>
 
                 <div class="historico-meses-grid historico-seis-meses">
-                    <div class="historico-mes-card"><div class="historico-mes-label">OUTUBRO</div><div class="historico-mes-valor">${item["OUTUBRO"] || 0}</div></div>
-                    <div class="historico-mes-card"><div class="historico-mes-label">NOVEMBRO</div><div class="historico-mes-valor">${item["NOVEMBRO"] || 0}</div></div>
-                    <div class="historico-mes-card"><div class="historico-mes-label">DEZEMBRO</div><div class="historico-mes-valor">${item["DEZEMBRO"] || 0}</div></div>
-                    <div class="historico-mes-card"><div class="historico-mes-label">JANEIRO</div><div class="historico-mes-valor">${item["JANEIRO"] || 0}</div></div>
-                    <div class="historico-mes-card"><div class="historico-mes-label">FEVEREIRO</div><div class="historico-mes-valor">${item["FEVEREIRO"] || 0}</div></div>
-                    <div class="historico-mes-card"><div class="historico-mes-label">MARÇO</div><div class="historico-mes-valor">${item["MARÇO"] || 0}</div></div>
+                    ${montarCardMesHistoricoDiario(item, codigo, "OUTUBRO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "NOVEMBRO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "DEZEMBRO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "JANEIRO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "FEVEREIRO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "MARÇO")}
                 </div>
 
-                <div class="historico-mensal-rodape" style="margin-top:12px;">
-                    <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
-                    <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
+                <div class="historico-diario-wrap">
+                    <div class="historico-diario-topo">
+                        <div class="historico-diario-titulo">📈 Vendas por dia do mês</div>
+                        <div class="historico-diario-mes" id="historico-diario-mes-${codigo}">OUTUBRO</div>
+                    </div>
+                    <canvas class="historico-diario-canvas" id="historico-diario-canvas-${codigo}"></canvas>
                 </div>
             </div>
         </div>
@@ -4251,6 +4417,7 @@ function renderProximoLote(){
     }
 
     container.appendChild(fragment);
+    requestAnimationFrame(() => inicializarGraficosHistoricoDiario(container));
     indiceRender = fim;
     renderizando = false;
 

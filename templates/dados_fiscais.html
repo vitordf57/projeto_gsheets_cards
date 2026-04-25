@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.page-wrap{
+    padding:24px;
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+}
+
+.topo-fiscal-page{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:24px;
+}
+
+.subtitulo-fiscal{
+    color:#666;
+    margin-top:6px;
+    font-size:14px;
+}
+
+.filtro-lote-box{
+    background:white;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:14px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    min-width:360px;
+    max-width:520px;
+    flex:1;
+}
+
+.filtro-lote-box label{
+    display:block;
+    font-size:12px;
+    color:#666;
+    text-transform:uppercase;
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.filtro-lote-linha{
+    display:flex;
+    gap:10px;
+}
+
+.filtro-lote-linha input{
+    flex:1;
+    min-width:0;
+    padding:12px 14px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    font-size:14px;
+    outline:none;
+    box-sizing:border-box;
+}
+
+.filtro-lote-linha input:focus{
+    border-color:#1c5ed6;
+    box-shadow:0 0 0 3px rgba(28,94,214,0.12);
+}
+
+.btn-filtrar,
+.btn-limpar{
+    border:none;
+    border-radius:10px;
+    padding:12px 14px;
+    font-weight:bold;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+}
+
+.btn-filtrar{
+    background:#0d6efd;
+    color:white;
+}
+
+.btn-limpar{
+    background:#6c757d;
+    color:white;
+}
+
+.resumo-filtro{
+    margin-top:10px;
+    font-size:13px;
+    color:#4b5563;
+    line-height:1.5;
+}
+
+.grid-fiscal{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:24px;
+}
+
+.card-fiscal{
+    background:white;
+    border-radius:18px;
+    padding:24px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.08);
+    border:1px solid #e5e7eb;
+}
+
+.topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+}
+
+.topo-info{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    min-width:0;
+}
+
+.mlb{
+    font-size:20px;
+    font-weight:bold;
+    color:#111827;
+}
+
+.info-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background:#f3f4f6;
+    border:1px solid #e5e7eb;
+    color:#374151;
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:13px;
+    font-weight:600;
+    max-width:420px;
+}
+
+.info-chip span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.info-chip.titulo-produto{
+    max-width:720px;
+}
+
+.badge{
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
+    white-space:nowrap;
+}
+
+.ok{ background:#dcfce7; color:#166534; }
+.erro{ background:#fee2e2; color:#991b1b; }
+
+.bloco{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.coluna{
+    background:#f9fafb;
+    border-radius:14px;
+    padding:16px;
+    border:1px solid #e5e7eb;
+}
+
+.titulo{
+    font-size:12px;
+    text-transform:uppercase;
+    color:#6b7280;
+    margin-bottom:12px;
+    font-weight:bold;
+}
+
+.linha{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.linha:not(:last-child){
+    margin-bottom:6px;
+}
+
+.linha span:last-child{
+    text-align:right;
+    word-break:break-word;
+}
+
+.erro-campo{
+    background:#fff1f2;
+    color:#991b1b;
+}
+
+.ok-campo{
+    background:#f0fdf4;
+    color:#166534;
+}
+
+.sem-dados{
+    background:white;
+    border-radius:16px;
+    padding:28px;
+    color:#666;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    border:1px solid #e5e7eb;
+}
+
+@media (max-width: 900px){
+    .filtro-lote-box{
+        min-width:100%;
+    }
+
+    .bloco{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width: 600px){
+    .filtro-lote-linha{
+        flex-direction:column;
+    }
+
+    .btn-filtrar,
+    .btn-limpar{
+        width:100%;
+    }
+}
+</style>
+
+<div class="page-wrap">
+    <div class="topo-fiscal-page">
+        <div>
+            <h1 style="margin:0;">🧾 Dados Fiscais por MLB</h1>
+            <div class="subtitulo-fiscal">
+                Visualização em blocos comparando dados Signus e dados Mercado Livre.
+            </div>
+        </div>
+
+        <form class="filtro-lote-box" method="get" action="/dados-fiscais">
+            <label for="lote">Filtrar por número do lote</label>
+            <div class="filtro-lote-linha">
+                <input
+                    type="text"
+                    id="lote"
+                    name="lote"
+                    value="{{ lote or '' }}"
+                    placeholder="Digite o número do lote"
+                    list="listaLotesFiscais"
+                    autocomplete="off"
+                >
+                <button class="btn-filtrar" type="submit">Filtrar</button>
+                <a class="btn-limpar" href="/dados-fiscais">Limpar</a>
+            </div>
+
+            <datalist id="listaLotesFiscais">
+                {% for numero in lotes_disponiveis or [] %}
+                    <option value="{{ numero }}"></option>
+                {% endfor %}
+            </datalist>
+
+            <div class="resumo-filtro">
+                {% if lote %}
+                    Exibindo <strong>{{ total_resultados }}</strong> MLB(s) do lote <strong>{{ lote }}</strong>.
+                {% else %}
+                    Exibindo <strong>{{ total_resultados }}</strong> MLB(s). Digite um número de lote para filtrar.
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+{% if dados %}
+<div class="grid-fiscal">
+
+{% for item in dados %}
+
+{% set custo_s = (item.custo_signus|string).replace(',', '.').replace(' ', '') %}
+{% set custo_m = (item.custo_meli|string).replace(',', '.').replace(' ', '') %}
+
+{% set origem_s = item.origem_signus|string|trim %}
+{% set origem_m = (item.origem_meli|string|trim)[:1] %}
+
+{% set ncm_s = item.ncm|string|replace('.', '')|replace(',', '')|replace(' ', '')|replace('-', '')|replace('/', '') %}
+{% set ncm_m = item.ncm_meli|string|replace('.', '')|replace(',', '')|replace(' ', '')|replace('-', '')|replace('/', '') %}
+{% set regra_m = item.regra_meli|string|replace('.', '')|replace(',', '')|replace(' ', '')|replace('-', '')|replace('/', '') %}
+
+{% set cest_s = item.cest_signus|string|replace('.', '')|replace(',', '')|replace(' ', '')|replace('-', '')|replace('/', '') %}
+{% set cest_m = item.cest_meli|string|replace('.', '')|replace(',', '')|replace(' ', '')|replace('-', '')|replace('/', '') %}
+
+{% set id_s = item.id_signus|string|trim %}
+{% set id_m = item.id_meli|string|trim %}
+
+{% set ok_custo = custo_s == custo_m %}
+{% set ok_origem = origem_m == origem_s or (origem_s == '1' and origem_m == '2') %}
+{% set ok_ncm = ncm_s == ncm_m and ncm_s in regra_m %}
+{% set ok_cest = cest_s == cest_m or cest_s == ('0' ~ cest_m) or cest_m == ('0' ~ cest_s) %}
+{% set ok_id = id_s == id_m %}
+
+{% set tem_erro = not (ok_custo and ok_origem and ok_ncm and ok_cest and ok_id) %}
+
+<div class="card-fiscal">
+
+    <div class="topo">
+        <div class="topo-info">
+            <div class="mlb">{{ item.mlb }}</div>
+
+            {% if item.nickname %}
+                <div class="info-chip">
+                    <strong>Conta:</strong>
+                    <span>{{ item.nickname }}</span>
+                </div>
+            {% endif %}
+
+            {% if item.titulo %}
+                <div class="info-chip titulo-produto">
+                    <strong>Título:</strong>
+                    <span title="{{ item.titulo }}">{{ item.titulo }}</span>
+                </div>
+            {% endif %}
+
+            {% if item.sku %}
+                <div class="info-chip">
+                    <strong>SKU:</strong>
+                    <span>{{ item.sku }}</span>
+                </div>
+            {% endif %}
+
+            {% if item.numero_lote %}
+                <div class="info-chip">
+                    <strong>Lote:</strong>
+                    <span>#{{ item.numero_lote }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if tem_erro %}
+        <div class="badge erro">DIVERGÊNCIA</div>
+        {% else %}
+        <div class="badge ok">SEM DIVERGÊNCIA</div>
+        {% endif %}
+    </div>
+
+    <div class="bloco">
+
+        <div class="coluna">
+            <div class="titulo">SIGNUS</div>
+
+            <div class="linha {{ 'ok-campo' if ok_custo else 'erro-campo' }}">
+                <span>CUSTO</span><span>{{ item.custo_signus }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_origem else 'erro-campo' }}">
+                <span>ORIGEM</span><span>{{ item.origem_signus }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_ncm else 'erro-campo' }}">
+                <span>NCM</span><span>{{ item.ncm }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_cest else 'erro-campo' }}">
+                <span>CEST</span><span>{{ item.cest_signus }}</span>
+            </div>
+
+            <div class="linha">
+                <span>ST</span><span>{{ item.st }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_id else 'erro-campo' }}">
+                <span>ID</span><span>{{ item.id_signus }}</span>
+            </div>
+        </div>
+
+        <div class="coluna">
+            <div class="titulo">MELI</div>
+
+            <div class="linha {{ 'ok-campo' if ok_custo else 'erro-campo' }}">
+                <span>CUSTO</span><span>{{ item.custo_meli }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_origem else 'erro-campo' }}">
+                <span>ORIGEM</span><span>{{ item.origem_meli }}</span>
+            </div>
+
+            <div class="linha">
+                <span>TIPO ORIGEM</span><span>{{ item.tipo_origem_meli }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_ncm else 'erro-campo' }}">
+                <span>NCM</span><span>{{ item.ncm_meli }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_ncm else 'erro-campo' }}">
+                <span>REGRA</span><span>{{ item.regra_meli }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_cest else 'erro-campo' }}">
+                <span>CEST</span><span>{{ item.cest_meli }}</span>
+            </div>
+
+            <div class="linha {{ 'ok-campo' if ok_id else 'erro-campo' }}">
+                <span>ID</span><span>{{ item.id_meli }}</span>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+{% else %}
+    <div class="sem-dados">
+        Nenhum MLB encontrado{% if lote %} para o lote <strong>{{ lote }}</strong>{% endif %}.
+    </div>
+{% endif %}
+</div>
+
+{% endblock %}
