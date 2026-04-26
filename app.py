@@ -33,6 +33,9 @@ SCREEN_ENDPOINT_RULES = {
     "/dados-fiscais": "metricas_full",
     "/conferencia": "conferencia",
     "/picking": "picking",
+    "/gestao-operacional": "picking",
+    "/embalagem": "conferencia",
+    "/api/embalagem/confirmar": "conferencia",
     "/api/historico-mensal": "principal",
     "/api/historico-mensal-resumo": "principal",
     "/dados": "principal",
@@ -63,6 +66,7 @@ SCREEN_PREFIX_RULES = [
     ("/api/lote-envio/", "metricas_full"),
     ("/lote-envio/", "metricas_full"),
     ("/excluir-lote/", "metricas_full"),
+    ("/embalagem/", "conferencia"),
 ]
 
 
@@ -772,11 +776,277 @@ def api_historico_mensal_resumo():
         "dados": resultado
     })
 
+
+def garantir_tabela_embalagem(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_embalagem_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT DEFAULT '',
+            quantidade INTEGER DEFAULT 0,
+            endereco TEXT DEFAULT '',
+            lote_filete TEXT DEFAULT '',
+            observacao TEXT DEFAULT '',
+            embalado INTEGER DEFAULT 0,
+            embalado_em TEXT DEFAULT '',
+            embalado_por TEXT DEFAULT '',
+            quantidade_embalada INTEGER DEFAULT 0,
+            divergencia INTEGER DEFAULT 0,
+            divergencia_em TEXT DEFAULT '',
+            UNIQUE(numero_lote, codigo)
+        )
+    """)
+
+    cursor.execute("PRAGMA table_info(lotes_embalagem_itens)")
+    colunas = [col[1] for col in cursor.fetchall()]
+    if "observacao" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN observacao TEXT DEFAULT ''")
+    if "embalado" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN embalado INTEGER DEFAULT 0")
+    if "embalado_em" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN embalado_em TEXT DEFAULT ''")
+    if "embalado_por" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN embalado_por TEXT DEFAULT ''")
+    if "quantidade_embalada" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN quantidade_embalada INTEGER DEFAULT 0")
+    if "divergencia" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN divergencia INTEGER DEFAULT 0")
+    if "divergencia_em" not in colunas:
+        cursor.execute("ALTER TABLE lotes_embalagem_itens ADD COLUMN divergencia_em TEXT DEFAULT ''")
+
+
+
+def garantir_lote_conferencia_e_itens(cursor, numero_lote):
+    numero_lote = str(numero_lote or "").strip()
+    if not numero_lote:
+        return
+
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote_envio = cursor.fetchone()
+
+    tipo_lote = ""
+    data_criacao = agora_str()
+    if lote_envio:
+        tipo_lote = str(lote_envio["tipo_lote"] or "")
+        data_criacao = str(lote_envio["data_criacao"] or "") or data_criacao
+
+    cursor.execute("SELECT numero_lote FROM lotes_conferencia WHERE numero_lote = ?", (numero_lote,))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO lotes_conferencia (numero_lote, tipo_lote, status, data_criacao)
+            VALUES (?, ?, 'PENDENTE', ?)
+        """, (numero_lote, tipo_lote, data_criacao))
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_itens WHERE numero_lote = ?", (numero_lote,))
+    total_itens = int(cursor.fetchone()[0] or 0)
+    if total_itens > 0:
+        return
+
+    cursor.execute("""
+        SELECT numero_lote, codigo, sku, titulo, quantidade, endereco, lote_filete
+        FROM lotes_envio_itens_snapshot
+        WHERE numero_lote = ?
+        ORDER BY endereco, sku, codigo
+    """, (numero_lote,))
+    itens_snapshot = cursor.fetchall()
+
+    if not itens_snapshot:
+        cursor.execute("""
+            SELECT numero_lote, codigo, sku, endereco, titulo, quantidade, observacao
+            FROM lotes_picking_itens
+            WHERE numero_lote = ?
+            ORDER BY endereco, sku, codigo
+        """, (numero_lote,))
+        itens_picking = cursor.fetchall()
+
+        for item in itens_picking:
+            cursor.execute("""
+                INSERT OR IGNORE INTO lotes_itens (
+                    numero_lote, codigo, sku, titulo, quantidade_esperada, endereco, lote_filete
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item["numero_lote"],
+                item["codigo"],
+                item["sku"],
+                item["titulo"],
+                int(item["quantidade"] or 0),
+                item["endereco"],
+                ""
+            ))
+        return
+
+    for item in itens_snapshot:
+        cursor.execute("""
+            INSERT OR IGNORE INTO lotes_itens (
+                numero_lote, codigo, sku, titulo, quantidade_esperada, endereco, lote_filete
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            item["numero_lote"],
+            item["codigo"],
+            item["sku"],
+            item["titulo"],
+            int(item["quantidade"] or 0),
+            item["endereco"],
+            item["lote_filete"]
+        ))
+
+
+def sincronizar_embalagem_itens(cursor, numero_lote):
+    garantir_tabela_embalagem(cursor)
+
+    cursor.execute("""
+        SELECT
+            li.numero_lote,
+            li.codigo,
+            li.sku,
+            li.titulo,
+            li.quantidade_esperada,
+            li.endereco,
+            li.lote_filete,
+            COALESCE(ci.observacao, '') AS observacao_conferencia
+        FROM lotes_itens li
+        INNER JOIN conferencia_itens ci
+            ON li.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE li.numero_lote = ?
+          AND COALESCE(ci.status_item, '') IN ('OK', 'DIVERGENTE')
+        ORDER BY li.endereco, li.sku, li.codigo
+    """, (numero_lote,))
+    itens = cursor.fetchall()
+
+    for item in itens:
+        cursor.execute("""
+            INSERT INTO lotes_embalagem_itens (
+                numero_lote, codigo, sku, titulo, quantidade, endereco, lote_filete, observacao
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(numero_lote, codigo) DO UPDATE SET
+                sku = excluded.sku,
+                titulo = excluded.titulo,
+                quantidade = excluded.quantidade,
+                endereco = excluded.endereco,
+                lote_filete = excluded.lote_filete
+        """, (
+            item["numero_lote"],
+            item["codigo"],
+            item["sku"],
+            item["titulo"],
+            int(item["quantidade_esperada"] or 0),
+            item["endereco"],
+            item["lote_filete"],
+            item["observacao_conferencia"]
+        ))
+
+
+def obter_nome_usuario_atual():
+    usuario_atual = get_current_user()
+    try:
+        return str(getattr(usuario_atual, "nome", "") or getattr(usuario_atual, "email", "") or "").strip()
+    except:
+        return ""
+
+
+def garantir_lote_conferencia_aberto(cursor, numero_lote):
+    numero_lote = str(numero_lote or "").strip()
+    if not numero_lote:
+        return
+
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote_envio = cursor.fetchone()
+
+    tipo_lote = ""
+    data_criacao = agora_str()
+    if lote_envio:
+        try:
+            tipo_lote = str(lote_envio["tipo_lote"] or "")
+            data_criacao = str(lote_envio["data_criacao"] or "") or data_criacao
+        except:
+            pass
+
+    cursor.execute("SELECT numero_lote FROM lotes_conferencia WHERE numero_lote = ?", (numero_lote,))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO lotes_conferencia (numero_lote, tipo_lote, status, data_criacao)
+            VALUES (?, ?, 'PENDENTE', ?)
+        """, (numero_lote, tipo_lote, data_criacao))
+
+
+def mover_item_picking_para_conferencia(cursor, numero_lote, codigo):
+    numero_lote = str(numero_lote or "").strip()
+    codigo = str(codigo or "").strip()
+    if not numero_lote or not codigo:
+        return
+
+    garantir_lote_conferencia_aberto(cursor, numero_lote)
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO lotes_itens (
+            numero_lote, codigo, sku, titulo, quantidade_esperada, endereco, lote_filete
+        )
+        SELECT
+            numero_lote,
+            codigo,
+            sku,
+            titulo,
+            quantidade,
+            endereco,
+            ''
+        FROM lotes_picking_itens
+        WHERE numero_lote = ? AND codigo = ?
+    """, (numero_lote, codigo))
+
+
+def mover_item_conferencia_para_embalagem(cursor, numero_lote, codigo):
+    numero_lote = str(numero_lote or "").strip()
+    codigo = str(codigo or "").strip()
+    if not numero_lote or not codigo:
+        return
+
+    garantir_tabela_embalagem(cursor)
+
+    cursor.execute("""
+        INSERT INTO lotes_embalagem_itens (
+            numero_lote, codigo, sku, titulo, quantidade, endereco, lote_filete, observacao
+        )
+        SELECT
+            li.numero_lote,
+            li.codigo,
+            li.sku,
+            li.titulo,
+            li.quantidade_esperada,
+            li.endereco,
+            li.lote_filete,
+            COALESCE(ci.observacao, '')
+        FROM lotes_itens li
+        LEFT JOIN conferencia_itens ci
+            ON li.numero_lote = ci.numero_lote AND li.codigo = ci.codigo
+        WHERE li.numero_lote = ? AND li.codigo = ?
+        ON CONFLICT(numero_lote, codigo) DO UPDATE SET
+            sku = excluded.sku,
+            titulo = excluded.titulo,
+            quantidade = excluded.quantidade,
+            endereco = excluded.endereco,
+            lote_filete = excluded.lote_filete,
+            observacao = CASE
+                WHEN COALESCE(lotes_embalagem_itens.observacao, '') = '' THEN excluded.observacao
+                ELSE lotes_embalagem_itens.observacao
+            END
+    """, (numero_lote, codigo))
+
+
 @app.route("/conferencia")
 def conferencia():
     conn = sqlite3.connect("status.db")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+
+    cursor.execute("SELECT DISTINCT numero_lote FROM lotes_itens")
+    for row_envio in cursor.fetchall():
+        garantir_lote_conferencia_aberto(cursor, row_envio["numero_lote"])
+    conn.commit()
 
     cursor.execute("""
         SELECT
@@ -807,6 +1077,8 @@ def conferencia_lote(numero_lote):
     conn = sqlite3.connect("status.db")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    garantir_lote_conferencia_e_itens(cursor, numero_lote)
+    conn.commit()
 
     cursor.execute("""
         SELECT
@@ -966,6 +1238,9 @@ def salvar_conferencia_item():
         conferido_em
     ))
 
+    if status_item in ["OK", "DIVERGENTE"]:
+        mover_item_conferencia_para_embalagem(cursor, numero_lote, codigo)
+
     cursor.execute("""
         SELECT COUNT(*)
         FROM lotes_itens
@@ -1004,10 +1279,13 @@ def salvar_conferencia_item():
         WHERE numero_lote = ?
     """, (novo_status_lote, data_fechamento, numero_lote))
 
+    if total_itens > 0 and total_conferidos >= total_itens:
+        sincronizar_embalagem_itens(cursor, numero_lote)
+
     conn.commit()
     conn.close()
 
-    return conferencia_lote(numero_lote)
+    return redirect(f"/conferencia/{numero_lote}")
 
 
 def init_db():
@@ -1156,6 +1434,27 @@ def init_db():
             coletado INTEGER DEFAULT 0,
             coletado_em TEXT DEFAULT '',
             quantidade_informada INTEGER DEFAULT 0,
+            divergencia INTEGER DEFAULT 0,
+            divergencia_em TEXT DEFAULT '',
+            UNIQUE(numero_lote, codigo)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lotes_embalagem_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_lote TEXT,
+            codigo TEXT,
+            sku TEXT,
+            titulo TEXT DEFAULT '',
+            quantidade INTEGER DEFAULT 0,
+            endereco TEXT DEFAULT '',
+            lote_filete TEXT DEFAULT '',
+            observacao TEXT DEFAULT '',
+            embalado INTEGER DEFAULT 0,
+            embalado_em TEXT DEFAULT '',
+            embalado_por TEXT DEFAULT '',
+            quantidade_embalada INTEGER DEFAULT 0,
             divergencia INTEGER DEFAULT 0,
             divergencia_em TEXT DEFAULT '',
             UNIQUE(numero_lote, codigo)
@@ -1653,6 +1952,262 @@ def metricas_full():
         formatar_data_hora_br=formatar_data_hora_br
     )
 
+
+def segundos_para_humano_operacional(segundos):
+    try:
+        segundos = int(segundos or 0)
+    except:
+        segundos = 0
+
+    if segundos <= 0:
+        return "-"
+
+    horas = segundos // 3600
+    minutos = (segundos % 3600) // 60
+    seg = segundos % 60
+
+    partes = []
+    if horas:
+        partes.append(f"{horas}h")
+    if minutos:
+        partes.append(f"{minutos}min")
+    if seg and not horas:
+        partes.append(f"{seg}s")
+
+    return " ".join(partes) if partes else "0s"
+
+
+def garantir_colunas_gestao_operacional(cursor):
+    try:
+        cursor.execute("PRAGMA table_info(lotes_picking_itens)")
+        colunas = [col[1] for col in cursor.fetchall()]
+        if "coletado_por" not in colunas:
+            cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN coletado_por TEXT DEFAULT ''")
+        if "divergencia_por" not in colunas:
+            cursor.execute("ALTER TABLE lotes_picking_itens ADD COLUMN divergencia_por TEXT DEFAULT ''")
+    except:
+        pass
+
+
+@app.route("/gestao-operacional")
+def gestao_operacional():
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    garantir_colunas_gestao_operacional(cursor)
+    conn.commit()
+
+    cursor.execute("""
+        SELECT *
+        FROM lotes_envio
+        ORDER BY COALESCE(data_criacao, '') DESC, numero_lote DESC
+    """)
+    lotes_rows = cursor.fetchall()
+
+    lotes = []
+    lotes_andamento = []
+    lotes_finalizados = []
+    itens_geral = []
+
+    total_lotes_andamento = 0
+    total_lotes_finalizados = 0
+    total_itens = 0
+    total_coletados = 0
+    total_divergencias = 0
+    total_quantidade_coletada = 0
+    soma_tempo_item = 0
+    qtd_tempo_item = 0
+
+    for lote_row in lotes_rows:
+        lote = dict(lote_row)
+        numero_lote = str(lote.get("numero_lote") or "").strip()
+        etapa_atual = lote.get("etapa_atual") or TIMELINE_ETAPAS[0]
+        status_abertura = obter_status_abertura_por_etapa(etapa_atual)
+
+        cursor.execute("""
+            SELECT
+                numero_lote,
+                codigo,
+                sku,
+                endereco,
+                titulo,
+                conta,
+                selo,
+                quantidade,
+                observacao,
+                coletado,
+                coletado_em,
+                quantidade_informada,
+                divergencia,
+                divergencia_em,
+                COALESCE(coletado_por, '') AS coletado_por,
+                COALESCE(divergencia_por, '') AS divergencia_por
+            FROM lotes_picking_itens
+            WHERE numero_lote = ?
+            ORDER BY
+                CASE
+                    WHEN COALESCE(coletado_em, '') <> '' THEN coletado_em
+                    WHEN COALESCE(divergencia_em, '') <> '' THEN divergencia_em
+                    ELSE '9999-12-31 23:59:59'
+                END,
+                endereco,
+                sku,
+                codigo
+        """, (numero_lote,))
+        itens = [dict(row) for row in cursor.fetchall()]
+
+        if not itens:
+            itens_snapshot = carregar_itens_snapshot_lote(numero_lote)
+            if itens_snapshot:
+                try:
+                    df_boot = pd.DataFrame(itens_snapshot)
+                    sincronizar_picking_itens(numero_lote, df_boot)
+                    garantir_colunas_gestao_operacional(cursor)
+                    conn.commit()
+                    cursor.execute("""
+                        SELECT
+                            numero_lote,
+                            codigo,
+                            sku,
+                            endereco,
+                            titulo,
+                            conta,
+                            selo,
+                            quantidade,
+                            observacao,
+                            coletado,
+                            coletado_em,
+                            quantidade_informada,
+                            divergencia,
+                            divergencia_em,
+                            COALESCE(coletado_por, '') AS coletado_por,
+                            COALESCE(divergencia_por, '') AS divergencia_por
+                        FROM lotes_picking_itens
+                        WHERE numero_lote = ?
+                        ORDER BY endereco, sku, codigo
+                    """, (numero_lote,))
+                    itens = [dict(row) for row in cursor.fetchall()]
+                except:
+                    itens = []
+
+        qtd_total = len(itens)
+        qtd_coletados = sum(1 for item in itens if int(item.get("coletado") or 0) == 1)
+        qtd_divergencias = sum(1 for item in itens if int(item.get("divergencia") or 0) == 1)
+
+        if qtd_total == 0:
+            continue
+
+        lote_finalizado = (qtd_coletados + qtd_divergencias) >= qtd_total
+
+        total_itens += qtd_total
+        total_coletados += qtd_coletados
+        total_divergencias += qtd_divergencias
+
+        eventos = []
+        for item in itens:
+            fim_raw = str(item.get("coletado_em") or item.get("divergencia_em") or "").strip()
+            fim_dt = parse_data_hora(fim_raw)
+            if fim_dt:
+                eventos.append((fim_dt, item))
+
+        eventos.sort(key=lambda x: x[0])
+
+        primeiro_dt = eventos[0][0] if eventos else None
+        ultimo_dt = eventos[-1][0] if eventos else None
+        lote_segundos = int((ultimo_dt - primeiro_dt).total_seconds()) if primeiro_dt and ultimo_dt else 0
+
+        item_rows = []
+        for idx, (fim_dt, item) in enumerate(eventos):
+            inicio_dt = eventos[idx - 1][0] if idx > 0 else None
+            proximo_dt = eventos[idx + 1][0] if idx + 1 < len(eventos) else None
+
+            tempo_item_seg = int((fim_dt - inicio_dt).total_seconds()) if inicio_dt else 0
+            tempo_ate_proxima_seg = int((proximo_dt - fim_dt).total_seconds()) if proximo_dt else 0
+
+            if tempo_item_seg > 0:
+                soma_tempo_item += tempo_item_seg
+                qtd_tempo_item += 1
+
+            quantidade_coletada = int(item.get("quantidade_informada") or 0)
+            if quantidade_coletada <= 0 and int(item.get("coletado") or 0) == 1:
+                quantidade_coletada = int(item.get("quantidade") or 0)
+            total_quantidade_coletada += quantidade_coletada
+
+            coletor = str(item.get("coletado_por") or item.get("divergencia_por") or "").strip() or "Não informado"
+
+            item_view = {
+                "numero_lote": numero_lote,
+                "codigo": item.get("codigo") or "",
+                "sku": item.get("sku") or "-",
+                "titulo": item.get("titulo") or "-",
+                "endereco": item.get("endereco") or "-",
+                "selo": item.get("selo") or "-",
+                "conta": item.get("conta") or "-",
+                "inicio": inicio_dt.strftime("%d/%m/%Y %H:%M:%S") if inicio_dt else "-",
+                "fim": fim_dt.strftime("%d/%m/%Y %H:%M:%S"),
+                "data_coleta": fim_dt.strftime("%d/%m/%Y"),
+                "tempo_item": segundos_para_humano_operacional(tempo_item_seg),
+                "tempo_ate_proxima": segundos_para_humano_operacional(tempo_ate_proxima_seg),
+                "coletor": coletor,
+                "quantidade_coletada": quantidade_coletada,
+                "quantidade_esperada": int(item.get("quantidade") or 0),
+                "status": "Divergência" if int(item.get("divergencia") or 0) == 1 else "Coletado",
+                "observacao": item.get("observacao") or ""
+            }
+            item_rows.append(item_view)
+            itens_geral.append(item_view)
+
+        percentual = int(round(((qtd_coletados + qtd_divergencias) / qtd_total) * 100)) if qtd_total else 0
+
+        lote_view = {
+            "numero_lote": numero_lote,
+            "tipo_lote": lote.get("tipo_lote") or "Diversos",
+            "etapa_atual": etapa_atual,
+            "status": "FINALIZADO" if lote_finalizado else status_abertura,
+            "data_criacao": formatar_data_hora_br(lote.get("data_criacao")),
+            "data_coleta_agendada": formatar_data_br(lote.get("data_coleta_agendada")),
+            "total_itens": qtd_total,
+            "coletados": qtd_coletados,
+            "divergencias": qtd_divergencias,
+            "pendentes": max(qtd_total - qtd_coletados - qtd_divergencias, 0),
+            "percentual": percentual,
+            "inicio_coleta": primeiro_dt.strftime("%d/%m/%Y %H:%M:%S") if primeiro_dt else "-",
+            "fim_coleta": ultimo_dt.strftime("%d/%m/%Y %H:%M:%S") if ultimo_dt else "-",
+            "tempo_total_coleta": segundos_para_humano_operacional(lote_segundos),
+            "tempo_medio_item": segundos_para_humano_operacional(int(lote_segundos / max(len(eventos) - 1, 1))) if lote_segundos else "-",
+            "itens": item_rows
+        }
+
+        lotes.append(lote_view)
+        if lote_finalizado:
+            lotes_finalizados.append(lote_view)
+            total_lotes_finalizados += 1
+        else:
+            lotes_andamento.append(lote_view)
+            total_lotes_andamento += 1
+
+    tempo_medio_geral = segundos_para_humano_operacional(int(soma_tempo_item / qtd_tempo_item)) if qtd_tempo_item else "-"
+
+    conn.close()
+
+    return render_template(
+        "gestao_operacional.html",
+        lotes=lotes,
+        lotes_andamento=lotes_andamento,
+        lotes_finalizados=lotes_finalizados,
+        itens_geral=itens_geral,
+        total_lotes_andamento=total_lotes_andamento,
+        total_lotes_finalizados=total_lotes_finalizados,
+        total_itens=total_itens,
+        total_coletados=total_coletados,
+        total_divergencias=total_divergencias,
+        total_pendentes=max(total_itens - total_coletados - total_divergencias, 0),
+        total_quantidade_coletada=total_quantidade_coletada,
+        tempo_medio_geral=tempo_medio_geral
+    )
+
+
 @app.route("/picking")
 def picking_lista():
     conn = sqlite3.connect("status.db")
@@ -1760,6 +2315,14 @@ def api_picking_coletar():
     conn = sqlite3.connect("status.db")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+    garantir_colunas_gestao_operacional(cursor)
+
+    usuario_atual = get_current_user()
+    nome_coletor = ""
+    try:
+        nome_coletor = str(getattr(usuario_atual, "nome", "") or getattr(usuario_atual, "email", "") or "").strip()
+    except:
+        nome_coletor = ""
 
     cursor.execute(
         """
@@ -1808,10 +2371,11 @@ def api_picking_coletar():
             SET quantidade_informada = ?,
                 divergencia = 1,
                 divergencia_em = ?,
+                divergencia_por = ?,
                 observacao = ?
             WHERE numero_lote = ? AND codigo = ?
             """,
-            (quantidade_informada, agora, observacao_final, numero_lote, item["codigo"])
+            (quantidade_informada, agora, nome_coletor, observacao_final, numero_lote, item["codigo"])
         )
         divergencia_registrada = True
         mensagem = "Divergência registrada com sucesso. O item ficou salvo com observação para conferência."
@@ -1821,15 +2385,19 @@ def api_picking_coletar():
             UPDATE lotes_picking_itens
             SET coletado = 1,
                 coletado_em = ?,
+                coletado_por = ?,
                 observacao = ?,
                 quantidade_informada = ?,
                 divergencia = 0,
-                divergencia_em = ''
+                divergencia_em = '',
+                divergencia_por = ''
             WHERE numero_lote = ? AND codigo = ?
             """,
-            (agora, observacao, quantidade_informada, numero_lote, item["codigo"])
+            (agora, nome_coletor, observacao, quantidade_informada, numero_lote, item["codigo"])
         )
         mensagem = "SKU coletado com sucesso."
+
+    mover_item_picking_para_conferencia(cursor, numero_lote, item["codigo"])
 
     conn.commit()
 
@@ -1851,6 +2419,12 @@ def api_picking_coletar():
     finalizado = total > 0 and (coletados + divergencias) >= total
     if finalizado:
         atualizar_etapa_lote(numero_lote, "EM CONFERÊNCIA")
+        conn_sync = sqlite3.connect("status.db")
+        conn_sync.row_factory = sqlite3.Row
+        cursor_sync = conn_sync.cursor()
+        garantir_lote_conferencia_e_itens(cursor_sync, numero_lote)
+        conn_sync.commit()
+        conn_sync.close()
         etapa_atual = "EM CONFERÊNCIA"
 
     return jsonify({
@@ -1864,6 +2438,204 @@ def api_picking_coletar():
         "mensagem": mensagem,
         "codigo": str(item["codigo"] or "")
     })
+
+
+
+@app.route("/embalagem")
+def embalagem_lista():
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    garantir_tabela_embalagem(cursor)
+
+    cursor.execute("""
+        SELECT DISTINCT le.*
+        FROM lotes_envio le
+        INNER JOIN lotes_embalagem_itens ei ON ei.numero_lote = le.numero_lote
+        WHERE COALESCE(ei.embalado, 0) = 0
+        ORDER BY le.data_criacao DESC, le.numero_lote DESC
+    """)
+    lotes_rows = cursor.fetchall()
+
+    lotes = []
+    for lote in lotes_rows:
+        lote_dict = dict(lote)
+        numero_lote = lote_dict["numero_lote"]
+        sincronizar_embalagem_itens(cursor, numero_lote)
+
+        cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ?", (numero_lote,))
+        total_itens = int(cursor.fetchone()[0] or 0)
+
+        cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ? AND embalado = 1", (numero_lote,))
+        itens_embalados = int(cursor.fetchone()[0] or 0)
+
+        cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ? AND divergencia = 1", (numero_lote,))
+        itens_divergencia = int(cursor.fetchone()[0] or 0)
+
+        lote_dict["total_itens"] = total_itens
+        lote_dict["itens_embalados"] = itens_embalados
+        lote_dict["itens_divergencia"] = itens_divergencia
+        lote_dict["itens_pendentes"] = max(total_itens - itens_embalados - itens_divergencia, 0)
+        lotes.append(lote_dict)
+
+    conn.commit()
+    conn.close()
+    return render_template("embalagem.html", lote=None, lotes=lotes, itens=[])
+
+
+@app.route("/embalagem/<numero_lote>")
+def embalagem_lote(numero_lote):
+    numero_lote = str(numero_lote or "").strip()
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    garantir_tabela_embalagem(cursor)
+
+    cursor.execute("SELECT * FROM lotes_envio WHERE numero_lote = ?", (numero_lote,))
+    lote_row = cursor.fetchone()
+
+    if not lote_row:
+        conn.close()
+        return redirect("/embalagem")
+
+    sincronizar_embalagem_itens(cursor, numero_lote)
+    conn.commit()
+
+    lote = dict(lote_row)
+    lote["status"] = obter_status_abertura_por_etapa(lote.get("etapa_atual") or "EMBALAGEM")
+    lote["etapa_atual"] = lote.get("etapa_atual") or "EMBALAGEM"
+
+    cursor.execute("""
+        SELECT *
+        FROM lotes_embalagem_itens
+        WHERE numero_lote = ?
+        ORDER BY embalado ASC, endereco ASC, sku ASC, codigo ASC
+    """, (numero_lote,))
+    itens = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+    return render_template("embalagem.html", lote=lote, lotes=[], itens=itens)
+
+
+@app.route("/api/embalagem/confirmar", methods=["POST"])
+def api_embalagem_confirmar():
+    data = request.get_json() or {}
+    numero_lote = str(data.get("numero_lote", "")).strip()
+    sku_digitado = str(data.get("sku", "") or "").strip()
+    observacao = str(data.get("observacao", "") or "").strip()
+
+    try:
+        quantidade_embalada = int(float(str(data.get("quantidade", 0) or 0).replace(",", ".")))
+    except:
+        quantidade_embalada = 0
+
+    if not numero_lote or not sku_digitado:
+        return jsonify({"ok": False, "erro": "Informe o lote e o SKU."}), 400
+
+    if quantidade_embalada <= 0:
+        return jsonify({"ok": False, "erro": "Informe uma quantidade válida para a embalagem."}), 400
+
+    conn = sqlite3.connect("status.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    garantir_tabela_embalagem(cursor)
+    sincronizar_embalagem_itens(cursor, numero_lote)
+
+    cursor.execute("""
+        SELECT *
+        FROM lotes_embalagem_itens
+        WHERE numero_lote = ?
+          AND UPPER(TRIM(COALESCE(sku, ''))) = UPPER(TRIM(?))
+        ORDER BY embalado ASC, divergencia ASC, codigo ASC
+    """, (numero_lote, sku_digitado))
+    encontrados = cursor.fetchall()
+
+    item = None
+    for row in encontrados:
+        if int(row["embalado"] or 0) != 1 and int(row["divergencia"] or 0) != 1:
+            item = row
+            break
+
+    if not item:
+        conn.close()
+        return jsonify({"ok": False, "erro": "SKU não encontrado entre os itens pendentes desta embalagem."}), 404
+
+    quantidade_esperada = int(item["quantidade"] or 0)
+    agora = agora_str()
+    nome_usuario = obter_nome_usuario_atual()
+
+    if quantidade_embalada > quantidade_esperada:
+        conn.close()
+        return jsonify({"ok": False, "erro": f"A quantidade informada ({quantidade_embalada}) é maior que a esperada para este SKU ({quantidade_esperada})."}), 400
+
+    divergencia_registrada = False
+    mensagem = ""
+
+    if quantidade_embalada < quantidade_esperada:
+        if not observacao:
+            conn.close()
+            return jsonify({
+                "ok": False,
+                "erro": f"Quantidade embalada menor que a esperada. Esperado: {quantidade_esperada}. Informe o motivo na observação."
+            }), 400
+
+        observacao_final = f"DIVERGÊNCIA DE EMBALAGEM | Esperado: {quantidade_esperada} | Informado: {quantidade_embalada} | Motivo: {observacao}"
+        cursor.execute("""
+            UPDATE lotes_embalagem_itens
+            SET quantidade_embalada = ?,
+                divergencia = 1,
+                divergencia_em = ?,
+                observacao = ?
+            WHERE numero_lote = ? AND codigo = ?
+        """, (quantidade_embalada, agora, observacao_final, numero_lote, item["codigo"]))
+        divergencia_registrada = True
+        mensagem = "Divergência registrada na embalagem."
+    else:
+        cursor.execute("""
+            UPDATE lotes_embalagem_itens
+            SET embalado = 1,
+                embalado_em = ?,
+                embalado_por = ?,
+                quantidade_embalada = ?,
+                observacao = ?,
+                divergencia = 0,
+                divergencia_em = ''
+            WHERE numero_lote = ? AND codigo = ?
+        """, (agora, nome_usuario, quantidade_embalada, observacao, numero_lote, item["codigo"]))
+        mensagem = "SKU embalado com sucesso."
+
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ?", (numero_lote,))
+    total = int(cursor.fetchone()[0] or 0)
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ? AND embalado = 1", (numero_lote,))
+    embalados = int(cursor.fetchone()[0] or 0)
+
+    cursor.execute("SELECT COUNT(*) FROM lotes_embalagem_itens WHERE numero_lote = ? AND divergencia = 1", (numero_lote,))
+    divergencias = int(cursor.fetchone()[0] or 0)
+
+    conn.close()
+
+    finalizado = total > 0 and (embalados + divergencias) >= total
+    etapa_atual = "EMBALAGEM"
+    if finalizado:
+        atualizar_etapa_lote(numero_lote, "CONFERIR CAIXAS MASTER")
+        etapa_atual = "CONFERIR CAIXAS MASTER"
+
+    return jsonify({
+        "ok": True,
+        "total": total,
+        "embalados": embalados,
+        "divergencias": divergencias,
+        "finalizado": finalizado,
+        "etapa_atual": etapa_atual,
+        "divergencia": divergencia_registrada,
+        "mensagem": mensagem,
+        "codigo": str(item["codigo"] or "")
+    })
+
 
 
 @app.route("/dados")

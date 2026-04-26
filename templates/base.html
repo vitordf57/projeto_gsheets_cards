@@ -42,8 +42,10 @@ body { margin: 0; font-family: Arial; display: flex; background: #f3f4f6; }
     {% if usuario_pode('naoEnviar') %}<a href="/?tela=naoEnviar">❌ <span>Não Enviar (<span id="contNaoSidebar">0</span>)</span></a>{% endif %}
     {% if usuario_pode('acompanhamento') %}<a href="/?tela=acompanhamento">📊 <span>Acompanhamento (<span id="contAcompanhamentoSidebar">0</span>)</span></a>{% endif %}
     {% if usuario_pode('metricas_full') %}<a href="/metricas-full">📦 <span>Lotes de Envio</span></a>{% endif %}
+    {% if usuario_pode('metricas_full') %}<li><a href="/embalagem">📦 Embalagem</a></li>{% endif %}
     {% if usuario_pode('conferencia') %}<a href="/conferencia">📋 <span>Conferência</span></a>{% endif %}
     {% if usuario_pode('picking') %}<a href="/picking">📲 <span>Picking</span></a>{% endif %}
+    {% if usuario_pode('picking') %}<a href="/gestao-operacional">📈 <span>Gestão Operacional</span></a>{% endif %}
     {% if usuario_pode('picking') %}<a href="/dados-fiscais">📊 <span>Dados Fiscais</span></a>{% endif %}
     
 

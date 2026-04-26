@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.gestao-wrap{
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+    color:#0f172a;
+}
+
+.gestao-hero{
+    background:linear-gradient(135deg,#0f172a,#1d4ed8 58%,#0ea5e9);
+    color:white;
+    border-radius:24px;
+    padding:24px;
+    box-shadow:0 14px 32px rgba(15,23,42,0.18);
+    margin-bottom:22px;
+}
+
+.gestao-hero-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:18px;
+    flex-wrap:wrap;
+}
+
+.gestao-hero h1{
+    margin:0 0 8px 0;
+    font-size:32px;
+    letter-spacing:-0.03em;
+}
+
+.gestao-hero p{
+    margin:0;
+    color:rgba(255,255,255,0.82);
+    line-height:1.5;
+}
+
+.gestao-refresh{
+    border:1px solid rgba(255,255,255,0.20);
+    background:rgba(255,255,255,0.12);
+    color:white;
+    padding:12px 16px;
+    border-radius:14px;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+.gestao-kpis{
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:12px;
+    margin-top:22px;
+}
+
+.gestao-kpi{
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.16);
+    border-radius:18px;
+    padding:16px;
+    backdrop-filter:blur(10px);
+    min-width:0;
+}
+
+.gestao-kpi-label{
+    font-size:11px;
+    text-transform:uppercase;
+    font-weight:800;
+    letter-spacing:.05em;
+    color:rgba(255,255,255,0.72);
+    margin-bottom:8px;
+}
+
+.gestao-kpi-value{
+    font-size:30px;
+    font-weight:900;
+    line-height:1;
+}
+
+.gestao-grid{
+    display:grid;
+    grid-template-columns:360px minmax(0,1fr);
+    gap:18px;
+    align-items:start;
+}
+
+.gestao-card{
+    background:white;
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    box-shadow:0 8px 24px rgba(15,23,42,0.08);
+    padding:18px;
+    min-width:0;
+}
+
+.gestao-card h2{
+    margin:0 0 14px 0;
+    font-size:20px;
+}
+
+.lotes-lista{
+    display:grid;
+    gap:12px;
+    max-height:calc(100vh - 310px);
+    overflow:auto;
+    padding-right:4px;
+}
+
+.lote-operacional{
+    border:1px solid #e5e7eb;
+    background:#f8fafc;
+    border-radius:18px;
+    padding:14px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.lote-operacional:hover,
+.lote-operacional.ativo{
+    border-color:#2563eb;
+    background:#eff6ff;
+    transform:translateY(-1px);
+}
+
+.lote-operacional.finalizado{
+    background:#f0fdf4;
+    border-color:#bbf7d0;
+}
+
+.lote-operacional.finalizado:hover,
+.lote-operacional.finalizado.ativo{
+    border-color:#16a34a;
+    background:#dcfce7;
+}
+
+.lote-etapa.finalizado{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.lote-operacional-top{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+}
+
+.lote-numero{
+    font-size:18px;
+    font-weight:900;
+}
+
+.lote-etapa{
+    font-size:11px;
+    font-weight:800;
+    color:#1d4ed8;
+    background:#dbeafe;
+    border-radius:999px;
+    padding:6px 9px;
+    white-space:nowrap;
+}
+
+.progress{
+    height:10px;
+    border-radius:999px;
+    background:#e5e7eb;
+    overflow:hidden;
+    margin:10px 0;
+}
+
+.progress span{
+    display:block;
+    height:100%;
+    background:linear-gradient(90deg,#2563eb,#22c55e);
+    border-radius:999px;
+}
+
+.lote-mini-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    font-size:12px;
+    color:#475569;
+}
+
+.lote-mini-grid strong{
+    display:block;
+    color:#0f172a;
+    font-size:14px;
+    margin-top:3px;
+}
+
+.filtros-operacionais{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+
+.filtro-input{
+    flex:1;
+    min-width:240px;
+    border:1px solid #cbd5e1;
+    border-radius:14px;
+    padding:12px 14px;
+    font-size:14px;
+    outline:none;
+}
+
+.tabela-wrap{
+    width:100%;
+    overflow:auto;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+    max-height:calc(100vh - 355px);
+}
+
+.tabela-gestao{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1180px;
+}
+
+.tabela-gestao th,
+.tabela-gestao td{
+    padding:12px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    vertical-align:top;
+    font-size:13px;
+}
+
+.tabela-gestao th{
+    position:sticky;
+    top:0;
+    z-index:2;
+    background:#f8fafc;
+    color:#475569;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+
+.tabela-gestao tr:hover td{
+    background:#f8fafc;
+}
+
+.badge-status{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:11px;
+}
+
+.badge-coletado{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge-divergencia{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.titulo-produto{
+    max-width:260px;
+    font-weight:700;
+    color:#111827;
+}
+
+.obs{
+    max-width:280px;
+    color:#64748b;
+    font-size:12px;
+}
+
+.vazio{
+    padding:28px;
+    text-align:center;
+    color:#64748b;
+    background:white;
+    border-radius:18px;
+    border:1px dashed #cbd5e1;
+}
+
+@media (max-width: 1100px){
+    .gestao-kpis{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .gestao-grid{
+        grid-template-columns:1fr;
+    }
+
+    .lotes-lista{
+        max-height:none;
+    }
+}
+
+@media (max-width: 720px){
+    .gestao-hero{
+        padding:18px;
+        border-radius:20px;
+    }
+
+    .gestao-hero h1{
+        font-size:25px;
+    }
+
+    .gestao-kpis{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .gestao-kpi-value{
+        font-size:24px;
+    }
+}
+</style>
+
+<div class="gestao-wrap">
+    <div class="gestao-hero">
+        <div class="gestao-hero-top">
+            <div>
+                <h1>Gestão Operacional</h1>
+                <p>Visão macro dos lotes em andamento e finalizados, produtividade do picking e tempo entre as coletas registradas.</p>
+            </div>
+            <a class="gestao-refresh" href="/gestao-operacional">Atualizar visão</a>
+        </div>
+
+        <div class="gestao-kpis">
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Lotes em andamento</div>
+                <div class="gestao-kpi-value">{{ total_lotes_andamento }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Lotes finalizados</div>
+                <div class="gestao-kpi-value">{{ total_lotes_finalizados }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Itens totais</div>
+                <div class="gestao-kpi-value">{{ total_itens }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Coletados</div>
+                <div class="gestao-kpi-value">{{ total_coletados }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Divergências</div>
+                <div class="gestao-kpi-value">{{ total_divergencias }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Qtd coletada</div>
+                <div class="gestao-kpi-value">{{ total_quantidade_coletada }}</div>
+            </div>
+            <div class="gestao-kpi">
+                <div class="gestao-kpi-label">Tempo médio item</div>
+                <div class="gestao-kpi-value">{{ tempo_medio_geral }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if lotes %}
+    <div class="gestao-grid">
+        <div class="gestao-card">
+            <h2>Lotes em andamento</h2>
+            {% if lotes_andamento %}
+                <div class="lotes-lista">
+                    {% for lote in lotes_andamento %}
+                        <div class="lote-operacional {% if loop.first %}ativo{% endif %}" data-lote="{{ lote.numero_lote }}" onclick="filtrarLoteGestao('{{ lote.numero_lote }}', this)">
+                            <div class="lote-operacional-top">
+                                <div>
+                                    <div class="lote-numero">Lote #{{ lote.numero_lote }}</div>
+                                    <div style="color:#64748b; font-size:12px; margin-top:3px;">{{ lote.tipo_lote }}</div>
+                                </div>
+                                <div class="lote-etapa">{{ lote.etapa_atual }}</div>
+                            </div>
+
+                            <div class="progress"><span style="width:{{ lote.percentual }}%;"></span></div>
+
+                            <div class="lote-mini-grid">
+                                <div>Progresso<strong>{{ lote.coletados + lote.divergencias }}/{{ lote.total_itens }} itens</strong></div>
+                                <div>Pendentes<strong>{{ lote.pendentes }}</strong></div>
+                                <div>Início coleta<strong>{{ lote.inicio_coleta }}</strong></div>
+                                <div>Fim coleta<strong>{{ lote.fim_coleta }}</strong></div>
+                                <div>Tempo total<strong>{{ lote.tempo_total_coleta }}</strong></div>
+                                <div>Média item<strong>{{ lote.tempo_medio_item }}</strong></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="vazio" style="padding:18px;">Nenhum lote em andamento.</div>
+            {% endif %}
+
+            <h2 style="margin-top:22px;">Lotes finalizados</h2>
+            {% if lotes_finalizados %}
+                <div class="lotes-lista" style="max-height:calc(100vh - 470px);">
+                    {% for lote in lotes_finalizados %}
+                        <div class="lote-operacional finalizado" data-lote="{{ lote.numero_lote }}" onclick="filtrarLoteGestao('{{ lote.numero_lote }}', this)">
+                            <div class="lote-operacional-top">
+                                <div>
+                                    <div class="lote-numero">Lote #{{ lote.numero_lote }}</div>
+                                    <div style="color:#64748b; font-size:12px; margin-top:3px;">{{ lote.tipo_lote }}</div>
+                                </div>
+                                <div class="lote-etapa finalizado">FINALIZADO</div>
+                            </div>
+
+                            <div class="progress"><span style="width:100%;"></span></div>
+
+                            <div class="lote-mini-grid">
+                                <div>Progresso<strong>{{ lote.coletados + lote.divergencias }}/{{ lote.total_itens }} itens</strong></div>
+                                <div>Pendentes<strong>0</strong></div>
+                                <div>Início coleta<strong>{{ lote.inicio_coleta }}</strong></div>
+                                <div>Fim coleta<strong>{{ lote.fim_coleta }}</strong></div>
+                                <div>Tempo total<strong>{{ lote.tempo_total_coleta }}</strong></div>
+                                <div>Média item<strong>{{ lote.tempo_medio_item }}</strong></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="vazio" style="padding:18px;">Nenhum lote finalizado.</div>
+            {% endif %}
+        </div>
+
+        <div class="gestao-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+                <h2 style="margin-bottom:6px;">Detalhe das coletas</h2>
+                <button onclick="limparFiltroGestao()" style="border:none;background:#0f172a;color:white;border-radius:12px;padding:10px 14px;font-weight:bold;cursor:pointer;">Ver todos</button>
+            </div>
+
+            <div class="filtros-operacionais">
+                <input class="filtro-input" id="buscaGestao" oninput="buscarGestao()" placeholder="Buscar por lote, SKU, produto, endereço, conta ou coletor...">
+            </div>
+
+            <div class="tabela-wrap">
+                <table class="tabela-gestao" id="tabelaGestao">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Status</th>
+                            <th>SKU / Produto</th>
+                            <th>Endereço</th>
+                            <th>Coletor</th>
+                            <th>Data</th>
+                            <th>Início item</th>
+                            <th>Fim item</th>
+                            <th>Tempo item</th>
+                            <th>Até próxima coleta</th>
+                            <th>Qtd</th>
+                            <th>Obs.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in itens_geral %}
+                            <tr data-lote="{{ item.numero_lote }}" data-search="{{ (item.numero_lote ~ ' ' ~ item.sku ~ ' ' ~ item.titulo ~ ' ' ~ item.endereco ~ ' ' ~ item.conta ~ ' ' ~ item.coletor)|lower }}">
+                                <td><strong>#{{ item.numero_lote }}</strong></td>
+                                <td>
+                                    {% if item.status == 'Divergência' %}
+                                        <span class="badge-status badge-divergencia">Divergência</span>
+                                    {% else %}
+                                        <span class="badge-status badge-coletado">Coletado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div><strong>{{ item.sku }}</strong></div>
+                                    <div class="titulo-produto">{{ item.titulo }}</div>
+                                    <div style="color:#64748b;font-size:12px;">Conta: {{ item.conta }} | Selo: {{ item.selo }}</div>
+                                </td>
+                                <td>{{ item.endereco }}</td>
+                                <td>{{ item.coletor }}</td>
+                                <td>{{ item.data_coleta }}</td>
+                                <td>{{ item.inicio }}</td>
+                                <td>{{ item.fim }}</td>
+                                <td><strong>{{ item.tempo_item }}</strong></td>
+                                <td>{{ item.tempo_ate_proxima }}</td>
+                                <td><strong>{{ item.quantidade_coletada }}</strong> / {{ item.quantidade_esperada }}</td>
+                                <td><div class="obs">{{ item.observacao }}</div></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="vazio">Nenhum lote encontrado para gestão operacional.</div>
+    {% endif %}
+</div>
+
+<script>
+let loteAtivoGestao = "";
+
+function aplicarFiltroGestao(){
+    const busca = String(document.getElementById("buscaGestao")?.value || "").trim().toLowerCase();
+    document.querySelectorAll("#tabelaGestao tbody tr").forEach(function(row){
+        const loteOk = !loteAtivoGestao || row.dataset.lote === loteAtivoGestao;
+        const buscaOk = !busca || String(row.dataset.search || "").includes(busca);
+        row.style.display = (loteOk && buscaOk) ? "" : "none";
+    });
+}
+
+function filtrarLoteGestao(lote, el){
+    loteAtivoGestao = String(lote || "");
+    document.querySelectorAll(".lote-operacional").forEach(function(card){
+        card.classList.remove("ativo");
+    });
+    if (el){
+        el.classList.add("ativo");
+    }
+    aplicarFiltroGestao();
+}
+
+function limparFiltroGestao(){
+    loteAtivoGestao = "";
+    document.querySelectorAll(".lote-operacional").forEach(function(card){
+        card.classList.remove("ativo");
+    });
+    aplicarFiltroGestao();
+}
+
+function buscarGestao(){
+    aplicarFiltroGestao();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+    const primeiro = document.querySelector(".lote-operacional");
+    if (primeiro){
+        loteAtivoGestao = primeiro.dataset.lote || "";
+        aplicarFiltroGestao();
+    }
+});
+</script>
+{% endblock %}

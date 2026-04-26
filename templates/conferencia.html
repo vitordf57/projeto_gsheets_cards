@@ -2,344 +2,620 @@
 
 {% block content %}
 
+<script>
+(function(){
+    var viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport){
+        viewport = document.createElement('meta');
+        viewport.name = 'viewport';
+        document.head.appendChild(viewport);
+    }
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover');
+})();
+</script>
+
 <style>
-.page-wrap{
-    padding: 20px;
+.conferencia-wrap{
+    padding:24px;
+    max-width:1280px;
+    margin:0 auto;
 }
 
-.titulo-pagina{
-    margin-bottom: 20px;
+.conferencia-topo{
+    margin-bottom:18px;
 }
 
-.layout-conferencia{
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 20px;
+.conferencia-topo h1{
+    margin:0 0 8px 0;
+    font-size:40px;
 }
 
-.card-padrao{
-    background: white;
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+.conferencia-topo p{
+    margin:0;
+    color:#64748b;
+    font-size:18px;
 }
 
-.lista-lotes{
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.conferencia-grid-lotes{
+    display:grid;
+    gap:18px;
+    grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));
 }
 
-.lote-item{
-    display: block;
-    padding: 14px;
-    border-radius: 10px;
-    text-decoration: none;
-    color: #111;
-    background: #f5f7fb;
-    border: 1px solid #e3e8f0;
+.card-lote-conferencia,
+.card-item-conferencia,
+.resumo-conferencia,
+.form-conferencia-manual,
+.item-ref-conferencia{
+    background:white;
+    border-radius:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
+    padding:24px;
 }
 
-.lote-item:hover{
-    background: #eef4ff;
+.card-lote-conferencia a{
+    text-decoration:none;
 }
 
-.lote-item.ativo{
-    border: 2px solid #1c5ed6;
-    background: #eef4ff;
+.lote-linha-titulo{
+    font-size:30px;
+    font-weight:bold;
+    color:#111827;
+    margin-bottom:8px;
 }
 
-.lote-item strong{
-    display: block;
-    margin-bottom: 6px;
+.lote-linha-sub{
+    color:#475569;
+    line-height:1.7;
+    font-size:18px;
+}
+
+.badge-etapa{
+    display:inline-block;
+    margin-top:12px;
+    padding:10px 16px;
+    border-radius:999px;
+    background:#ede9fe;
+    color:#6d28d9;
+    font-size:15px;
+    font-weight:bold;
+}
+
+.resumo-conferencia,
+.form-conferencia-manual{
+    margin-bottom:16px;
+}
+
+.resumo-grid,
+.grid-manual,
+.grid-item-ref{
+    display:grid;
+    gap:10px;
 }
 
 .resumo-grid{
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    grid-template-columns:repeat(4, minmax(180px, 1fr));
 }
 
-.kpi{
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 14px;
-    border: 1px solid #e5e7eb;
+.grid-manual{
+    grid-template-columns:1fr 1fr;
 }
 
-.kpi-titulo{
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    font-weight: bold;
+.grid-item-ref{
+    grid-template-columns:1fr 1fr;
 }
 
-.kpi-valor{
-    font-size: 24px;
-    font-weight: bold;
+.resumo-mini,
+.campo-manual,
+.item-caixa-ref{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    padding:18px;
 }
 
-.item-conferencia{
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-    background: #fff;
+.resumo-mini strong,
+.label-manual,
+.item-label{
+    display:block;
+    font-size:15px;
+    text-transform:uppercase;
+    color:#64748b;
+    font-weight:bold;
+    margin-bottom:6px;
 }
 
-.item-topo{
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
+.resumo-mini span{
+    font-size:34px;
+    font-weight:bold;
+    color:#111827;
 }
 
-.item-topo strong{
-    font-size: 18px;
+.input-manual,
+.textarea-manual{
+    width:100%;
+    border:1px solid #cbd5e1;
+    border-radius:16px;
+    padding:18px;
+    font-size:22px;
+    box-sizing:border-box;
+    outline:none;
+    background:white;
 }
 
-.info-linha{
-    margin-bottom: 5px;
-    font-size: 14px;
+.textarea-manual{
+    min-height:120px;
+    resize:vertical;
 }
 
-.form-grid{
-    display: grid;
-    grid-template-columns: 160px 160px 1fr;
-    gap: 12px;
-    margin-top: 12px;
-    align-items: start;
+.item-valor-principal{
+    font-size:26px;
+    font-weight:bold;
+    color:#111827;
+    margin:2px 0 0 0;
+    word-break:break-word;
 }
 
-.form-grid input,
-.form-grid select,
-.form-grid textarea{
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #cfd8e3;
-    box-sizing: border-box;
+.item-valor-ref{
+    font-size:24px;
+    font-weight:bold;
+    color:#111827;
+    word-break:break-word;
 }
 
-.form-grid textarea{
-    min-height: 92px;
-    resize: vertical;
+.item-ref-conferencia.status-divergente{
+    border:1px solid #f59e0b;
+    background:#fffaf0;
 }
 
-.botoes-form{
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
+.item-ref-conferencia.status-ok{
+    border:1px solid #86efac;
+    background:#f0fdf4;
 }
 
-.btn-salvar{
-    background: #198754;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    cursor: pointer;
-    font-weight: bold;
+.badge-ref{
+    display:inline-block;
+    margin-top:12px;
+    padding:10px 16px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:bold;
 }
 
-.status-badge{
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
+.badge-ok{
+    background:#dcfce7;
+    color:#166534;
 }
 
-.status-ok{
-    background: #d1e7dd;
-    color: #0f5132;
+.badge-divergencia{
+    background:#fef3c7;
+    color:#92400e;
 }
 
-.status-div{
-    background: #f8d7da;
-    color: #842029;
+.badge-pendente{
+    background:#fff3cd;
+    color:#664d03;
 }
 
-.status-pendente{
-    background: #fff3cd;
-    color: #664d03;
+.lista-referencia{
+    display:grid;
+    gap:12px;
+}
+
+.btn-conferir{
+    width:100%;
+    margin-top:18px;
+    border:none;
+    border-radius:20px;
+    padding:22px 24px;
+    background:#2563eb;
+    color:white;
+    font-weight:bold;
+    font-size:30px;
+    cursor:pointer;
+}
+
+.btn-conferir:hover{
+    background:#1d4ed8;
+}
+
+.btn-excluir{
+    display:inline-block;
+    margin:4px 0 16px 0;
+    text-decoration:none;
+    color:white;
+    background:#dc2626;
+    border-radius:14px;
+    padding:12px 16px;
+    font-weight:bold;
+}
+
+.alerta-finalizado,
+.alerta-acao,
+.alerta-erro,
+.alerta-aviso{
+    margin-bottom:18px;
+    padding:18px 20px;
+    border-radius:18px;
+    font-weight:bold;
+    font-size:18px;
+}
+
+.alerta-finalizado{
+    background:#dcfce7;
+    border:1px solid #86efac;
+    color:#166534;
+}
+
+.alerta-acao{
+    background:#dbeafe;
+    border:1px solid #93c5fd;
+    color:#1d4ed8;
+}
+
+.alerta-erro{
+    background:#fee2e2;
+    border:1px solid #fca5a5;
+    color:#b91c1c;
+}
+
+.alerta-aviso{
+    background:#fff7ed;
+    border:1px solid #fdba74;
+    color:#9a3412;
+}
+
+.link-voltar{
+    display:inline-block;
+    margin-bottom:18px;
+    text-decoration:none;
+    color:#2563eb;
+    font-weight:bold;
+    font-size:18px;
 }
 
 .preview-foto{
-    margin-top: 8px;
+    margin-top:10px;
 }
 
 .preview-foto img{
-    max-width: 180px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
+    max-width:180px;
+    border-radius:12px;
+    border:1px solid #ddd;
 }
 
 .vazio{
-    color: #666;
-    font-style: italic;
+    background:white;
+    border-radius:18px;
+    padding:24px;
+    color:#64748b;
+    box-shadow:0 4px 14px rgba(0,0,0,0.08);
 }
 
-@media (max-width: 1100px){
-    .layout-conferencia{
-        grid-template-columns: 1fr;
+@media (max-width: 768px){
+    html,
+    body{
+        width:100% !important;
+        max-width:100% !important;
+        overflow-x:hidden !important;
+        background:#f3f6fb !important;
+    }
+
+    body:has(.conferencia-wrap) .sidebar,
+    body:has(.conferencia-wrap) .menu-lateral,
+    body:has(.conferencia-wrap) .side-menu,
+    body:has(.conferencia-wrap) .navbar-lateral,
+    body:has(.conferencia-wrap) aside{
+        display:none !important;
+        width:0 !important;
+        min-width:0 !important;
+    }
+
+    body:has(.conferencia-wrap) .main-content,
+    body:has(.conferencia-wrap) .content,
+    body:has(.conferencia-wrap) .page-content,
+    body:has(.conferencia-wrap) .container,
+    body:has(.conferencia-wrap) main{
+        margin-left:0 !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+        width:100% !important;
+        max-width:100% !important;
+    }
+
+    .conferencia-wrap{
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 !important;
+        padding:14px 14px 28px 14px !important;
+        box-sizing:border-box !important;
+    }
+
+    .link-voltar{
+        font-size:15px !important;
+        margin-bottom:12px !important;
+    }
+
+    .conferencia-topo{
+        margin-bottom:14px !important;
+    }
+
+    .conferencia-topo h1{
+        font-size:28px !important;
+        line-height:1.15 !important;
+        margin-bottom:8px !important;
+    }
+
+    .conferencia-topo p{
+        font-size:16px !important;
+        line-height:1.35 !important;
+    }
+
+    .card-lote-conferencia,
+    .card-item-conferencia,
+    .resumo-conferencia,
+    .form-conferencia-manual,
+    .item-ref-conferencia{
+        border-radius:18px !important;
+        padding:18px !important;
+        box-shadow:0 8px 22px rgba(15,23,42,0.10) !important;
+        box-sizing:border-box !important;
     }
 
     .resumo-grid{
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+        gap:10px !important;
     }
 
-    .form-grid{
-        grid-template-columns: 1fr;
+    .grid-manual,
+    .grid-item-ref{
+        grid-template-columns:1fr !important;
+        gap:10px !important;
+    }
+
+    .resumo-mini,
+    .campo-manual,
+    .item-caixa-ref{
+        border-radius:16px !important;
+        padding:14px !important;
+    }
+
+    .resumo-mini strong,
+    .label-manual,
+    .item-label{
+        font-size:12px !important;
+        letter-spacing:.02em !important;
+    }
+
+    .resumo-mini span{
+        font-size:28px !important;
+    }
+
+    .lote-linha-titulo{
+        font-size:24px !important;
+        line-height:1.2 !important;
+    }
+
+    .lote-linha-sub{
+        font-size:16px !important;
+        line-height:1.45 !important;
+    }
+
+    .input-manual,
+    .textarea-manual{
+        font-size:18px !important;
+        padding:16px !important;
+        border-radius:14px !important;
+    }
+
+    .textarea-manual{
+        min-height:110px !important;
+    }
+
+    .item-valor-principal{
+        font-size:22px !important;
+        line-height:1.25 !important;
+    }
+
+    .item-valor-ref{
+        font-size:22px !important;
+        line-height:1.2 !important;
+    }
+
+    .alerta-finalizado,
+    .alerta-acao,
+    .alerta-erro,
+    .alerta-aviso{
+        font-size:15px !important;
+        line-height:1.35 !important;
+        padding:14px 16px !important;
+        border-radius:16px !important;
+    }
+
+    .btn-conferir{
+        font-size:22px !important;
+        padding:18px 20px !important;
+        border-radius:16px !important;
+        margin-top:16px !important;
+    }
+
+    .conferencia-grid-lotes{
+        grid-template-columns:1fr !important;
+        gap:14px !important;
+    }
+
+    .lista-referencia{
+        gap:12px !important;
     }
 }
 </style>
 
-<div class="page-wrap">
-    <h1 class="titulo-pagina">📋 Conferência de Lotes</h1>
+<div class="conferencia-wrap">
+    {% if lote %}
+        <a href="/conferencia" class="link-voltar">← Voltar para lotes de conferência</a>
 
-    <div class="layout-conferencia">
-        <div class="card-padrao">
-            <h3>Lotes</h3>
+        <div class="conferencia-topo">
+            <h1>Conferência do lote #{{ lote['numero_lote'] }}</h1>
+            <p>Confira cada SKU, informe a quantidade conferida, registre foto se necessário e salve a conferência.</p>
+        </div>
 
-            <div class="lista-lotes">
-                {% if lotes %}
-                    {% for item in lotes %}
-                        <a href="{{ url_for('conferencia', numero_lote=item['numero_lote']) }}"
-                           class="lote-item {% if lote and lote['numero_lote'] == item['numero_lote'] %}ativo{% endif %}">
-                            <strong>Lote #{{ item['numero_lote'] }}</strong>
-                            <div>Tipo: {{ item['tipo_lote'] or '-' }}</div>
-                            <div>Status: {{ item['status'] or 'PENDENTE' }}</div>
-                            <div>Itens: {{ item['total_itens'] or 0 }}</div>
-                            <div>Conferidos: {{ item['itens_conferidos'] or 0 }}</div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="vazio">Nenhum lote gerado ainda.</div>
-                {% endif %}
+        {% set total_itens = itens|length %}
+        {% set itens_ok = itens|selectattr('status_item', 'equalto', 'OK')|list|length %}
+        {% set itens_divergentes = itens|selectattr('status_item', 'equalto', 'DIVERGENTE')|list|length %}
+        {% set itens_conferidos = itens_ok + itens_divergentes %}
+        {% set itens_pendentes = total_itens - itens_conferidos %}
+
+        {% if itens_pendentes <= 0 and total_itens > 0 %}
+            <div class="alerta-finalizado">
+                Conferência finalizada. O lote será movido para EMBALAGEM.
+            </div>
+        {% endif %}
+
+        <div class="resumo-conferencia">
+            <div class="lote-linha-titulo">{{ lote['tipo_lote'] or 'Diversos' }}</div>
+            <div class="lote-linha-sub">
+                Status atual: <strong>{{ lote['status'] or 'PENDENTE' }}</strong>
+                {% if lote['data_criacao'] %}| Criado em: <strong>{{ lote['data_criacao'] }}</strong>{% endif %}
+            </div>
+
+            <div class="resumo-grid" style="margin-top:14px;">
+                <div class="resumo-mini">
+                    <strong>Total de itens</strong>
+                    <span>{{ total_itens }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>Conferidos</strong>
+                    <span>{{ itens_conferidos }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>OK</strong>
+                    <span>{{ itens_ok }}</span>
+                </div>
+                <div class="resumo-mini">
+                    <strong>Divergentes</strong>
+                    <span>{{ itens_divergentes }}</span>
+                </div>
             </div>
         </div>
 
-        <div class="card-padrao">
-            {% if lote %}
-                <h2>Lote #{{ lote['numero_lote'] }}</h2>
-                <div style="margin-bottom: 18px;">
-                    <strong>Tipo:</strong> {{ lote['tipo_lote'] or '-' }}<br>
-                    <strong>Status:</strong> {{ lote['status'] or 'PENDENTE' }}<br>
-                    <strong>Criado em:</strong> {{ lote['data_criacao'] or '-' }}
-                </div>
+        <a class="btn-excluir"
+           href="{{ url_for('excluir_lote', numero_lote=lote['numero_lote']) }}"
+           onclick="return confirm('Tem certeza que deseja excluir este lote?')">
+            🗑 Excluir lote
+        </a>
 
-        <a class="btn-card btn-editar"
-   href="{{ url_for('excluir_lote', numero_lote=lote['numero_lote']) }}"
-   onclick="return confirm('Tem certeza que deseja excluir este lote?')">
-    🗑 Excluir Lote
-</a>
+        <div class="lote-linha-titulo" style="font-size:22px; margin:14px 0 10px 0;">Itens para conferência</div>
 
-                <div class="resumo-grid">
-                    <div class="kpi">
-                        <div class="kpi-titulo">Total de itens</div>
-                        <div class="kpi-valor">{{ lote['total_itens'] or 0 }}</div>
-                    </div>
-                    <div class="kpi">
-                        <div class="kpi-titulo">Conferidos</div>
-                        <div class="kpi-valor">{{ lote['itens_conferidos'] or 0 }}</div>
-                    </div>
-                    <div class="kpi">
-                        <div class="kpi-titulo">OK</div>
-                        <div class="kpi-valor">{{ lote['itens_ok'] or 0 }}</div>
-                    </div>
-                    <div class="kpi">
-                        <div class="kpi-titulo">Divergentes</div>
-                        <div class="kpi-valor">{{ lote['itens_divergentes'] or 0 }}</div>
-                    </div>
-                </div>
+        {% if itens %}
+            <div class="lista-referencia">
+                {% for item in itens %}
+                    {% set status = item['status_item'] or 'PENDENTE' %}
+                    <div class="item-ref-conferencia {% if status == 'DIVERGENTE' %}status-divergente{% elif status == 'OK' %}status-ok{% endif %}">
+                        <div class="item-label">Produto</div>
+                        <div class="item-valor-principal">{{ item['titulo'] or '-' }}</div>
 
-                {% if itens %}
-                    {% for item in itens %}
-                        <div class="item-conferencia">
-                            <div class="item-topo">
-                                <div>
-                                    <strong>{{ item['sku'] }}</strong>
-                                    <div class="info-linha"><b>Código:</b> {{ item['codigo'] }}</div>
-                                    <div class="info-linha"><b>Título:</b> {{ item['titulo'] }}</div>
-                                    <div class="info-linha"><b>Esperado:</b> {{ item['quantidade_esperada'] }}</div>
-                                    <div class="info-linha"><b>Endereço:</b> {{ item['endereco'] }}</div>
-                                    <div class="info-linha"><b>Filete:</b> {{ item['lote_filete'] }}</div>
+                        <div class="grid-item-ref" style="margin-top:12px;">
+                            <div class="item-caixa-ref">
+                                <div class="item-label">SKU</div>
+                                <div class="item-valor-ref">{{ item['sku'] or '-' }}</div>
+                            </div>
+                            <div class="item-caixa-ref">
+                                <div class="item-label">Quantidade esperada</div>
+                                <div class="item-valor-ref">{{ item['quantidade_esperada'] or 0 }}</div>
+                            </div>
+                            <div class="item-caixa-ref">
+                                <div class="item-label">Endereço</div>
+                                <div class="item-valor-ref">{{ item['endereco'] or '-' }}</div>
+                            </div>
+                            <div class="item-caixa-ref">
+                                <div class="item-label">Filete</div>
+                                <div class="item-valor-ref">{{ item['lote_filete'] or '-' }}</div>
+                            </div>
+                        </div>
+
+                        {% if status == 'OK' %}
+                            <div class="badge-ref badge-ok">OK{% if item['conferido_em'] %} em {{ item['conferido_em'] }}{% endif %}</div>
+                        {% elif status == 'DIVERGENTE' %}
+                            <div class="badge-ref badge-divergencia">Divergente{% if item['conferido_em'] %} em {{ item['conferido_em'] }}{% endif %}</div>
+                        {% else %}
+                            <div class="badge-ref badge-pendente">Pendente</div>
+                        {% endif %}
+
+                        <form action="/salvar-conferencia-item" method="POST" enctype="multipart/form-data" style="margin-top:14px;">
+                            <input type="hidden" name="numero_lote" value="{{ item['numero_lote'] }}">
+                            <input type="hidden" name="codigo" value="{{ item['codigo'] }}">
+                            <input type="hidden" name="sku" value="{{ item['sku'] }}">
+
+                            <div class="grid-manual">
+                                <div class="campo-manual">
+                                    <label class="label-manual">Qtd conferida</label>
+                                    <input type="number" name="quantidade_conferida" class="input-manual"
+                                           value="{{ item['quantidade_conferida'] if item['quantidade_conferida'] is not none else item['quantidade_esperada'] }}">
                                 </div>
 
-                                <div>
-                                    {% set status = item['status_item'] or 'PENDENTE' %}
-                                    {% if status == 'OK' %}
-                                        <span class="status-badge status-ok">OK</span>
-                                    {% elif status == 'DIVERGENTE' %}
-                                        <span class="status-badge status-div">DIVERGENTE</span>
-                                    {% else %}
-                                        <span class="status-badge status-pendente">PENDENTE</span>
-                                    {% endif %}
+                                <div class="campo-manual">
+                                    <label class="label-manual">Status</label>
+                                    <select name="status_item" class="input-manual">
+                                        <option value="OK" {% if item['status_item'] == 'OK' %}selected{% endif %}>OK</option>
+                                        <option value="DIVERGENTE" {% if item['status_item'] == 'DIVERGENTE' %}selected{% endif %}>Divergente</option>
+                                        <option value="PENDENTE" {% if item['status_item'] == 'PENDENTE' or not item['status_item'] %}selected{% endif %}>Pendente</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <form action="/salvar-conferencia-item" method="POST" enctype="multipart/form-data">
-                                <input type="hidden" name="numero_lote" value="{{ item['numero_lote'] }}">
-                                <input type="hidden" name="codigo" value="{{ item['codigo'] }}">
-                                <input type="hidden" name="sku" value="{{ item['sku'] }}">
-
-                                <div class="form-grid">
-                                    <div>
-                                        <label><strong>Qtd conferida</strong></label>
-                                        <input type="number" name="quantidade_conferida"
-                                               value="{{ item['quantidade_conferida'] if item['quantidade_conferida'] is not none else item['quantidade_esperada'] }}">
+                            <div class="campo-manual" style="margin-top:12px;">
+                                <label class="label-manual">Foto do produto</label>
+                                <input type="file" name="foto" accept="image/*" class="input-manual">
+                                {% if item['foto_path'] %}
+                                    <div class="preview-foto">
+                                        <a href="/{{ item['foto_path'] }}" target="_blank">
+                                            <img src="/{{ item['foto_path'] }}" alt="Foto conferência">
+                                        </a>
                                     </div>
+                                {% endif %}
+                            </div>
 
-                                    <div>
-                                        <label><strong>Status</strong></label>
-                                        <select name="status_item">
-                                            <option value="OK" {% if item['status_item'] == 'OK' %}selected{% endif %}>OK</option>
-                                            <option value="DIVERGENTE" {% if item['status_item'] == 'DIVERGENTE' %}selected{% endif %}>Divergente</option>
-                                            <option value="PENDENTE" {% if item['status_item'] == 'PENDENTE' or not item['status_item'] %}selected{% endif %}>Pendente</option>
-                                        </select>
-                                    </div>
+                            <div class="campo-manual" style="margin-top:12px;">
+                                <label class="label-manual">Observação</label>
+                                <textarea name="observacao" class="textarea-manual" placeholder="Descreva qualquer divergência encontrada.">{{ item['observacao'] or '' }}</textarea>
+                            </div>
 
-                                    <div>
-                                        <label><strong>Foto do produto</strong></label>
-                                        <input type="file" name="foto" accept="image/*">
-                                        {% if item['foto_path'] %}
-                                            <div class="preview-foto">
-                                                <a href="/{{ item['foto_path'] }}" target="_blank">
-                                                    <img src="/{{ item['foto_path'] }}" alt="Foto conferência">
-                                                </a>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                            <button type="submit" class="btn-conferir">Salvar conferência</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="vazio">Nenhum item encontrado para este lote.</div>
+        {% endif %}
+    {% else %}
+        <div class="conferencia-topo">
+            <h1>Conferência</h1>
+            <p>Escolha o lote para iniciar a conferência no celular.</p>
+        </div>
 
-                                <div style="margin-top: 12px;">
-                                    <label><strong>Observação</strong></label>
-                                    <textarea name="observacao">{{ item['observacao'] or '' }}</textarea>
-                                </div>
-
-                                <div class="botoes-form">
-                                    <button type="submit" class="btn-salvar">Salvar conferência</button>
-                                    {% if item['conferido_em'] %}
-                                        <span><strong>Última conferência:</strong> {{ item['conferido_em'] }}</span>
-                                    {% endif %}
-                                </div>
-                            </form>
+        <div class="conferencia-grid-lotes">
+            {% if lotes %}
+                {% for item in lotes %}
+                    <div class="card-lote-conferencia">
+                        <div class="lote-linha-titulo">Lote #{{ item['numero_lote'] }}</div>
+                        <div class="lote-linha-sub">
+                            Tipo: <strong>{{ item['tipo_lote'] or '-' }}</strong><br>
+                            Status: <strong>{{ item['status'] or 'PENDENTE' }}</strong><br>
+                            Itens: <strong>{{ item['total_itens'] or 0 }}</strong><br>
+                            Conferidos: <strong>{{ item['itens_conferidos'] or 0 }}</strong>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="vazio">Nenhum item encontrado para este lote.</div>
-                {% endif %}
+                        <div class="badge-etapa">EM CONFERÊNCIA</div>
+                        <div style="margin-top:14px;">
+                            <a href="{{ url_for('conferencia_lote', numero_lote=item['numero_lote']) }}" class="btn-conferir" style="display:inline-block; text-align:center; box-sizing:border-box; text-decoration:none;">Abrir conferência</a>
+                        </div>
+                    </div>
+                {% endfor %}
             {% else %}
-                <div class="vazio">Selecione um lote à esquerda para iniciar a conferência.</div>
+                <div class="vazio">Nenhum lote disponível para conferência.</div>
             {% endif %}
         </div>
-    </div>
+    {% endif %}
 </div>
 
 {% endblock %}

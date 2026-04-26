@@ -2973,7 +2973,7 @@ function obterDiasLeadTime(item){
 }
 
 function obterHistoricoMensal3Meses(item){
-    const meses = ["AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO"];
+    const meses = ["SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","JANEIRO","FEVEREIRO","MARÇO","ABRIL"];
     const historico = meses.map(nome => ({
         nome,
         valor: numeroInteiro(item[nome] || 0)
@@ -4006,7 +4006,32 @@ function obterCampoHistoricoDiario(item, candidatos){
         const chaveNormalizada = normalizarChaveHistoricoDiario(candidato);
         if (Object.prototype.hasOwnProperty.call(mapa, chaveNormalizada)) return mapa[chaveNormalizada];
     }
-    return 0;
+    return "";
+}
+
+const mesesHistoricoDiario = {"JANEIRO":1,"FEVEREIRO":2,"MARÇO":3,"MARCO":3,"ABRIL":4,"MAIO":5,"JUNHO":6,"JULHO":7,"AGOSTO":8,"SETEMBRO":9,"OUTUBRO":10,"NOVEMBRO":11,"DEZEMBRO":12};
+
+function obterTextoDatasVendaHistorico(item){
+    return String(obterCampoHistoricoDiario(item, [
+        "DATAS VENDA", "DATAS DE VENDA", "DATA VENDA", "DATA DE VENDA",
+        "DATAS VENDAS", "DATAS DAS VENDAS", "DATA DAS VENDAS",
+        "HISTORICO DATAS VENDA", "HISTORICO DE DATAS VENDA", "HISTORICO VENDAS DATA",
+        "VENDAS DATA", "VENDAS DATAS", "DATA", "DATAS"
+    ]) || "");
+}
+
+function interpretarDataVendaHistorico(texto){
+    const valor = String(texto || "").trim();
+    if (!valor) return null;
+    let match = valor.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if (match) return { ano:Number(match[1]), mes:Number(match[2]), dia:Number(match[3]) };
+    match = valor.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (match){
+        let ano = Number(match[3]);
+        if (ano < 100) ano += 2000;
+        return { ano, mes:Number(match[2]), dia:Number(match[1]) };
+    }
+    return null;
 }
 
 function obterVendasDiaMesHistorico(item, mes, dia){
@@ -4020,23 +4045,116 @@ function obterVendasDiaMesHistorico(item, mes, dia){
     ]));
 }
 
+function obterValorAnuncioHistorico(item){
+    return valorParaNumero(obterCampoHistoricoDiario(item, [
+        "VALOR DO ANUNCIO", "VALOR DO ANÚNCIO", "Valor do Anuncio", "Valor do Anúncio",
+        "PRECO", "PREÇO", "VALOR ANUNCIO", "VALOR ANÚNCIO"
+    ]));
+}
+
+function formatarMoedaHistorico(valor){
+    const numero = Number(valor || 0);
+    return numero.toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+}
+
+function obterSerieDiariaPorColunaDatas(item, mes){
+    const numeroMes = mesesHistoricoDiario[String(mes || "").toUpperCase()] || 0;
+    const serie = Array(31).fill(0);
+    const textoDatas = obterTextoDatasVendaHistorico(item);
+    if (!numeroMes || !textoDatas) return serie;
+    textoDatas.split(/[,;|\n]+/)
+        .map(parte => interpretarDataVendaHistorico(parte))
+        .filter(data => data && data.mes === numeroMes && data.dia >= 1 && data.dia <= 31)
+        .forEach(data => { serie[data.dia - 1] += 1; });
+    return serie;
+}
+
 function obterSerieDiariaHistorico(item, mes){
+    const seriePorDatas = obterSerieDiariaPorColunaDatas(item, mes);
+    if (seriePorDatas.some(v => v > 0)) return seriePorDatas;
     const dias = [];
     for (let dia = 1; dia <= 31; dia++) dias.push(obterVendasDiaMesHistorico(item, mes, dia));
     return dias;
 }
 
+function obterDetalhesSerieDiariaHistorico(item, mes){
+    const serie = obterSerieDiariaHistorico(item, mes);
+    const valorAnuncio = obterValorAnuncioHistorico(item);
+    const numeroMes = mesesHistoricoDiario[String(mes || "").toUpperCase()] || 0;
+    return serie.map((qtd, index) => {
+        const quantidade = numeroInteiro(qtd);
+        const dia = index + 1;
+        return {
+            dia,
+            mes,
+            numeroMes,
+            quantidade,
+            valorUnitario: valorAnuncio,
+            valorTotal: quantidade * valorAnuncio,
+            dataTexto: `${String(dia).padStart(2, "0")}/${String(numeroMes || "").padStart(2, "0")}`
+        };
+    });
+}
+
 function montarCardMesHistoricoDiario(item, codigo, mes){
     const serie = obterSerieDiariaHistorico(item, mes);
+    const detalhes = obterDetalhesSerieDiariaHistorico(item, mes);
     return `
-        <div class="historico-mes-card" onclick="selecionarMesHistoricoDiario(this, '${codigo}', '${mes}', '${serie.join(',')}')">
+        <div class="historico-mes-card" data-mes="${mes}" data-serie="${serie.join(',')}" data-detalhes="${encodeURIComponent(JSON.stringify(detalhes))}" onclick="selecionarMesHistoricoDiario(this, '${codigo}')">
             <div class="historico-mes-label">${mes}</div>
             <div class="historico-mes-valor">${item[mes] || 0}</div>
         </div>
     `;
 }
 
-function desenharGraficoHistoricoDiario(canvas, serie, mes){
+function obterTooltipHistoricoDiario(){
+    let tooltip = document.getElementById("tooltip-historico-diario-grafico");
+    if (!tooltip){
+        tooltip = document.createElement("div");
+        tooltip.id = "tooltip-historico-diario-grafico";
+        tooltip.style.position = "fixed";
+        tooltip.style.display = "none";
+        tooltip.style.zIndex = "100000";
+        tooltip.style.pointerEvents = "none";
+        tooltip.style.background = "#111827";
+        tooltip.style.color = "#fff";
+        tooltip.style.padding = "10px 12px";
+        tooltip.style.borderRadius = "10px";
+        tooltip.style.boxShadow = "0 10px 25px rgba(0,0,0,0.28)";
+        tooltip.style.fontSize = "12px";
+        tooltip.style.lineHeight = "1.45";
+        tooltip.style.maxWidth = "280px";
+        document.body.appendChild(tooltip);
+    }
+    return tooltip;
+}
+
+function esconderTooltipHistoricoDiario(){
+    const tooltip = document.getElementById("tooltip-historico-diario-grafico");
+    if (tooltip) tooltip.style.display = "none";
+}
+
+function montarHtmlTooltipHistoricoDiario(ponto){
+    const detalhes = ponto.detalhes || {};
+    const quantidade = numeroInteiro(detalhes.quantidade || ponto.valor || 0);
+    const valorUnitario = Number(detalhes.valorUnitario || 0);
+    const valorTotal = Number(detalhes.valorTotal || (quantidade * valorUnitario));
+    const dataTexto = detalhes.dataTexto || `${String(ponto.dia).padStart(2, "0")}/${ponto.mes || ""}`;
+
+    let html = `<strong>${ponto.mes || "MÊS"} - ${dataTexto}</strong><br>`;
+    html += `Data da venda: <strong>${dataTexto}</strong><br>`;
+    if (quantidade > 2){
+        html += `Quantidade de vendas: <strong>${quantidade}</strong><br>`;
+        html += `Valor total: <strong>${formatarMoedaHistorico(valorTotal)}</strong>`;
+    } else {
+        html += `Quantidade de vendas: <strong>${quantidade}</strong><br>`;
+        html += `Valor do anúncio: <strong>${formatarMoedaHistorico(valorUnitario)}</strong>`;
+        if (quantidade > 1) html += `<br>Valor total: <strong>${formatarMoedaHistorico(valorTotal)}</strong>`;
+    }
+    return html;
+}
+
+function desenharGraficoHistoricoDiario(canvas, seriesEntrada, titulo){
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     const larguraCss = canvas.clientWidth || 600;
@@ -4046,85 +4164,112 @@ function desenharGraficoHistoricoDiario(canvas, serie, mes){
     canvas.height = alturaCss * escala;
     ctx.setTransform(escala, 0, 0, escala, 0, 0);
     ctx.clearRect(0, 0, larguraCss, alturaCss);
-
+    const series = Array.isArray(seriesEntrada) && seriesEntrada.length && seriesEntrada[0].valores
+        ? seriesEntrada
+        : [{ mes: titulo || "MÊS", valores: (seriesEntrada || []).map(v => numeroInteiro(v)), detalhes: [] }];
     const margemEsq = 28, margemDir = 10, margemTop = 12, margemBottom = 24;
     const largura = larguraCss - margemEsq - margemDir;
     const altura = alturaCss - margemTop - margemBottom;
-    const valores = (serie || []).map(v => numeroInteiro(v));
-    const maximo = Math.max(...valores, 1);
+    const todasSeries = series.map(serie => ({
+        mes: serie.mes || "MÊS",
+        valores: (serie.valores || []).map(v => numeroInteiro(v)),
+        detalhes: Array.isArray(serie.detalhes) ? serie.detalhes : []
+    }));
+    const todosValores = todasSeries.flatMap(serie => serie.valores);
+    const maximo = Math.max(...todosValores, 1);
+    const pontosTooltip = [];
 
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(margemEsq, margemTop);
-    ctx.lineTo(margemEsq, margemTop + altura);
-    ctx.lineTo(margemEsq + largura, margemTop + altura);
-    ctx.stroke();
-
-    ctx.fillStyle = "#64748b";
-    ctx.font = "10px Arial";
-    ctx.textAlign = "right";
-    ctx.fillText(maximo, margemEsq - 6, margemTop + 4);
-    ctx.fillText("0", margemEsq - 6, margemTop + altura + 3);
-
+    ctx.strokeStyle = "#e5e7eb"; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(margemEsq, margemTop); ctx.lineTo(margemEsq, margemTop + altura); ctx.lineTo(margemEsq + largura, margemTop + altura); ctx.stroke();
+    ctx.fillStyle = "#64748b"; ctx.font = "10px Arial"; ctx.textAlign = "right";
+    ctx.fillText(maximo, margemEsq - 6, margemTop + 4); ctx.fillText("0", margemEsq - 6, margemTop + altura + 3);
     ctx.textAlign = "center";
-    [1, 5, 10, 15, 20, 25, 31].forEach(dia => {
-        const x = margemEsq + ((dia - 1) / 30) * largura;
-        ctx.fillText(String(dia), x, alturaCss - 6);
-    });
+    [1,5,10,15,20,25,31].forEach(dia => { const x = margemEsq + ((dia - 1) / 30) * largura; ctx.fillText(String(dia), x, alturaCss - 6); });
+    const cores = ["#1d4ed8", "#16a34a", "#f97316", "#7c3aed", "#dc2626", "#0891b2"];
 
-    ctx.beginPath();
-    valores.forEach((valor, index) => {
-        const x = margemEsq + (index / 30) * largura;
-        const y = margemTop + altura - ((valor / maximo) * altura);
-        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.lineTo(margemEsq + largura, margemTop + altura);
-    ctx.lineTo(margemEsq, margemTop + altura);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(29,78,216,0.16)";
-    ctx.fill();
-
-    ctx.beginPath();
-    valores.forEach((valor, index) => {
-        const x = margemEsq + (index / 30) * largura;
-        const y = margemTop + altura - ((valor / maximo) * altura);
-        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = "#1d4ed8";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    valores.forEach((valor, index) => {
-        if (valor <= 0) return;
-        const x = margemEsq + (index / 30) * largura;
-        const y = margemTop + altura - ((valor / maximo) * altura);
+    todasSeries.forEach((serie, indiceSerie) => {
+        const valores = serie.valores; const cor = cores[indiceSerie % cores.length];
         ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = "#1d4ed8";
-        ctx.fill();
+        valores.forEach((valor, index) => {
+            const x = margemEsq + (index / 30) * largura;
+            const y = margemTop + altura - ((valor / maximo) * altura);
+            if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = cor; ctx.lineWidth = 2; ctx.stroke();
+
+        valores.forEach((valor, index) => {
+            if (valor <= 0) return;
+            const x = margemEsq + (index / 30) * largura;
+            const y = margemTop + altura - ((valor / maximo) * altura);
+            ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = cor; ctx.fill();
+            pontosTooltip.push({
+                x, y,
+                raio: 9,
+                mes: serie.mes,
+                dia: index + 1,
+                valor,
+                detalhes: serie.detalhes[index] || { quantidade: valor, valorUnitario: 0, valorTotal: 0 }
+            });
+        });
     });
 
-    if (valores.every(v => v === 0)){
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`Sem vendas diárias registradas em ${mes}`, margemEsq + largura / 2, margemTop + altura / 2);
+    ctx.font = "11px Arial"; ctx.textAlign = "left";
+    todasSeries.forEach((serie, indiceSerie) => { const x = margemEsq + 6 + (indiceSerie * 92); const y = margemTop + 10; ctx.fillStyle = cores[indiceSerie % cores.length]; ctx.fillRect(x, y - 7, 8, 8); ctx.fillStyle = "#334155"; ctx.fillText(serie.mes, x + 12, y); });
+    if (todosValores.every(v => v === 0)){ ctx.fillStyle = "#94a3b8"; ctx.font = "12px Arial"; ctx.textAlign = "center"; ctx.fillText(`Sem vendas diárias registradas em ${titulo || "mês selecionado"}`, margemEsq + largura / 2, margemTop + altura / 2); }
+
+    canvas.__historicoDiarioPontos = pontosTooltip;
+    if (!canvas.__historicoDiarioTooltipAtivo){
+        canvas.__historicoDiarioTooltipAtivo = true;
+        canvas.addEventListener("mousemove", (ev) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = ev.clientX - rect.left;
+            const mouseY = ev.clientY - rect.top;
+            const pontos = canvas.__historicoDiarioPontos || [];
+            let maisProximo = null;
+            let menorDistancia = Infinity;
+
+            pontos.forEach(ponto => {
+                const distancia = Math.hypot(mouseX - ponto.x, mouseY - ponto.y);
+                if (distancia < menorDistancia && distancia <= ponto.raio){
+                    menorDistancia = distancia;
+                    maisProximo = ponto;
+                }
+            });
+
+            const tooltip = obterTooltipHistoricoDiario();
+            if (!maisProximo){
+                tooltip.style.display = "none";
+                return;
+            }
+
+            tooltip.innerHTML = montarHtmlTooltipHistoricoDiario(maisProximo);
+            tooltip.style.display = "block";
+            tooltip.style.left = `${Math.min(ev.clientX + 14, window.innerWidth - tooltip.offsetWidth - 12)}px`;
+            tooltip.style.top = `${Math.min(ev.clientY + 14, window.innerHeight - tooltip.offsetHeight - 12)}px`;
+        });
+        canvas.addEventListener("mouseleave", esconderTooltipHistoricoDiario);
     }
 }
 
-function selecionarMesHistoricoDiario(card, codigo, mes, serieTexto){
+function selecionarMesHistoricoDiario(card, codigo){
     const wrap = card.closest(".historico-compacto-wrap");
     if (!wrap) return;
-    wrap.querySelectorAll(".historico-mes-card").forEach(el => el.classList.remove("ativo"));
-    card.classList.add("ativo");
-
+    card.classList.toggle("ativo");
+    let cardsAtivos = Array.from(wrap.querySelectorAll(".historico-mes-card.ativo"));
+    if (!cardsAtivos.length){ card.classList.add("ativo"); cardsAtivos = [card]; }
+    const series = cardsAtivos.map(el => {
+        let detalhes = [];
+        try { detalhes = JSON.parse(decodeURIComponent(el.dataset.detalhes || "%5B%5D")); } catch(e){ detalhes = []; }
+        return {
+            mes: el.dataset.mes || "MÊS",
+            valores: String(el.dataset.serie || "").split(",").map(v => numeroInteiro(v)),
+            detalhes
+        };
+    });
     const labelMes = wrap.querySelector(`#historico-diario-mes-${codigo}`);
-    if (labelMes) labelMes.textContent = mes;
-
+    if (labelMes) labelMes.textContent = series.map(serie => serie.mes).join(" x ");
     const canvas = wrap.querySelector(`#historico-diario-canvas-${codigo}`);
-    const serie = String(serieTexto || "").split(",").map(v => numeroInteiro(v));
-    desenharGraficoHistoricoDiario(canvas, serie, mes);
+    desenharGraficoHistoricoDiario(canvas, series, series.map(serie => serie.mes).join(" x "));
 }
 
 function inicializarGraficosHistoricoDiario(raiz){
@@ -4133,7 +4278,10 @@ function inicializarGraficosHistoricoDiario(raiz){
         if (wrap.dataset.graficoDiarioInicializado === "1") return;
         const primeiroMes = wrap.querySelector(".historico-mes-card");
         if (primeiroMes){
-            primeiroMes.click();
+            const canvas = wrap.querySelector("canvas[id^='historico-diario-canvas-']");
+            const codigo = canvas ? canvas.id.replace("historico-diario-canvas-", "") : "";
+            primeiroMes.classList.add("ativo");
+            selecionarMesHistoricoDiario(primeiroMes, codigo);
             wrap.dataset.graficoDiarioInicializado = "1";
         }
     });
@@ -4267,12 +4415,8 @@ function montarHTMLCard(item){
                 <span class="detalhe-valor">${item["Full"] || ""}</span>
             </div>
             <div class="info-detalhe-card">
-                <span class="detalhe-label">Condição</span>
-                <span class="detalhe-valor">${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</span>
-            </div>
-            <div class="info-detalhe-card">
-                    <span class="detalhe-label">Lote</span>
-                <span class="detalhe-valor">${item["LOTE"] || ""}</span>
+                <span class="detalhe-label">Valor do Anúncio</span>
+                <span class="detalhe-valor">${item["VALOR DO ANUNCIO"] || item["VALOR DO ANÚNCIO"] || item["Valor do Anuncio"] || item["Valor do Anúncio"] || ""}</span>
             </div>
             <div class="info-detalhe-card outros-mlbs-card">
                 <span class="detalhe-label">Outros MLBs mesmo SKU</span>
@@ -4281,6 +4425,14 @@ function montarHTMLCard(item){
                         ? `<span class="sku-relacionado">${analise.qtdSKU}${montarTooltipSkuRelacionado(item)}</span>`
                         : analise.qtdSKU}
                 </span>
+            </div>
+            <div class="info-detalhe-card">
+                <span class="detalhe-label">Condição</span>
+                <span class="detalhe-valor">${item["CONDIÇÃO"] || item["CONDIÇAO"] || ""}</span>
+            </div>
+            <div class="info-detalhe-card">
+                    <span class="detalhe-label">Lote</span>
+                <span class="detalhe-valor">${item["LOTE"] || ""}</span>
             </div>
         </div>
 
@@ -4307,6 +4459,9 @@ function montarHTMLCard(item){
     ↩ Voltar
 </button>
     </div>
+
+<hr style="margin:4px 0 0 0">
+
     </div>
         <div class="bloco-vendas-unificado">
             <div class="vendas-unificado-header">
@@ -4327,11 +4482,20 @@ function montarHTMLCard(item){
                     <span class="pill-label">Vai Ficar</span>
                     <span class="pill-value">${item["ESTOQUE QUE VAI FICAR NO FULL"] || 0}</span>
                 </div>
+<div class="card-resumo-pill">
+    <span class="pill-label">30D + 7D</span>
+    <span class="pill-value">${numeroInteiro(item["30 DIAS"]) + numeroInteiro(item["7 DIAS"])}</span>
+</div>
+<div class="card-resumo-pill">
+    <span class="pill-label">30D + 15D</span>
+    <span class="pill-value">${numeroInteiro(item["30 DIAS"]) + numeroInteiro(item["15 DIAS"])}</span>
+</div>
+<div class="card-resumo-pill">
+    <span class="pill-label">15D - Vai Ficar</span>
+    <span class="pill-value">${Math.max(0, numeroInteiro(item["ESTOQUE QUE VAI FICAR NO FULL"]) - numeroInteiro(item["15 DIAS"]))}</span>
+</div>
+
             </div>
-                <div class="vendas-unificado-badges">
-                    <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
-                    <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
-                </div>
             </div>
 
             <div class="vendas-destaque-grid">
@@ -4363,24 +4527,26 @@ function montarHTMLCard(item){
                         <div class="historico-compacto-subtitulo">6 meses anteriores</div>
                     </div>
                     <div class="historico-mensal-rodape" style="margin-top:12px;">
+                    <div class="historico-info-pill variacao">Curto prazo: ${classificarCurtoPrazo(item).status}</div>
+                    <div class="historico-info-pill leitura">Leitura final: ${montarLeituraFinalTendencia(item).final}</div>
                     <div class="historico-info-pill variacao">60D (2 últimos meses): ${obterHistoricoMensal3Meses(item).soma60D}</div>
                     <div class="historico-info-pill leitura">Leitura 3 meses: ${classificarHistoricoMensal(item).status}</div>
                     </div>
                 </div>
 
                 <div class="historico-meses-grid historico-seis-meses">
-                    ${montarCardMesHistoricoDiario(item, codigo, "OUTUBRO")}
                     ${montarCardMesHistoricoDiario(item, codigo, "NOVEMBRO")}
                     ${montarCardMesHistoricoDiario(item, codigo, "DEZEMBRO")}
                     ${montarCardMesHistoricoDiario(item, codigo, "JANEIRO")}
                     ${montarCardMesHistoricoDiario(item, codigo, "FEVEREIRO")}
                     ${montarCardMesHistoricoDiario(item, codigo, "MARÇO")}
+                    ${montarCardMesHistoricoDiario(item, codigo, "ABRIL")}
                 </div>
 
                 <div class="historico-diario-wrap">
                     <div class="historico-diario-topo">
-                        <div class="historico-diario-titulo">📈 Vendas por dia do mês</div>
-                        <div class="historico-diario-mes" id="historico-diario-mes-${codigo}">OUTUBRO</div>
+                        <div class="historico-diario-titulo">📈 Vendas por dia do mês / comparativo</div>
+                        <div class="historico-diario-mes" id="historico-diario-mes-${codigo}">NOVEMBRO</div>
                     </div>
                     <canvas class="historico-diario-canvas" id="historico-diario-canvas-${codigo}"></canvas>
                 </div>
